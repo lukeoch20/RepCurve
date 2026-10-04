@@ -1,0 +1,13 @@
+{
+  "name": "Reference user: male, 33, new lifter, dumbbells + treadmill + ab roller, 4 × 20 min",
+  "profile": {
+    "sex": "male", "age": 33, "heightCm": 178, "bodyweightKg": 84,
+    "trainingHistory": "never", "goal": "both",
+    "daysPerWeek": 4, "minutesPerSession": 20,
+    "injuries": [], "units": "lb"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "fixed", "weights": [10, 15, 20, 25, 30], "unit": "lb", "pairs": true },
+    "treadmill": true, "mat": true, "abRoller": true, "pullupBar": false, "bench": false, "bands": []
+  }
+}

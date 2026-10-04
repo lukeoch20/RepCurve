@@ -1,0 +1,13 @@
+{
+  "name": "Bodyweight only, 2 × 15 min",
+  "profile": {
+    "sex": "female", "age": 29, "heightCm": 165, "bodyweightKg": 62,
+    "trainingHistory": "a_little", "goal": "strength_muscle",
+    "daysPerWeek": 2, "minutesPerSession": 15,
+    "injuries": [], "units": "kg"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "none" },
+    "treadmill": false, "mat": true, "abRoller": false, "pullupBar": false, "bench": false, "bands": []
+  }
+}

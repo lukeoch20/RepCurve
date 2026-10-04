@@ -1,0 +1,13 @@
+{
+  "name": "Fitness goal, light dumbbells, 5 × 20 min",
+  "profile": {
+    "sex": "male", "age": 45, "heightCm": 175, "bodyweightKg": 95,
+    "trainingHistory": "never", "goal": "fitness",
+    "daysPerWeek": 5, "minutesPerSession": 20,
+    "injuries": [], "units": "lb"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "fixed", "weights": [8, 12, 20], "unit": "lb", "pairs": true },
+    "treadmill": true, "mat": false, "abRoller": false, "pullupBar": false, "bench": false, "bands": []
+  }
+}

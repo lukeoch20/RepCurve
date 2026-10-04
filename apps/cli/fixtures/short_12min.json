@@ -1,0 +1,13 @@
+{
+  "name": "Tiny budget: 3 × 12 min, dumbbells",
+  "profile": {
+    "sex": "female", "age": 34, "heightCm": 160, "bodyweightKg": 58,
+    "trainingHistory": "never", "goal": "strength_muscle",
+    "daysPerWeek": 3, "minutesPerSession": 12,
+    "injuries": [], "units": "kg"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "fixed", "weights": [5, 7.5, 10], "unit": "kg", "pairs": true },
+    "treadmill": false, "mat": true, "abRoller": true, "pullupBar": false, "bench": false, "bands": []
+  }
+}

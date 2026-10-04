@@ -1,0 +1,14 @@
+{
+  "name": "@repcurve/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/main.ts generate"
+  },
+  "dependencies": {
+    "@repcurve/engine": "workspace:*",
+    "@repcurve/exercises": "workspace:*",
+    "@repcurve/shared": "workspace:*"
+  }
+}
