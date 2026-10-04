@@ -7,6 +7,8 @@ export interface CardioSessionInput {
   level: TrainingLevel;
   /** 0-based index of this cardio session within the week. */
   cardioIndex: number;
+  /** 0-based position in the session sequence. */
+  index: number;
   week: number;
   dayIndex: number;
 }
@@ -26,7 +28,9 @@ export function buildCardioSession(input: CardioSessionInput): SessionPlan {
     const reps = Math.max(2, Math.min(maxReps, Math.floor((budget - warm - cool) / 2)));
     segments.push({ minutes: warm, intent: "warmup", effort: 3, note: "Brisk walk" });
     for (let i = 0; i < reps; i++) {
-      segments.push({ minutes: 1, intent: "hard", effort: 8, note: i === 0 ? "Fast walk, incline, or jog: breathing hard" : undefined } as CardioSegment);
+      const hard: CardioSegment = { minutes: 1, intent: "hard", effort: 8 };
+      if (i === 0) hard.note = "Fast walk, incline, or jog: breathing hard";
+      segments.push(hard);
       segments.push({ minutes: 1, intent: "easy", effort: 3 });
     }
     const used = warm + cool + reps * 2;
@@ -44,14 +48,13 @@ export function buildCardioSession(input: CardioSessionInput): SessionPlan {
     segments.push({ minutes: 2, intent: "cooldown", effort: 2 });
     plan = { mode, style, segments, totalMinutes: budget };
   }
-  // Strip undefined notes for exactOptionalPropertyTypes cleanliness.
-  for (const s of plan.segments) if (s.note === undefined) delete s.note;
-
   return {
     id: `w${input.week}d${input.dayIndex + 1}`,
+    index: input.index,
     week: input.week,
     dayIndex: input.dayIndex,
     kind: "cardio",
+    variant: "cardio",
     name: plan.style === "intervals" ? "Intervals" : plan.style === "incline_walk" ? "Incline walk" : "Steady cardio",
     budgetMinutes: budget,
     estimatedMinutes: budget,
@@ -60,5 +63,7 @@ export function buildCardioSession(input: CardioSessionInput): SessionPlan {
     supersets: [],
     finisher: null,
     cardio: plan,
+    deload: false,
+    comeback: false,
   };
 }

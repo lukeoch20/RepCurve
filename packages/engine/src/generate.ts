@@ -1,62 +1,86 @@
 import { buildCardioSession } from "./cardio.js";
+import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
-import { trainingLevel, volumeTarget } from "./level.js";
-import { buildPool } from "./pool.js";
-import { buildStrengthSession } from "./session.js";
-import { weeklyTemplate } from "./template.js";
+import { volumeTarget } from "./level.js";
+import { buildStrengthSession, type StrengthSessionInput } from "./session.js";
 import type { GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
 import { hardSets, weeklyVolume } from "./volume.js";
 
-export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}): Program {
-  const { profile, equipment } = input;
-  const weeks = opts.weeks ?? 4;
-  const e1rmByExercise = opts.e1rmByExercise ?? {};
-  const level = trainingLevel(profile);
-  const pool = buildPool(equipment, profile.injuries);
-  const template = weeklyTemplate(profile.daysPerWeek, profile.goal, equipment);
-  const baseRounds = 3;
+export const BASE_ROUNDS = 3;
 
-  const sessions: SessionPlan[] = [];
-  for (let week = 1; week <= weeks; week++) {
-    const rampWeek = week === 1 && profile.trainingHistory === "never";
-    let strengthIndex = 0;
-    let cardioIndex = 0;
-    template.forEach((kind, dayIndex) => {
-      if (kind === "strength") {
-        const base = {
-          profile,
-          equipment,
-          level,
-          pool,
-          strengthIndex: strengthIndex++,
-          week,
-          dayIndex,
-          benchmark: week === 1,
-          e1rmByExercise,
-        };
-        const steady = buildStrengthSession({ ...base, rounds: baseRounds });
-        if (rampWeek) {
-          // Same exercises and superset count as the steady weeks, one round lighter.
-          sessions.push(
-            buildStrengthSession({
-              ...base,
-              rounds: baseRounds - 1,
-              maxRounds: baseRounds - 1,
-              maxSupersets: steady.supersets.length,
-            }),
-          );
-        } else {
-          sessions.push(steady);
-        }
-      } else {
-        sessions.push(buildCardioSession({ profile, equipment, level, cardioIndex: cardioIndex++, week, dayIndex }));
-      }
-    });
+export interface PlanOptions {
+  /** Today's time budget, when it differs from the profile ("I only have 12 minutes"). */
+  minutes?: number;
+  /** Rest after each superset round, seconds. Defaults by time budget. */
+  restSec?: number;
+  e1rmByExercise?: Record<string, number>;
+}
+
+/** Week and day for a position in the session sequence. */
+export function weekAndDay(ctx: EngineContext, index: number): { week: number; dayIndex: number } {
+  const days = ctx.template.length;
+  return { week: Math.floor(index / days) + 1, dayIndex: index % days };
+}
+
+/**
+ * The plan for the Nth session (0-based) of an open-ended sequence. Sessions
+ * are a sequence, not calendar days: a missed day just means the next session
+ * waits for you. Week 1 is the benchmark (and, for brand-new lifters, a lighter
+ * ramp); later weeks repeat the steady structure while the training state
+ * carries loads and reps forward.
+ */
+export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOptions = {}): SessionPlan {
+  const { week, dayIndex } = weekAndDay(ctx, index);
+  const kind = ctx.template[dayIndex]!;
+  const profile = opts.minutes !== undefined ? { ...ctx.profile, minutesPerSession: opts.minutes } : ctx.profile;
+  const before = ctx.template.slice(0, dayIndex);
+  if (kind === "cardio") {
+    const cardioIndex = before.filter((k) => k === "cardio").length;
+    return buildCardioSession({ profile, equipment: ctx.equipment, level: ctx.level, cardioIndex, index, week, dayIndex });
   }
+  const base: StrengthSessionInput = {
+    profile,
+    equipment: ctx.equipment,
+    level: ctx.level,
+    pool: ctx.pool,
+    index,
+    strengthIndex: before.filter((k) => k === "strength").length,
+    week,
+    dayIndex,
+    rounds: BASE_ROUNDS,
+    benchmark: week === 1,
+    e1rmByExercise: opts.e1rmByExercise ?? {},
+    ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
+  };
+  const steady = buildStrengthSession(base);
+  const rampWeek = week === 1 && profile.trainingHistory === "never";
+  if (!rampWeek) return steady;
+  // Same exercises and superset count as the steady weeks, one round lighter.
+  return buildStrengthSession({
+    ...base,
+    rounds: BASE_ROUNDS - 1,
+    maxRounds: BASE_ROUNDS - 1,
+    maxSupersets: steady.supersets.length,
+  });
+}
+
+export function planSession(input: GenerateInput, index: number, opts: PlanOptions = {}): SessionPlan {
+  return planSessionWith(makeContext(input.profile, input.equipment), index, opts);
+}
+
+export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}): Program {
+  const ctx = makeContext(input.profile, input.equipment);
+  const weeks = opts.weeks ?? 4;
+  const planOpts: PlanOptions = {
+    e1rmByExercise: opts.e1rmByExercise ?? {},
+    ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
+  };
+  const sessions: SessionPlan[] = [];
+  for (let i = 0; i < weeks * ctx.template.length; i++) sessions.push(planSessionWith(ctx, i, planOpts));
 
   const steadyWeek = sessions.filter((s) => s.week === Math.min(2, weeks));
   const volume = weeklyVolume(steadyWeek);
-  const target = volumeTarget(level);
+  const target = volumeTarget(ctx.level);
   const strengthSessions = steadyWeek.filter((s) => s.kind === "strength");
   const avgHardSets = strengthSessions.length
     ? Math.round(strengthSessions.reduce((n, s) => n + hardSets(s), 0) / strengthSessions.length)
@@ -64,12 +88,12 @@ export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}
 
   return {
     createdAt: opts.createdAt ?? new Date().toISOString(),
-    level,
+    level: ctx.level,
     weeks,
-    template,
+    template: ctx.template,
     sessions,
     weeklyVolume: volume,
     volumeTarget: target,
-    explanation: explain(profile, equipment, level, template, volume, target, avgHardSets),
+    explanation: explain(input.profile, input.equipment, ctx.level, ctx.template, volume, target, avgHardSets),
   };
 }

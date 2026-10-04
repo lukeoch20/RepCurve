@@ -7,9 +7,14 @@ export function isLoaded(e: Exercise): boolean {
   return e.loadType === "dumbbell_pair" || e.loadType === "single_dumbbell";
 }
 
+/** Reps the starting load is aimed at: a third of the way into the range. */
+export function startingTargetReps(repRange: [number, number]): number {
+  return Math.round((repRange[0] * 2 + repRange[1]) / 3);
+}
+
 /**
  * Starting load for an exercise. If an e1RM is known, derive the load for the
- * bottom-middle of the rep range at the target RIR; otherwise use a
+ * lower part of the rep range at the target RIR; otherwise use a
  * conservative bodyweight ratio. Always rounded down to an owned dumbbell.
  */
 export function startingLoadKg(
@@ -26,8 +31,7 @@ export function startingLoadKg(
   if (owned.length === 0) return null;
   let target: number;
   if (e1rmKg && e1rmKg > 0) {
-    const reps = Math.round((repRange[0] * 2 + repRange[1]) / 3);
-    target = loadForReps(e1rmKg, reps, targetRir);
+    target = loadForReps(e1rmKg, startingTargetReps(repRange), targetRir);
   } else {
     const ratio = STARTING_LOAD_RATIO[e.id]?.[profile.sex] ?? 0.1;
     target = ratio * profile.bodyweightKg * LEVEL_LOAD_MULTIPLIER[level];
