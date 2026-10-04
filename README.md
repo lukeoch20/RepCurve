@@ -13,10 +13,14 @@ packages/shared     types, formulas (Epley, RIR), load helpers
 packages/exercises  exercise library with progression ladders
 packages/engine     program generation, session fill, progression rules
 apps/cli            command-line generator for trying personas
-apps/web            (coming) installable web app
+apps/web            the phone app (installable web app, or a claude.ai page)
 ```
 
-## Try it
+## The app
+
+See [`apps/web/README.md`](apps/web/README.md) for running the phone app and the hosting options.
+
+## Try the engine
 
 ```sh
 pnpm install

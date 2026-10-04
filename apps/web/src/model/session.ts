@@ -259,7 +259,8 @@ export function tickCardio(active: ActiveSession, now: number): { active: Active
   const c = active.cardio;
   const segs = active.plan.cardio?.segments ?? [];
   if (!c || !c.started || c.finished || c.segmentEndsAt === null || now < c.segmentEndsAt) return { active, crossed: 0 };
-  let { segmentIndex, segmentEndsAt } = c;
+  let segmentIndex = c.segmentIndex;
+  let segmentEndsAt: number | null = c.segmentEndsAt;
   let crossed = 0;
   let finished = false;
   while (segmentEndsAt !== null && now >= segmentEndsAt) {
