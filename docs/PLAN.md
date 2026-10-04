@@ -12,7 +12,7 @@
 | Nutrition | **Out of scope.** No food logging, no calorie or protein tracking. Projections assume roughly maintenance eating and say so in one line. |
 | Monetisation | None. Personal-use MVP. |
 | Team | Solo build. Minimal tooling, no premature infrastructure. |
-| Platform / stack | **Recommended: installable web app (PWA), local-only data, pure TypeScript engine.** See §7 for the alternatives. Awaiting confirmation. |
+| Platform / stack | **Confirmed: option A, installable web app (PWA) on iPhone, local-only data, pure TypeScript engine.** A Mac is available in the household, so wrapping the same code in a native shell (Capacitor) for lock-screen timers, haptics or Apple Health is a later option, not a rewrite. See §7. |
 | Equipment focus for MVP | Dumbbells, bodyweight, treadmill, ab roller, mat. Bench, pull-up bar and bands as optional extras. Commercial-gym and barbell support deferred. |
 
 ---
@@ -267,7 +267,14 @@ Keep `docs/EVIDENCE.md`: each rule, its source(s), and the date last reviewed. T
 | C. React Native + Expo (+ Supabase) | A true native iOS/Android app from one codebase | App Store distribution later | Apple developer account ($99/yr), builds, more moving parts |
 | D. Native Swift | iPhone only | Not needed here | Mac + Xcode, single platform |
 
-A is the recommendation. The engine package doesn't change if we move to B or C later.
+A is confirmed. The engine package doesn't change if we move to B or C later.
+
+**iPhone-specific notes for option A**
+- Keep the screen awake during a session (Screen Wake Lock) so the rest timer keeps running.
+- Compute the rest timer from a stored end time, not a running counter, so it is still correct after the app is backgrounded.
+- Timer end is signalled with sound; iPhone web apps cannot vibrate or post a lock-screen countdown. If that gap matters after a few weeks of use, wrap the app with Capacitor on the Mac.
+- Install: open the link in Safari, Share → Add to Home Screen.
+- Data lives on the phone; monthly JSON export reminder until sync exists.
 
 ### 7.3 Proposed stack for option A
 | Layer | Choice | Why |
@@ -357,8 +364,10 @@ Projection      created_at, horizon_weeks, metrics (per-pattern bands, lean mass
 ---
 
 ## 10. Immediate next steps
-1. Confirm platform option A (installable web app, local data).
-2. Scaffold the monorepo: `packages/engine`, `packages/exercises`, `packages/shared`, CLI, Vitest, GitHub Actions.
-3. Write the equipment model and first ~30 exercises with ladders.
-4. Get `repcurve generate` producing a 4-week program for the reference persona (male, 33, novice, dumbbells + treadmill + ab roller, 4 × 20 min) and check it fits 20 minutes on paper.
+1. ~~Confirm platform option A~~ Confirmed.
+2. ~~Scaffold the monorepo~~ Done: `packages/shared`, `packages/exercises`, `packages/engine`, `apps/cli`, Vitest, GitHub Actions.
+3. ~~Equipment model and first exercises with ladders~~ Done: 40 exercises across dumbbell, bodyweight, ab-roller and pull-up-bar ladders.
+4. ~~`repcurve generate` for the reference persona~~ Done: `pnpm generate -- --profile fixtures/reference.json --week 2` fits 20 minutes with two supersets of three rounds plus a finisher.
 5. Draft `EVIDENCE.md` and verify every **[verify]** number.
+6. Session-state model: turn a `SessionPlan` plus `SetLog`s into the next session's prescriptions using `progressExercise` (today it works per exercise; it needs the block-level wrapper and the reactive deload trigger).
+7. Start `apps/web`: onboarding, equipment entry, today's session screen with the rest timer, local storage.

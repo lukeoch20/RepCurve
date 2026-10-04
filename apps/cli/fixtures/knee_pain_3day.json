@@ -1,0 +1,13 @@
+{
+  "name": "Knee and low-back caution, dumbbells, 3 × 20 min",
+  "profile": {
+    "sex": "female", "age": 38, "heightCm": 170, "bodyweightKg": 70,
+    "trainingHistory": "lapsed", "goal": "both",
+    "daysPerWeek": 3, "minutesPerSession": 20,
+    "injuries": ["knee", "low_back"], "units": "kg"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "fixed", "weights": [4, 6, 8, 10, 12], "unit": "kg", "pairs": true },
+    "treadmill": true, "mat": true, "abRoller": false, "pullupBar": false, "bench": true, "bands": ["light", "medium"]
+  }
+}

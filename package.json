@@ -1,0 +1,19 @@
+{
+  "name": "repcurve",
+  "private": true,
+  "version": "0.0.1",
+  "description": "RepCurve: short, dense home workouts that adapt to you and show you your curve.",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate": "pnpm --filter @repcurve/cli generate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  }
+}
