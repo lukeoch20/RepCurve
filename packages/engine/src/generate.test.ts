@@ -2,7 +2,7 @@ import { getExercise } from "@repcurve/exercises";
 import { availableDumbbellLoadsKg, canLoad, meetsRequirements } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { loadFixtures } from "./fixtures.js";
-import { generateProgram } from "./generate.js";
+import { generateProgram, planSession } from "./generate.js";
 import { hardSets } from "./volume.js";
 
 const fixtures = loadFixtures();
@@ -79,6 +79,19 @@ describe.each(fixtures)("program for $name", (fx) => {
     for (const p of loaded) expect(p.benchmarkSet, p.exerciseId).toBe(true);
     const w2 = program.sessions.filter((s) => s.week === 2);
     for (const p of w2.flatMap((s) => s.supersets.flatMap((ss) => ss.items))) expect(p.benchmarkSet).toBe(false);
+  });
+});
+
+describe("user rest settings", () => {
+  const fx = fixtures.find((f) => f.name === "reference")!;
+  it("fits fewer rounds when the user rests longer, and stays in budget", () => {
+    const quick = planSession({ profile: fx.profile, equipment: fx.equipment }, 4, { restSec: 45, transitionSec: 15 });
+    const slow = planSession({ profile: fx.profile, equipment: fx.equipment }, 4, { restSec: 120, transitionSec: 30 });
+    const rounds = (s: typeof quick) => s.supersets.reduce((n, ss) => n + ss.rounds, 0);
+    expect(rounds(slow)).toBeLessThan(rounds(quick));
+    expect(slow.estimatedMinutes).toBeLessThanOrEqual(slow.budgetMinutes);
+    expect(slow.supersets[0]!.restSec).toBe(120);
+    expect(slow.supersets[0]!.transitionSec).toBe(30);
   });
 });
 
