@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "last_reviewed": "2026-10-04",
+    "evidence_doc": "EVIDENCE.md",
+    "access_caveat": "Sources were read through web-search extracts (abstracts, partial full text) because direct fetches of PubMed, PMC, Springer and SportRxiv were blocked by the sandbox network policy. Values tagged 'est' in the notes are engineering syntheses, not reported values.",
+    "assumptions": "Adherent user; roughly maintenance energy intake (the app does not track nutrition); fractional set counting (direct set = 1, synergist set = 0.5); sets count only if ~4 RIR or closer."
+  },
+  "strength_untrained": {
+    "pct_gain_12wk_median": 22,
+    "pct_gain_12wk_p10": 8,
+    "pct_gain_12wk_p90": 40,
+    "pct_gain_8wk_median": 15,
+    "pct_gain_26wk_median": 32,
+    "pct_gain_52wk_median": 42,
+    "upper_vs_lower_note": "Per-lift % change in estimated 1RM, averaged over compound lifts. Lower-body and isolation/unfamiliar lifts usually show larger early % gains than upper-body presses (skill plus neural learning). Women gain relatively more upper-body strength than men (Roberts 2020, ES -0.60). Light home dumbbells push lower-body sets toward high reps, which understates e1RM gains, so project per exercise rather than as a single strength number.",
+    "notes": "12-wk values: medium confidence (est), anchored on Ahtiainen 2016 (+21.1 +/- 11.5% leg-press 1RM after 20-24 wk at 2x/wk, n=287, ages 19-78) and typical young-novice RCTs at 3x/wk. 8/26/52-wk values come from a decelerating curve through those anchors plus ACSM 2009 (~40% for untrained over 4 wk-2 yr): low confidence. p10/p90 reflect individual variability (Ahtiainen SD ~11.5 points; Hubal 2005 1RM range 0-250% for an isolated arm exercise).",
+    "source": "Ahtiainen JP et al. 2016 Age 38:10 (PMC5005877); ACSM 2009 Med Sci Sports Exerc 41:687-708; Peterson MD et al. 2010 Ageing Res Rev 9:226-237 (older adults +24-33%); Hubal MJ et al. 2005 Med Sci Sports Exerc 37:964-972",
+    "confidence": "medium"
+  },
+  "lean_mass_untrained": {
+    "kg_gain_10to12wk_men_median": 1.5,
+    "kg_gain_10to12wk_women_median": 1.0,
+    "pct_gain_10to12wk_median": 2.5,
+    "p10": 0.0,
+    "p90": 5.0,
+    "first_year_kg_men_estimate": 3.5,
+    "notes": "p10/p90 are % of baseline fat-free mass at 10-12 wk (est). DXA/BIA measurement noise is about +/-0.5-1 kg, so do not show week-4 lean-mass changes as signal. Women's kg value is derived from similar relative gains (Roberts 2020; Refalo 2025) times smaller baseline FFM. The first-year value is extrapolated (about 1.5 kg at 12 wk, 2.5 at 26 wk, 3.5 at 52 wk; plausible range 1.5-6 kg) and assumes maintenance intake: low confidence. An energy surplus likely raises it and a deficit lowers it; the size of either effect is not quantified here.",
+    "source": "Benito PJ et al. 2020 IJERPH 17:1285 (+1.53 kg [1.30-1.76], 111 studies, men; durations 2 wk-1 yr); untrained men 8 wk +1.0-1.5 kg LBM (J Strength Cond Res 2021, PMID 31009427); Peterson MD et al. 2011 Med Sci Sports Exerc 43:249 (older adults +1.1 kg at ~20.5 wk); Refalo MC et al. 2025 PeerJ 13:e19042; Roberts BM et al. 2020 J Strength Cond Res 34:1448",
+    "confidence": "medium"
+  },
+  "dose_response": {
+    "hypertrophy_shape": "Concave and square-root-like. Pelland 2026: the square-root model was the best fit for fractional weekly sets, with a marginal gain of +0.24%/set at 12.25 sets. Engine power law: rel = (S/10)^0.4, slightly flatter at the low end than sqrt to match Schoenfeld 2017 (<5: 5.4%, 5-9: 6.6%, 10+: 9.8%) and Krieger 2010 (2-3 sets give 40% more than 1 set).",
+    "strength_shape": "Concave with steeper diminishing returns than hypertrophy. Pelland 2026: strength 'topped out earlier'; Remmert 2025 per-session preprint: little extra benefit beyond about 2 direct sets per session. Engine power law: rel = (S/10)^0.25 (plausible exponent range 0.15-0.35). Frequency adds a small independent strength benefit.",
+    "reference_sets_per_week": 10,
+    "relative_effect_at_sets": { "1": 0.40, "3": 0.62, "5": 0.76, "10": 1.0, "15": 1.18, "20": 1.32 },
+    "strength_relative_effect_at_sets": { "1": 0.56, "3": 0.74, "5": 0.84, "10": 1.0, "15": 1.11, "20": 1.19 },
+    "notes": "S = weekly fractional hard sets per muscle (or per lift pattern for strength). The values are model-derived (est), not reported by any paper. Apply the RIR credit (EVIDENCE.md section 2) before computing S.",
+    "source": "Pelland JC et al. 2026 Sports Med 56:481-505 (doi:10.1007/s40279-025-02344-w); Schoenfeld BJ et al. 2017 J Sports Sci 35:1073; Krieger JW 2009/2010 J Strength Cond Res; Ralston GW et al. 2017 Sports Med 47:2585",
+    "confidence": "medium"
+  },
+  "modifiers": {
+    "female_relative_hypertrophy": 1.0,
+    "female_relative_upper_strength": 1.3,
+    "age_40_to_65_relative_gain": 0.9,
+    "age_65_plus_relative_gain": 0.75,
+    "lapsed_early_speedup": 2.0,
+    "trained_relative_rate": 0.5,
+    "notes": "female_relative_hypertrophy: high confidence (Roberts 2020 ES 0.07, p=0.31; Refalo 2025 relative difference 0.69% [-1.50, 2.88]). female_relative_upper_strength: ES -0.60 favouring women; the 1.3 multiplier is est. Age: relative strength gains are largely preserved (Ahtiainen 2016: 'age and sex did not affect the RT responses'), while lean-mass gains are smaller in older adults (Peterson 2011). Suggested split is strength 1.0 / hypertrophy 0.9 for ages 40-65 and 0.85 / 0.75 for 65+ (est, low). lapsed_early_speedup: Halonen 2024 regained the pre-break level in 5 wk after 10 wk of initial training (~2x); Staron 1991 regained 20 wk of gains in 6 wk (~3x). Apply only until the previous best is restored. trained_relative_rate: ACSM 2009 cites ~40% for untrained vs ~20% for moderately trained.",
+    "source": "Roberts BM et al. 2020 J Strength Cond Res 34:1448; Refalo MC et al. 2025 PeerJ 13:e19042; Ahtiainen JP et al. 2016 Age 38:10; Peterson MD et al. 2011 Med Sci Sports Exerc 43:249; Halonen et al. 2024 Scand J Med Sci Sports 34:e14739; Staron RS et al. 1991 J Appl Physiol 70:631; ACSM 2009 Med Sci Sports Exerc 41:687",
+    "confidence": "low"
+  },
+  "cardio_untrained": {
+    "vo2max_pct_gain_12wk_median": 12,
+    "p10": 3,
+    "p90": 22,
+    "note_on_20min_sessions_1_to_2_per_week": "The headline values above are for a standard aerobic programme (~3x30-50 min/wk). Montero & Lundby 2017 (6 wk): 69% non-responders at 1x60 min/wk, 40% at 2x60, 0% at >=4x60. One 20-min treadmill session per week is about a third of their lowest dose. Superset/circuit resistance training adds some aerobic stimulus (Ramos-Campo 2021: +6.3% VO2max for circuit RT). Reference user (3x20-min superset RT + 1x20-min treadmill): 12-wk median ~+5% (p10 0%, p90 +10%). With 2x20 min/wk of treadmill work, especially including intervals: ~+7% (p10 +1%, p90 +14%). These dose-scaled values are est, low confidence; show them as 'small, uncertain' rather than a precise number.",
+    "twelve_minute_test_note": "Cooper 1968: VO2max (mL/kg/min) = (distance_m - 504.9) / 44.73 (r ~0.90 in 115 USAF men). Meta-analytic validity for the 12-min test is r = 0.78 (Mayorga-Vega 2016), so the absolute estimate has large individual error. Use it as a within-person trend: same treadmill, same incline, similar time of day, no hard training the day before. The first test includes a pacing-learning effect, so consider a familiarisation run. Many untrained users cannot run 12 min continuously; allow walk/run and report distance change. Screen for cardiac symptoms before a maximal test.",
+    "dose_scaled_estimate_reference_user": { "pct_gain_12wk_median": 5, "p10": 0, "p90": 10, "confidence": "low" },
+    "source": "Bouchard C et al. 1999 J Appl Physiol 87:1003 (HERITAGE: ~+400 mL/min, ~17-18% at 20 wk); Milanovic Z et al. 2015 Sports Med 45:1469 (+4.9 continuous / +5.5 HIIT mL/kg/min vs control); Montero D & Lundby C 2017 J Physiol 595:3377; Ramos-Campo DJ et al. 2021 Biology 10:377; Cooper KH 1968 JAMA 203:201; Mayorga-Vega D et al. 2016 PLoS One 11:e0151671",
+    "confidence": "medium"
+  },
+  "lean_body_mass_formula": {
+    "name": "Boer (1984)",
+    "men": "LBM_kg = 0.407 * weight_kg + 0.267 * height_cm - 19.2",
+    "women": "LBM_kg = 0.252 * weight_kg + 0.473 * height_cm - 48.3",
+    "notes": "Estimates total lean body mass (muscle plus organs, bone and water), not skeletal muscle. Use it only to scale % lean-mass gains into kg. It is inaccurate at high BMI and in already-muscular users; prefer a user-entered body-fat % if available.",
+    "source": "Boer P. Am J Physiol 1984;247(4):F632-F636, doi:10.1152/ajprenal.1984.247.4.F632 (coefficients confirmed via secondary sources)"
+  }
+}

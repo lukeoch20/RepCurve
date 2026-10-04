@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+apps/web/dist/
+apps/web/dist-artifact/
+apps/web/artifact/
+apps/web/test-results/
+apps/web/playwright-report/

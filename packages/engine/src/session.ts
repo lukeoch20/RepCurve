@@ -52,6 +52,8 @@ export interface StrengthSessionInput {
   maxSupersets?: number;
   /** Rest after each round, seconds. Defaults by time budget. */
   restSec?: number;
+  /** Seconds between exercises within a round. Defaults to TRANSITION_SEC. */
+  transitionSec?: number;
   benchmark: boolean;
   e1rmByExercise: Record<string, number>;
 }
@@ -110,6 +112,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const variant = VARIANTS[input.strengthIndex % VARIANTS.length]!;
   const used = new Set<string>();
   const restSec = input.restSec ?? restSecondsForBudget(budget);
+  const transitionSec = input.transitionSec ?? TRANSITION_SEC;
 
   const warmupMin = warmupMinutes(budget);
   const finisherMin = finisherMinutes(budget);
@@ -125,7 +128,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     const chosen = choosePair(pair, variant, input, used);
     if (!chosen) return false;
     const items = chosen.map((c) => ({ exercise: c.exercise, repRange: c.repRange }));
-    const secs = supersetSeconds(items, rounds, TRANSITION_SEC, restSec);
+    const secs = supersetSeconds(items, rounds, transitionSec, restSec);
     if (secs > remainingSec) {
       for (const c of chosen) used.delete(c.exercise.id);
       return false;
@@ -136,7 +139,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       label: String.fromCharCode("A".charCodeAt(0) + supersets.length),
       rounds,
       items: chosen.map((c) => prescribe(c, input, rounds, input.benchmark)),
-      transitionSec: TRANSITION_SEC,
+      transitionSec,
       restSec,
       estimatedSec: secs,
     });
@@ -151,7 +154,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       supersets.forEach((ss, i) => {
         if (ss.rounds >= cap) return;
         const items = pairsChosen[i]!.map((c) => ({ exercise: c.exercise, repRange: c.repRange }));
-        const extra = supersetSeconds(items, 1, TRANSITION_SEC, restSec);
+        const extra = supersetSeconds(items, 1, transitionSec, restSec);
         if (extra <= remainingSec) {
           ss.rounds += 1;
           ss.estimatedSec += extra;

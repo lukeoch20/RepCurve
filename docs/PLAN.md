@@ -1,6 +1,6 @@
 # RepCurve — Product & Technical Plan
 
-> Working draft, v2. Sections marked **[verify]** contain numbers pulled from training literature that should be re-checked against primary sources before they ship in the projection model.
+> Working draft, v2. Sections marked **[verify]** were checked on 2026-10-04: see [`EVIDENCE.md`](EVIDENCE.md) for verdicts, sources and the parameters the engine uses, and [`projection-priors.json`](projection-priors.json) for the projection model's inputs. Main corrections: the 8–10 / 12–16 / 16–20 set tiers are a coaching heuristic, not a measured optimum; strength flattens with volume much sooner than muscle size; rest beyond about 90 s adds little for muscle; deload evidence is unclear, so deloads stay reactive.
 
 ---
 
@@ -370,4 +370,7 @@ Projection      created_at, horizon_weeks, metrics (per-pattern bands, lean mass
 4. ~~`repcurve generate` for the reference persona~~ Done: `pnpm generate -- --profile fixtures/reference.json --week 2` fits 20 minutes with two supersets of three rounds plus a finisher.
 5. Draft `EVIDENCE.md` and verify every **[verify]** number.
 6. ~~Session-state model~~ Done: `planSession(index)` plans any session in the open-ended sequence, `applyState` personalises it (substitutions, working weights, rep targets, deloads, comebacks after 14+ days off), `recordSession` folds logged sets back in (benchmark calibration, double progression with e1RM-checked dumbbell steps, ladder moves applied everywhere an exercise is programmed, reactive deload after three grinding sessions), and `adviseNextSet` coaches between sets. `pnpm --filter @repcurve/cli exec tsx src/main.ts simulate` runs a virtual lifter through 12 weeks to eyeball progression.
-7. Start `apps/web`: onboarding, equipment entry, today's session screen with the rest timer, local storage.
+7. ~~Start `apps/web`~~ Done: onboarding, Today, the in-workout runner (set check-off, coaching after each set, a rest timer you set yourself with ±15 s and a beep, pause, swaps, skip), treadmill runner, Plan, Progress, Settings with backups. Builds as an installable web app (on-device storage, offline) or as a claude.ai page (saved to the user's Claude account).
+8. Hosting the installable version: the repo is private, so free GitHub Pages isn't available. Options in `apps/web/README.md`.
+9. ~~Projection model and `docs/EVIDENCE.md`~~ Done: `project()` in the engine gives strength, lean-mass and cardio ranges at 4, 8, 12, 26 and 52 weeks from the program's real dose, the user's adherence, and a personal factor learned from their logged lifts. Shown on Progress and at the end of onboarding.
+10. Next candidates: tempo progressions once dumbbells are maxed out, readiness check-ins, a second treadmill option with intervals for users who want more cardio, and spot-checking the evidence quotes against full papers (the research pass could only read search extracts).

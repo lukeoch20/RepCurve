@@ -5,10 +5,13 @@
   "description": "RepCurve: short, dense home workouts that adapt to you and show you your curve.",
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate": "pnpm --filter @repcurve/cli generate"
+    "generate": "pnpm --filter @repcurve/cli generate",
+    "build:web": "pnpm --filter @repcurve/web build",
+    "build:artifact": "pnpm --filter @repcurve/web build:artifact",
+    "e2e": "pnpm --filter @repcurve/web e2e"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

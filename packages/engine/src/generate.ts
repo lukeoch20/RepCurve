@@ -13,6 +13,8 @@ export interface PlanOptions {
   minutes?: number;
   /** Rest after each superset round, seconds. Defaults by time budget. */
   restSec?: number;
+  /** Seconds between exercises within a round. */
+  transitionSec?: number;
   e1rmByExercise?: Record<string, number>;
 }
 
@@ -51,6 +53,7 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     benchmark: week === 1,
     e1rmByExercise: opts.e1rmByExercise ?? {},
     ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
+    ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),
   };
   const steady = buildStrengthSession(base);
   const rampWeek = week === 1 && profile.trainingHistory === "never";
