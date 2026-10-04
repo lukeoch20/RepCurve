@@ -39,3 +39,5 @@ export { TARGET_RIR, defaultTargetReps } from "./prescribe.js";
 export { setSeconds, supersetSeconds, TRANSITION_SEC } from "./timing.js";
 export { simulateTraining, DEFAULT_LIFTER } from "./simulate.js";
 export type { SimulationResult, SimulatedSession, VirtualLifter } from "./simulate.js";
+export { project, personalFactor, leanBodyMassKg, HORIZONS } from "./projection.js";
+export type { Projection, ProjectionPoint, ProjectionInput, Band, LiftObservation } from "./projection.js";

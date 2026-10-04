@@ -1,0 +1,67 @@
+import { generateProgram, project, type LiftObservation, type Projection } from "@repcurve/engine";
+import { getExercise } from "@repcurve/exercises";
+import { e1RM } from "@repcurve/shared";
+import type { Equipment, Profile } from "@repcurve/shared";
+import type { Core, SessionRecord } from "./types";
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function weeksSince(iso: string, now: number): number {
+  return Math.max(0, (now - Date.parse(iso)) / WEEK_MS);
+}
+
+/** Projection for a profile and equipment before any training (onboarding preview). */
+export function previewProjection(profile: Profile, equipment: Equipment, restSec?: number): Projection {
+  const program = generateProgram({ profile, equipment }, { weeks: 2, createdAt: "preview", ...(restSec ? { restSec } : {}) });
+  const cardioMinutes = program.template.filter((k) => k === "cardio").length * profile.minutesPerSession;
+  return project({ profile, weeklyVolume: program.weeklyVolume, template: program.template, cardioMinutesPerWeek: cardioMinutes });
+}
+
+/** Best estimated 1RM per loaded exercise per session, timed in weeks since the start. */
+export function liftObservations(history: SessionRecord[], startedAt: string): LiftObservation[] {
+  const start = Date.parse(startedAt);
+  const out: LiftObservation[] = [];
+  for (const r of history) {
+    if (r.kind !== "strength" || r.skipped || r.deload || r.comeback) continue;
+    const best = new Map<string, number>();
+    for (const s of r.sets) {
+      if (s.loadKg === null || s.reps <= 0 || getExercise(s.exerciseId).pattern === "core") continue;
+      best.set(s.exerciseId, Math.max(best.get(s.exerciseId) ?? 0, e1RM(s.loadKg, s.reps, s.rir)));
+    }
+    for (const [exerciseId, e1rmKg] of best) out.push({ exerciseId, week: (r.finishedAt - start) / WEEK_MS, e1rmKg });
+  }
+  return out;
+}
+
+/** Share of planned sessions done, once at least a week has passed. */
+export function adherence(core: Core, history: SessionRecord[], now: number): number | undefined {
+  const weeks = weeksSince(core.startedAt, now);
+  if (weeks < 1) return undefined;
+  const planned = weeks * core.profile.daysPerWeek;
+  const done = history.filter((r) => !r.skipped).length;
+  return Math.min(1, done / planned);
+}
+
+export function userProjection(core: Core, history: SessionRecord[], now: number): Projection {
+  const { profile, equipment } = core;
+  const program = generateProgram({ profile, equipment }, { weeks: 2, createdAt: "projection", restSec: core.settings.restSec });
+  const cardioMinutes = program.template.filter((k) => k === "cardio").length * profile.minutesPerSession;
+  const a = adherence(core, history, now);
+  return project({
+    profile,
+    weeklyVolume: program.weeklyVolume,
+    template: program.template,
+    cardioMinutesPerWeek: cardioMinutes,
+    weeksIn: weeksSince(core.startedAt, now),
+    lifts: liftObservations(history, core.startedAt),
+    ...(a !== undefined ? { adherence: a } : {}),
+  });
+}
+
+export const NOTICE: Record<number, string> = {
+  4: "The moves feel smoother and the weights feel lighter. Most early strength is your nervous system learning the lifts.",
+  8: "Clear strength gains on every lift. Stairs, carrying kids and getting off the floor feel easier.",
+  12: "Clothes may fit differently through the shoulders and legs. People who see you often may notice before the scale does.",
+  26: "Most people who keep going see a visible change in shoulders, back and legs. Progress slows a little, which is normal.",
+  52: "A noticeably stronger, more muscular version of the person who started, especially upper back, shoulders and legs. Gains keep coming, more slowly.",
+};

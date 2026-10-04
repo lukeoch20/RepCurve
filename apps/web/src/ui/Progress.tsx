@@ -3,6 +3,8 @@ import { e1RM, formatLoad, displayLoad } from "@repcurve/shared";
 import { getExercise } from "@repcurve/exercises";
 import { dayLabel } from "../model/format";
 import { weekStreak } from "../model/plan";
+import { userProjection } from "../model/projection";
+import { ProjectionCard } from "./ProjectionCard";
 import type { Core, SessionRecord } from "../model/types";
 import { Spark, type SparkPoint } from "./Spark";
 
@@ -51,6 +53,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   const minutes = done.reduce((n, r) => n + r.activeMinutes, 0);
   const streak = weekStreak(history, Date.now());
   const units = core.profile.units;
+  const projection = useMemo(() => userProjection(core, history, Date.now()), [core, history]);
 
   return (
     <div className="stack-lg">
@@ -64,6 +67,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         <div className="stat"><b className="num">{minutes}</b><span>minutes</span></div>
         <div className="stat"><b className="num">{streak}</b><span>week streak</span></div>
       </div>
+
+      <ProjectionCard projection={projection} units={units} />
 
       <section className="card">
         <h2 className="h3">Lifts</h2>

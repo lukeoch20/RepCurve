@@ -4,6 +4,8 @@ import { kgToLb, lbToKg } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Seg, Toggle } from "./common";
 import { Lineup } from "./Lineup";
+import { previewProjection } from "../model/projection";
+import { ProjectionCard } from "./ProjectionCard";
 
 const LB_WEIGHTS = [3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 const KG_WEIGHTS = [1, 2, 3, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 17.5, 20, 22.5, 25];
@@ -434,6 +436,7 @@ function Welcome(): React.ReactElement {
 function Review(props: { profile: Profile; equipment: Equipment }): React.ReactElement {
   const program = useMemo(() => generateProgram({ profile: props.profile, equipment: props.equipment }, { weeks: 2, createdAt: "preview" }), [props.profile, props.equipment]);
   const first = program.sessions.find((s) => s.kind === "strength");
+  const projection = useMemo(() => previewProjection(props.profile, props.equipment), [props.profile, props.equipment]);
   return (
     <section className="stack-lg">
       <header className="stack">
@@ -442,6 +445,7 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
           {props.profile.daysPerWeek} days · {props.profile.minutesPerSession} minutes
         </h1>
       </header>
+      <ProjectionCard projection={projection} units={props.profile.units} compact />
       <div className="stack">
         {program.explanation.map((p, k) => (
           <p key={k} className="prose">{p}</p>
