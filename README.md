@@ -22,6 +22,9 @@ apps/web            (coming) installable web app
 pnpm install
 pnpm test
 pnpm generate -- --profile fixtures/reference.json --week 2
+pnpm --filter @repcurve/cli exec tsx src/main.ts simulate --profile fixtures/reference.json --weeks 12
 ```
+
+`generate` prints a 4-week program. `simulate` trains a virtual lifter through the engine and prints every progression decision, which is the quickest way to sanity-check a rule change.
 
 Other fixtures live in `apps/cli/fixtures/`.

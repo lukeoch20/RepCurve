@@ -27,7 +27,7 @@ export function ladderPreference(pattern: Pattern, variant: number): string[] {
     case "squat":
       return ["squat_db", "squat_bw"];
     case "hinge":
-      return ["hinge_db", "hinge_bw"];
+      return ["hinge_db", "bridge_db", "hinge_bw"];
     case "horizontal_push":
       return variant % 2 === 0 ? ["hpush_bw", "hpush_db"] : ["hpush_db", "hpush_bw"];
     case "vertical_push":

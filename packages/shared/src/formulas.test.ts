@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { e1RM, epley1RM, loadForReps, repsAtLoad } from "./formulas.js";
-import { availableDumbbellLoadsKg, roundDownToOwned, nextOwnedLoad, prevOwnedLoad } from "./loads.js";
+import { availableDumbbellLoadsKg, displayLoad, formatLoad, roundDownToOwned, nextOwnedLoad, prevOwnedLoad } from "./loads.js";
 import { lbToKg } from "./formulas.js";
 
 describe("formulas", () => {
@@ -38,6 +38,15 @@ describe("loads", () => {
     expect(nextOwnedLoad(lbToKg(25), owned)).toBeNull();
     expect(prevOwnedLoad(lbToKg(15), owned)).toBeCloseTo(lbToKg(10));
     expect(prevOwnedLoad(lbToKg(10), owned)).toBeNull();
+  });
+
+  it("formats owned weights back to the numbers the user typed", () => {
+    const adj = availableDumbbellLoadsKg({ kind: "adjustable", min: 5, max: 52.5, step: 2.5, unit: "lb", pairs: true });
+    expect(adj.map((w) => displayLoad(w, "lb"))).toContain(22.5);
+    expect(formatLoad(lbToKg(22.5), "dumbbell_pair", "lb")).toBe("22.5 lb each");
+    expect(formatLoad(7.5, "single_dumbbell", "kg")).toBe("7.5 kg");
+    expect(formatLoad(null, "band", "kg")).toBe("band");
+    expect(formatLoad(null, "bodyweight", "kg")).toBe("bodyweight");
   });
 
   it("adjustable sets expand into steps", () => {

@@ -26,7 +26,8 @@ export function formatSession(s: SessionPlan, _units: Units): string[] {
       const side = p.unilateral ? " per side" : "";
       const load = p.loadDisplay ? ` @ ${p.loadDisplay}` : "";
       const bench = p.benchmarkSet ? "  [first set: as many as you can, stop with 2 left, cap 20]" : "";
-      out.push(`    ${ss.label}${i + 1} ${p.name}: ${ss.rounds} × ${fmtRange(p)}${side}${load}${bench}`);
+      const aim = p.loadType === "time" ? `aim ${p.targetReps} s` : `aim ${p.targetReps}`;
+      out.push(`    ${ss.label}${i + 1} ${p.name}: ${ss.rounds} × ${fmtRange(p)} (${aim})${side}${load}${bench}`);
       if (p.cue) out.push(`       ${p.cue}`);
     });
   }

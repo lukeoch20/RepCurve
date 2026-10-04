@@ -1,4 +1,4 @@
-import { lbToKg, kgToLb, round1 } from "./formulas.js";
+import { lbToKg, kgToLb } from "./formulas.js";
 import type { Dumbbells, Equipment, EquipmentItem, LoadType, Units } from "./types.js";
 
 /** Sorted ascending list of per-dumbbell loads in kg the user owns. */
@@ -77,11 +77,18 @@ export function meetsRequirements(requires: EquipmentItem[][], eq: Equipment): b
   return requires.some((set) => set.every((item) => hasItem(eq, item)));
 }
 
+/** Load in the user's units, rounded to the nearest 0.5 lb or 0.25 kg so owned weights round-trip exactly. */
+export function displayLoad(loadKg: number, units: Units): number {
+  return units === "lb" ? Math.round(kgToLb(loadKg) * 2) / 2 : Math.round(loadKg * 4) / 4;
+}
+
 export function formatLoad(loadKg: number | null, loadType: LoadType, units: Units): string {
   if (loadKg === null) {
-    return loadType === "time" ? "" : "bodyweight";
+    if (loadType === "time") return "";
+    if (loadType === "band") return "band";
+    return "bodyweight";
   }
-  const n = units === "lb" ? Math.round(kgToLb(loadKg)) : round1(loadKg);
+  const n = displayLoad(loadKg, units);
   const suffix = loadType === "dumbbell_pair" ? ` ${units} each` : ` ${units}`;
   return `${n}${suffix}`;
 }

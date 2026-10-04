@@ -1,26 +1,36 @@
-import { formatLoad } from "@repcurve/shared";
-import type { Equipment, Exercise, Pattern, Profile, Rir, TrainingLevel } from "@repcurve/shared";
-import { repRangeFor, startingLoadKg } from "./loads.js";
+import type { Equipment, Exercise, Pattern, Profile, TrainingLevel } from "@repcurve/shared";
+import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
+import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
 import { TRANSITION_SEC, finisherMinutes, restSecondsForBudget, setSeconds, supersetSeconds, warmupMinutes } from "./timing.js";
 import type { Pool, Prescription, SessionPlan, Superset, WarmupItem } from "./types.js";
 
+interface Variant {
+  key: string;
+  name: string;
+  pairs: [Pattern, Pattern][];
+  offsets: Partial<Record<Pattern, number>>;
+}
+
 /** Pattern pairs per session variant, in priority order. */
-const VARIANTS: { name: string; pairs: [Pattern, Pattern][]; offsets: Partial<Record<Pattern, number>> }[] = [
+export const VARIANTS: Variant[] = [
   {
+    key: "A",
     name: "Full body A",
     pairs: [["squat", "horizontal_push"], ["hinge", "row"], ["vertical_push", "vertical_pull"]],
     offsets: {},
   },
   {
+    key: "B",
     name: "Full body B",
     pairs: [["hinge", "horizontal_push"], ["squat", "row"], ["vertical_push", "vertical_pull"]],
     offsets: { squat: 1, hinge: 1 },
   },
   {
+    key: "C",
     name: "Full body C",
     pairs: [["squat", "row"], ["hinge", "horizontal_push"], ["vertical_push", "isolation"]],
-    offsets: { squat: 0, hinge: 0 },
+    offsets: {},
   },
 ];
 
@@ -29,6 +39,8 @@ export interface StrengthSessionInput {
   equipment: Equipment;
   level: TrainingLevel;
   pool: Pool;
+  /** 0-based position in the session sequence. */
+  index: number;
   /** 0-based index of this strength session within the week. */
   strengthIndex: number;
   week: number;
@@ -38,6 +50,8 @@ export interface StrengthSessionInput {
   maxRounds?: number;
   /** Cap on supersets, used to make a ramp week mirror the steady structure. */
   maxSupersets?: number;
+  /** Rest after each round, seconds. Defaults by time budget. */
+  restSec?: number;
   benchmark: boolean;
   e1rmByExercise: Record<string, number>;
 }
@@ -45,35 +59,23 @@ export interface StrengthSessionInput {
 interface Chosen {
   exercise: Exercise;
   repRange: [number, number];
+  slot: string;
 }
 
-const TARGET_RIR: Rir = 2;
-
-function prescribe(c: Chosen, input: StrengthSessionInput, sets: number): Prescription {
-  const loadKg = startingLoadKg(
-    c.exercise,
-    input.profile,
-    input.equipment,
-    input.level,
-    c.repRange,
-    TARGET_RIR,
-    input.e1rmByExercise[c.exercise.id],
-  );
-  const p: Prescription = {
-    exerciseId: c.exercise.id,
-    name: c.exercise.name,
-    pattern: c.exercise.pattern,
-    loadType: c.exercise.loadType,
-    unilateral: c.exercise.unilateral,
+function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchmark: boolean): Prescription {
+  const e1rm = input.e1rmByExercise[c.exercise.id];
+  const loadKg = startingLoadKg(c.exercise, input.profile, input.equipment, input.level, c.repRange, TARGET_RIR, e1rm);
+  const targetReps = e1rm ? startingTargetReps(c.repRange) : defaultTargetReps(c.repRange, c.exercise.loadType);
+  return buildPrescription({
+    exercise: c.exercise,
+    slot: c.slot,
     sets,
     repRange: c.repRange,
+    targetReps,
     loadKg,
-    loadDisplay: formatLoad(loadKg, c.exercise.loadType, input.profile.units),
-    targetRir: TARGET_RIR,
-    benchmarkSet: input.benchmark && c.exercise.loadType !== "time" && !input.e1rmByExercise[c.exercise.id],
-  };
-  if (c.exercise.cue) p.cue = c.exercise.cue;
-  return p;
+    benchmarkSet: benchmark && c.exercise.loadType !== "time" && !e1rm,
+    units: input.profile.units,
+  });
 }
 
 /**
@@ -84,18 +86,13 @@ function bodyweightBoost(input: StrengthSessionInput): number {
   return input.profile.trainingHistory === "never" ? 0 : 1;
 }
 
-function choosePair(
-  pair: [Pattern, Pattern],
-  variant: (typeof VARIANTS)[number],
-  input: StrengthSessionInput,
-  used: Set<string>,
-): Chosen[] | null {
+function choosePair(pair: [Pattern, Pattern], variant: Variant, input: StrengthSessionInput, used: Set<string>): Chosen[] | null {
   const chosen: Chosen[] = [];
   for (const pattern of pair) {
     const ex = pickExercise(input.pool, pattern, input.level, input.strengthIndex, variant.offsets[pattern] ?? 0, used, bodyweightBoost(input));
     if (!ex) continue;
     used.add(ex.id);
-    chosen.push({ exercise: ex, repRange: repRangeFor(ex, input.level) });
+    chosen.push({ exercise: ex, repRange: repRangeFor(ex, input.level), slot: `${variant.key}.${pattern}` });
   }
   return chosen.length > 0 ? chosen : null;
 }
@@ -112,7 +109,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const budget = input.profile.minutesPerSession;
   const variant = VARIANTS[input.strengthIndex % VARIANTS.length]!;
   const used = new Set<string>();
-  const restSec = restSecondsForBudget(budget);
+  const restSec = input.restSec ?? restSecondsForBudget(budget);
 
   const warmupMin = warmupMinutes(budget);
   const finisherMin = finisherMinutes(budget);
@@ -138,7 +135,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     supersets.push({
       label: String.fromCharCode("A".charCodeAt(0) + supersets.length),
       rounds,
-      items: chosen.map((c) => prescribe(c, input, rounds)),
+      items: chosen.map((c) => prescribe(c, input, rounds, input.benchmark)),
       transitionSec: TRANSITION_SEC,
       restSec,
       estimatedSec: secs,
@@ -185,7 +182,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     if (core) {
       const repRange = repRangeFor(core, input.level);
       const sets = Math.max(1, Math.min(3, Math.floor((finisherMin * 60) / (setSeconds(core, repRange) + 30))));
-      finisher = prescribe({ exercise: core, repRange }, { ...input, benchmark: false }, sets);
+      finisher = prescribe({ exercise: core, repRange, slot: `${variant.key}.core` }, input, sets, false);
     }
   }
 
@@ -194,9 +191,11 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
 
   return {
     id: `w${input.week}d${input.dayIndex + 1}`,
+    index: input.index,
     week: input.week,
     dayIndex: input.dayIndex,
     kind: "strength",
+    variant: variant.key,
     name: variant.name,
     budgetMinutes: budget,
     estimatedMinutes,
@@ -205,5 +204,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     supersets,
     finisher,
     cardio: null,
+    deload: false,
+    comeback: false,
   };
 }

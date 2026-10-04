@@ -15,6 +15,7 @@ export const STARTING_LOAD_RATIO: Record<string, Record<Sex, number>> = {
   db_staggered_rdl: { male: 0.15, female: 0.12 },
   db_single_leg_rdl: { male: 0.12, female: 0.1 },
   db_glute_bridge: { male: 0.25, female: 0.2 },
+  db_hip_thrust: { male: 0.3, female: 0.25 },
   db_floor_press: { male: 0.15, female: 0.1 },
   db_bench_press: { male: 0.17, female: 0.11 },
   db_overhead_press: { male: 0.1, female: 0.07 },
@@ -121,11 +122,26 @@ export const EXERCISES: Exercise[] = [
     unilateral: true, repTimeSec: 2.5, avoidWith: [], bodyweightFraction: 0.45,
   },
   {
+    id: "single_leg_hip_thrust", name: "Single-leg hip thrust", pattern: "hinge",
+    primary: ["glutes", "hamstrings"], secondary: ["core"],
+    requires: [["bench"]], loadType: "bodyweight", ladder: "hinge_bw", ladderLevel: 3,
+    unilateral: true, repTimeSec: 2.5, avoidWith: [], bodyweightFraction: 0.55,
+    cue: "Upper back against a couch or sturdy chair, one foot planted, drive the hips up.",
+  },
+  // ---------------- Hinge: loaded bridge ladder (kind to backs) ----------------
+  {
     id: "db_glute_bridge", name: "Dumbbell glute bridge", pattern: "hinge",
     primary: ["glutes", "hamstrings"], secondary: ["core"],
-    requires: DB, loadType: "single_dumbbell", ladder: "hinge_bw", ladderLevel: 3,
+    requires: DB, loadType: "single_dumbbell", ladder: "bridge_db", ladderLevel: 1,
     unilateral: false, repTimeSec: 2.5, avoidWith: [],
     cue: "Dumbbell across your hips, drive through your heels, squeeze at the top.",
+  },
+  {
+    id: "db_hip_thrust", name: "Dumbbell hip thrust", pattern: "hinge",
+    primary: ["glutes", "hamstrings"], secondary: ["core"],
+    requires: DB_BENCH, loadType: "single_dumbbell", ladder: "bridge_db", ladderLevel: 2,
+    unilateral: false, repTimeSec: 2.5, avoidWith: [],
+    cue: "Upper back on the bench or couch edge, dumbbell across your hips, chin tucked.",
   },
   // ---------------- Horizontal push: bodyweight ladder ----------------
   {

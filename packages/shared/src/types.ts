@@ -100,6 +100,8 @@ export type Rir = 0 | 1 | 2 | 3 | 4;
 
 export interface SetLog {
   exerciseId: string;
+  /** Position in the session plan, e.g. "A.squat". */
+  slot?: string;
   setIndex: number;
   /** kg; null for bodyweight/time exercises. */
   loadKg: number | null;

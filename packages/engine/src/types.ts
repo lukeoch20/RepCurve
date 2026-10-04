@@ -3,6 +3,8 @@ import type { Equipment, Exercise, LoadType, Muscle, Pattern, Profile, Rir, Trai
 export type SessionKind = "strength" | "cardio";
 
 export interface Prescription {
+  /** Stable position in the session, e.g. "A.squat" or "B.core". */
+  slot: string;
   exerciseId: string;
   name: string;
   pattern: Pattern;
@@ -12,6 +14,8 @@ export interface Prescription {
   sets: number;
   /** Reps, or seconds for time-based exercises. */
   repRange: [number, number];
+  /** What each set is pre-filled with: reps, or seconds for time-based exercises. */
+  targetReps: number;
   /** kg per dumbbell; null for bodyweight, band and time exercises. */
   loadKg: number | null;
   loadDisplay: string;
@@ -25,7 +29,7 @@ export interface Superset {
   label: string;
   rounds: number;
   items: Prescription[];
-  /** Seconds between the two exercises within a round. */
+  /** Seconds between the exercises within a round. */
   transitionSec: number;
   /** Seconds after each round. */
   restSec: number;
@@ -56,10 +60,14 @@ export interface CardioPlan {
 
 export interface SessionPlan {
   id: string;
+  /** 0-based position in the open-ended sequence of sessions. */
+  index: number;
   week: number;
   /** 0-based index within the week. */
   dayIndex: number;
   kind: SessionKind;
+  /** Strength variant key ("A", "B", "C") or "cardio". */
+  variant: string;
   name: string;
   budgetMinutes: number;
   estimatedMinutes: number;
@@ -68,6 +76,9 @@ export interface SessionPlan {
   supersets: Superset[];
   finisher: Prescription | null;
   cardio: CardioPlan | null;
+  /** Lighter session: part of a deload, or the first session back after a break. */
+  deload: boolean;
+  comeback: boolean;
 }
 
 export interface Program {
@@ -86,6 +97,8 @@ export interface GenerateOptions {
   weeks?: number;
   /** Known e1RM per exercise id (kg per dumbbell), e.g. from a benchmark. */
   e1rmByExercise?: Record<string, number>;
+  /** Rest after each superset round, seconds. Defaults by time budget. */
+  restSec?: number;
   createdAt?: string;
 }
 
