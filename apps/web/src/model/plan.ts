@@ -1,10 +1,12 @@
 import {
   applyState,
+  generateProgram,
   initialTrainingState,
   makeContext,
   planSessionWith,
   weekAndDay,
   type EngineContext,
+  type Program,
   type SessionPlan,
 } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
@@ -41,13 +43,44 @@ export function daysSinceLastStrength(history: SessionRecord[], now: number): nu
   return undefined;
 }
 
+/** Position in the programme (which week and day) of the session with this count. */
+export function positionOf(core: Pick<Core, "positionOffset">, index: number): number {
+  return index + (core.positionOffset ?? 0);
+}
+
+/**
+ * Keep the user in the same week when days per week change: the next session becomes the
+ * same day of the current week in the new schedule (or its last day).
+ */
+export function rescheduled(core: Core, profile: Profile, equipment: Equipment): Core {
+  const before = contextFor(core).template.length;
+  const after = contextFor({ profile, equipment }).template.length;
+  const next = { ...core, profile, equipment };
+  if (before === after) return next;
+  const position = positionOf(core, core.nextIndex);
+  const week = Math.floor(position / before);
+  const day = Math.min(position % before, after - 1);
+  return { ...next, positionOffset: week * after + day - core.nextIndex };
+}
+
 export function planFor(core: Core, index: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
-  return planSessionWith(ctx, index, {
+  return planSessionWith(ctx, positionOf(core, index), {
     restSec: core.settings.restSec,
     transitionSec: core.settings.transitionSec,
     ...(minutes ? { minutes } : {}),
   });
+}
+
+/**
+ * The programme as the user gets it now: their rest and switch settings, and weekly volume
+ * from the sessions personalised with their training state (outside any deload).
+ */
+export function currentProgram(core: Core): Program {
+  return generateProgram(
+    { profile: core.profile, equipment: core.equipment },
+    { weeks: 2, restSec: core.settings.restSec, transitionSec: core.settings.transitionSec, state: core.state, createdAt: "current" },
+  );
 }
 
 /** The next session, personalised from the training state. */
@@ -67,13 +100,15 @@ export interface WeekSlot {
 /** The sessions of the week the next session belongs to. */
 export function weekSlots(core: Core, history: SessionRecord[]): { week: number; slots: WeekSlot[] } {
   const ctx = contextFor(core);
-  const { week } = weekAndDay(ctx, core.nextIndex);
+  const position = positionOf(core, core.nextIndex);
+  const { week } = weekAndDay(ctx, position);
   const days = ctx.template.length;
-  const first = (week - 1) * days;
+  // Session counts for the days of this week; earlier days map to the sessions just before the next one.
+  const first = core.nextIndex - (position - (week - 1) * days);
   const byIndex = new Map(history.map((r) => [r.index, r]));
   const slots: WeekSlot[] = [];
   for (let i = first; i < first + days; i++) {
-    const done = byIndex.get(i);
+    const done = i >= 0 ? byIndex.get(i) : undefined;
     const plan = done?.plan ?? planFor(core, i);
     slots.push({
       index: i,

@@ -12,8 +12,8 @@ import {
   type ProgressionAction,
   type ProgressionResult,
 } from "./progression.js";
-import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps } from "./prescribe.js";
-import { finisherMinutes, supersetSeconds } from "./timing.js";
+import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
+import { finisherSeconds, supersetSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
 
 /** Everything that carries over from one session to the next. Plain JSON, safe to persist. */
@@ -88,7 +88,10 @@ export function prescriptionFor(
   fallback?: Prescription,
 ): Prescription {
   const progress = state.exercises[exercise.id];
-  const repRange = progress?.repRange ?? fallback?.repRange ?? repRangeFor(exercise, ctx.level);
+  const stored = progress?.repRange ?? fallback?.repRange ?? repRangeFor(exercise, ctx.level);
+  // Ranges saved before a cap existed (e.g. 30 reps per side) are brought back inside it.
+  const cap = maxRepsFor(exercise);
+  const repRange: [number, number] = [Math.min(stored[0], cap), Math.min(stored[1], cap)];
   let loadKg: number | null = null;
   if (isLoaded(exercise) && ctx.ownedLoadsKg.length > 0) {
     const remembered = progress?.loadKg ?? fallback?.loadKg ?? null;
@@ -137,28 +140,82 @@ function lighter(p: Prescription, ctx: EngineContext): Prescription {
  * the last superset first (not below two), then the finisher, then whole
  * supersets. Needed when swaps or ladder moves bring in slower exercises.
  */
+/** Sessions may run this far over budget before anything is cut. */
+export const BUDGET_TOLERANCE = 0.05;
+/** A whole pattern pair is only dropped to save at least this much. */
+const MIN_PAIR_SAVING_SEC = 60;
+
+/**
+ * Re-time a personalised session and fit it to its budget. Sets are timed from the
+ * reps the user will actually do. When over budget (beyond a small tolerance) the
+ * smallest cut that helps goes first: one round of a superset above two rounds,
+ * then a finisher set, then rounds down to one, and a whole pair only when that
+ * saves at least a minute. Anything cut that fits again afterwards is put back.
+ */
 export function fitToBudget(session: SessionPlan): SessionPlan {
   if (session.kind !== "strength") return session;
-  const supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
-  let finisher = session.finisher;
-  const finisherMin = finisherMinutes(session.budgetMinutes);
-  const secsFor = (ss: Superset) =>
-    supersetSeconds(ss.items.map((p) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange })), ss.rounds, ss.transitionSec, ss.restSec);
-  const total = () => session.warmupMinutes + supersets.reduce((s, ss) => s + secsFor(ss), 0) / 60 + (finisher ? finisherMin : 0);
+  const planned = session.supersets.map((ss) => ss.rounds);
+  let supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
+  const plannedFinisher = session.finisher;
+  let finisher = plannedFinisher ? { ...plannedFinisher } : null;
+
+  const timedItem = (p: Prescription) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps });
+  const secsFor = (ss: Superset, rounds = ss.rounds) => supersetSeconds(ss.items.map(timedItem), rounds, ss.transitionSec, ss.restSec);
+  const finisherSecs = (f: Prescription | null) => (f ? finisherSeconds(getExercise(f.exerciseId), f.repRange, f.sets, f.targetReps) : 0);
+  const totalSec = () => session.warmupMinutes * 60 + supersets.reduce((s, ss) => s + secsFor(ss), 0) + finisherSecs(finisher);
+  const budgetSec = session.budgetMinutes * 60;
+  const limitSec = budgetSec * (1 + BUDGET_TOLERANCE);
   const setRounds = (ss: Superset, rounds: number) => {
     ss.rounds = rounds;
     for (const p of ss.items) p.sets = rounds;
   };
-  while (total() > session.budgetMinutes + 1e-9) {
-    const reducible = [...supersets].reverse().find((ss) => ss.rounds > 2);
-    if (reducible) setRounds(reducible, reducible.rounds - 1);
+  /** Of the supersets that can lose a round, the cheapest round that clears the overage, else the most expensive. */
+  const roundToCut = (minRounds: number): Superset | undefined => {
+    const over = totalSec() - limitSec;
+    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => secsFor(a, 1) - secsFor(b, 1));
+    return options.find((ss) => secsFor(ss, 1) >= over) ?? options[options.length - 1];
+  };
+
+  while (totalSec() > limitSec + 1e-9) {
+    const over = totalSec() - budgetSec;
+    const aboveTwo = roundToCut(2);
+    if (aboveTwo) setRounds(aboveTwo, aboveTwo.rounds - 1);
+    else if (finisher && finisher.sets > 1) finisher = { ...finisher, sets: finisher.sets - 1 };
     else if (finisher) finisher = null;
-    else if (supersets.length > 1) supersets.pop();
-    else if (supersets[0] && supersets[0].rounds > 1) setRounds(supersets[0], supersets[0].rounds - 1);
+    else if (roundToCut(1)) {
+      const ss = roundToCut(1)!;
+      setRounds(ss, ss.rounds - 1);
+    } else if (supersets.length > 1 && over >= MIN_PAIR_SAVING_SEC) supersets = supersets.slice(0, -1);
     else break;
   }
+
+  // Put back what fits within the budget itself: rounds first (cheapest first, up to the
+  // session's largest planned superset), then the finisher.
+  const roundCap = Math.max(0, ...planned);
+  let restored = true;
+  while (restored) {
+    restored = false;
+    const candidates = supersets
+      .map((ss) => ({ ss, planned: roundCap }))
+      .filter((c) => c.ss.rounds < c.planned)
+      .sort((a, b) => secsFor(a.ss, 1) - secsFor(b.ss, 1));
+    for (const c of candidates) {
+      if (totalSec() + secsFor(c.ss, 1) <= budgetSec) {
+        setRounds(c.ss, c.ss.rounds + 1);
+        restored = true;
+        break;
+      }
+    }
+    if (restored || !plannedFinisher) continue;
+    const next = finisher ? (finisher.sets < plannedFinisher.sets ? { ...finisher, sets: finisher.sets + 1 } : null) : { ...plannedFinisher, sets: 1 };
+    if (next && totalSec() - finisherSecs(finisher) + finisherSecs(next) <= budgetSec) {
+      finisher = next;
+      restored = true;
+    }
+  }
+
   for (const ss of supersets) ss.estimatedSec = secsFor(ss);
-  return { ...session, supersets, finisher, estimatedMinutes: Math.round(total() * 10) / 10 };
+  return { ...session, supersets, finisher, estimatedMinutes: Math.round((totalSec() / 60) * 10) / 10 };
 }
 
 export interface ApplyOptions {

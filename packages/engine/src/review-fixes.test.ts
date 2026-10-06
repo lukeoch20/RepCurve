@@ -4,7 +4,7 @@ import { lbToKg } from "@repcurve/shared";
 import type { Profile, Rir, SetLog } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { makeContext } from "./context.js";
-import { planSessionWith } from "./generate.js";
+import { generateProgram, missingPatterns, planSessionWith } from "./generate.js";
 import { freshProgress, progressExercise } from "./progression.js";
 import {
   applyState,
@@ -135,3 +135,104 @@ describe("RC-33: substitutions never chain", () => {
 });
 
 void onTarget;
+
+describe("RC-01: fitting keeps volume while the lifter progresses", () => {
+  it("times sets from the target reps and tolerates a small overrun instead of dropping a pair", () => {
+    const ctx = referenceContext({ profile: { daysPerWeek: 5, goal: "fitness" }, equipment: { ...referenceEquipment, dumbbells: { kind: "fixed", weights: [8, 12, 20], unit: "lb", pairs: true } } });
+    const plan = planSessionWith(ctx, 5);
+    const pairs = plan.supersets.length;
+    // A strong lifter on the hardest one-sided variants of every movement.
+    let state = initialTrainingState();
+    for (const [from, to] of [["goblet_squat", "db_reverse_lunge"], ["db_rdl", "db_single_leg_rdl"], ["db_bent_over_row", "db_renegade_row"]] as const) {
+      state = preferExercise(state, from, to);
+    }
+    const applied = applyState(plan, state, ctx);
+    expect(applied.supersets.length).toBe(pairs);
+    expect(applied.estimatedMinutes).toBeLessThanOrEqual(applied.budgetMinutes * 1.05);
+  });
+
+  it("puts rounds and the finisher back when time frees up", () => {
+    const ctx = referenceContext();
+    const plan = planSessionWith(ctx, 4);
+    const applied = applyState(plan, initialTrainingState(), ctx);
+    const planned = plan.supersets.reduce((n, ss) => n + ss.rounds, 0);
+    const got = applied.supersets.reduce((n, ss) => n + ss.rounds, 0);
+    expect(got).toBeGreaterThanOrEqual(planned);
+    expect(applied.finisher).not.toBeNull();
+  });
+});
+
+describe("RC-23: core finisher", () => {
+  it("plans two sets where they fit in the reserved time", () => {
+    const sessions = [0, 1, 2, 3].map((i) => planSessionWith(referenceContext(), i)).filter((s) => s.finisher);
+    expect(sessions.length).toBeGreaterThan(0);
+    for (const s of sessions) {
+      if (["dead_bug", "plank", "hollow_hold", "hanging_knee_raise"].includes(s.finisher!.exerciseId)) expect(s.finisher!.sets, s.id).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe("RC-25: pairs and coverage", () => {
+  it("pairs a lone exercise with another movement instead of a one-exercise superset", () => {
+    // Bodyweight only with a wrist injury: no pushing exercise exists at all.
+    const ctx = makeContext(
+      { ...referenceProfile, injuries: ["wrist"], daysPerWeek: 2, minutesPerSession: 15 },
+      { ...referenceEquipment, dumbbells: { kind: "none" }, abRoller: false, treadmill: false },
+    );
+    for (let i = 0; i < 2; i++) {
+      const s = planSessionWith(ctx, i);
+      expect(s.supersets[0]!.items.length, s.id).toBe(2);
+      expect(s.supersets[0]!.items.some((p) => p.slot.endsWith(".alt")), s.id).toBe(true);
+    }
+    const program = generateProgram({ profile: ctx.profile, equipment: ctx.equipment });
+    expect(program.explanation.join(" ")).toMatch(/no push-up or press/);
+  });
+
+  it("never pairs two exercises that share a prime mover", () => {
+    const ctx = referenceContext({ equipment: { ...referenceEquipment, dumbbells: { kind: "fixed", weights: [10, 15, 20], unit: "lb", pairs: false } } });
+    for (let i = 0; i < 12; i++) {
+      const s = planSessionWith(ctx, i);
+      for (const ss of s.supersets) {
+        const [a, b] = ss.items.map((p) => getExercise(p.exerciseId));
+        if (a && b) expect(a.primary.some((m) => b.primary.includes(m)), `${s.id} ${a.id}+${b.id}`).toBe(false);
+      }
+    }
+  });
+
+  it("says when the week misses a movement pattern", () => {
+    const program = generateProgram({ profile: { ...referenceProfile, daysPerWeek: 2, minutesPerSession: 10 }, equipment: referenceEquipment });
+    const missing = missingPatterns(program.sessions.filter((s) => s.week === 2));
+    if (missing.length > 0) expect(program.explanation.join(" ")).toMatch(/Your week has no/);
+  });
+});
+
+describe("RC-26: explanation text", () => {
+  it("explains the benchmark week to regular lifters too", () => {
+    const program = generateProgram({ profile: { ...referenceProfile, trainingHistory: "regular" }, equipment: referenceEquipment });
+    expect(program.explanation.join(" ")).toMatch(/benchmark week/);
+  });
+
+  it("describes a large volume gap with the numbers", () => {
+    const program = generateProgram({ profile: { ...referenceProfile, daysPerWeek: 2, minutesPerSession: 15 }, equipment: { ...referenceEquipment, dumbbells: { kind: "none" } } });
+    expect(program.explanation.join(" ")).toMatch(/well under \(.*\d/);
+  });
+});
+
+describe("RC-31: switch time reaches the program", () => {
+  it("passes transitionSec through generateProgram", () => {
+    const quick = generateProgram({ profile: referenceProfile, equipment: referenceEquipment }, { transitionSec: 10 });
+    const slow = generateProgram({ profile: referenceProfile, equipment: referenceEquipment }, { transitionSec: 45 });
+    expect(slow.sessions[4]!.supersets[0]!.transitionSec).toBe(45);
+    expect(quick.sessions[4]!.supersets[0]!.transitionSec).toBe(10);
+  });
+});
+
+describe("RC-32: a strength session always has exercises", () => {
+  it("places one pair even when long rests leave no room, and says why", () => {
+    const ctx = referenceContext({ profile: { minutesPerSession: 10 } });
+    const s = planSessionWith(ctx, 4, { restSec: 180, transitionSec: 45 });
+    expect(s.supersets.length).toBeGreaterThanOrEqual(1);
+    expect(s.supersets[0]!.items.length).toBe(2);
+    expect(s.notes?.join(" ")).toMatch(/Shorter rests/);
+  });
+});

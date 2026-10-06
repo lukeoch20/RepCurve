@@ -69,9 +69,11 @@ export function pickExercise(
   exclude: Set<string>,
   /** Extra rungs up bodyweight ladders for people with some training history. */
   bodyweightBoost = 0,
+  /** Extra filter, e.g. "shares no prime mover with its superset partner". */
+  accept: (e: Exercise) => boolean = () => true,
 ): Exercise | null {
   for (const ladder of ladderPreference(pattern, variant)) {
-    const candidates = (pool.byLadder.get(ladder) ?? []).filter((e) => !exclude.has(e.id));
+    const candidates = (pool.byLadder.get(ladder) ?? []).filter((e) => !exclude.has(e.id) && accept(e));
     if (candidates.length === 0) continue;
     const boost = candidates.every((e) => e.loadType === "bodyweight" || e.loadType === "time") ? bodyweightBoost : 0;
     const target = Math.max(1, baseLadderLevel(level) + levelOffset + boost);
@@ -80,5 +82,5 @@ export function pickExercise(
     return best ?? candidates[0]!;
   }
   // Last resort: any exercise of the pattern.
-  return pool.exercises.find((e) => e.pattern === pattern && !exclude.has(e.id)) ?? null;
+  return pool.exercises.find((e) => e.pattern === pattern && !exclude.has(e.id) && accept(e)) ?? null;
 }

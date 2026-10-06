@@ -26,6 +26,11 @@ export interface Core {
   startedAt: string;
   /** Position of the next session in the sequence. */
   nextIndex: number;
+  /**
+   * Programme position minus session count. Changes when days per week change, so the
+   * user stays in the same week of the programme. Missing means 0.
+   */
+  positionOffset?: number;
 }
 
 export interface LoggedSet extends SetLog {

@@ -39,6 +39,9 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {plan.comeback ? (
         <div className="banner info"><b>Welcome back</b>It's been a couple of weeks, so today eases you back in.</div>
       ) : null}
+      {plan.notes?.map((n) => (
+        <div key={n} className="banner info"><b>Short on room</b>{n}</div>
+      ))}
       {benchmarks ? (
         <div className="banner info"><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
       ) : null}

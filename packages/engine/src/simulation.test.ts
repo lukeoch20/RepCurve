@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { makeContext } from "./context.js";
 import { loadFixtures } from "./fixtures.js";
 import { simulateTraining } from "./simulate.js";
+import { BUDGET_TOLERANCE } from "./state.js";
+import { hardSets } from "./volume.js";
 
 describe.each(loadFixtures())("16 simulated weeks: $name", (fx) => {
   const ctx = makeContext(fx.profile, fx.equipment);
@@ -24,7 +26,7 @@ describe.each(loadFixtures())("16 simulated weeks: $name", (fx) => {
   });
 
   it("fits every session in its time budget", () => {
-    for (const s of sessions) expect(s.estimatedMinutes, s.id).toBeLessThanOrEqual(s.budgetMinutes + 0.01);
+    for (const s of sessions) expect(s.estimatedMinutes, s.id).toBeLessThanOrEqual(s.budgetMinutes * (1 + BUDGET_TOLERANCE) + 0.05);
   });
 
   it("progresses a steadily improving lifter without bouncing back down", () => {
@@ -38,6 +40,25 @@ describe.each(loadFixtures())("16 simulated weeks: $name", (fx) => {
     for (const s of sessions) {
       const ids = [...s.supersets.flatMap((ss) => ss.items.map((p) => p.exerciseId)), ...(s.finisher ? [s.finisher.exerciseId] : [])];
       expect(new Set(ids).size, s.id).toBe(ids.length);
+    }
+  });
+
+  it("keeps weekly hard sets and movement patterns while the lifter improves", () => {
+    const weeks = new Map<number, { sets: number; patterns: Set<string> }>();
+    for (const s of sessions) {
+      if (s.kind !== "strength" || s.deload || s.comeback) continue;
+      const w = weeks.get(s.week) ?? { sets: 0, patterns: new Set<string>() };
+      w.sets += hardSets(s);
+      for (const ss of s.supersets) for (const p of ss.items) w.patterns.add(p.pattern);
+      weeks.set(s.week, w);
+    }
+    // Harder one-sided variants take twice as long per set, which costs some sets in a fixed
+    // budget; the fitter must absorb that without dropping pairs or a third of the volume.
+    const base = weeks.get(2)!;
+    for (const [week, w] of weeks) {
+      if (week < 2) continue;
+      expect(w.sets, `week ${week}`).toBeGreaterThanOrEqual(Math.floor(base.sets * 0.65));
+      expect(w.patterns.size, `week ${week}`).toBeGreaterThanOrEqual(base.patterns.size);
     }
   });
 

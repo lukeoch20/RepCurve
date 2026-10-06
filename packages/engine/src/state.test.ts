@@ -3,6 +3,7 @@ import type { Rir } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { planSessionWith } from "./generate.js";
 import {
+  BUDGET_TOLERANCE,
   alternativesFor,
   applyState,
   initialTrainingState,
@@ -168,7 +169,7 @@ describe("swaps", () => {
     for (const idx of [4, 7]) {
       const s = applyState(planSessionWith(ctx, idx), state, ctx);
       expect(prescriptionsOf(s).map((p) => p.exerciseId)).toContain("db_reverse_lunge");
-      expect(s.estimatedMinutes).toBeLessThanOrEqual(s.budgetMinutes);
+      expect(s.estimatedMinutes).toBeLessThanOrEqual(s.budgetMinutes * (1 + BUDGET_TOLERANCE));
     }
   });
 });

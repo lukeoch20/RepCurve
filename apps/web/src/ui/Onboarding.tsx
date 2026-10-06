@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { generateProgram } from "@repcurve/engine";
 import { kgToLb, lbToKg } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Seg, Toggle } from "./common";
 import { Lineup } from "./Lineup";
-import { previewProjection } from "../model/projection";
+import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
 
 const LB_WEIGHTS = [3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
@@ -434,7 +433,7 @@ function Welcome(): React.ReactElement {
 }
 
 function Review(props: { profile: Profile; equipment: Equipment }): React.ReactElement {
-  const program = useMemo(() => generateProgram({ profile: props.profile, equipment: props.equipment }, { weeks: 2, createdAt: "preview" }), [props.profile, props.equipment]);
+  const program = useMemo(() => previewProgram(props.profile, props.equipment), [props.profile, props.equipment]);
   const first = program.sessions.find((s) => s.kind === "strength");
   const projection = useMemo(() => previewProjection(props.profile, props.equipment), [props.profile, props.equipment]);
   return (

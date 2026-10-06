@@ -48,20 +48,34 @@ describe("progression: loaded exercises", () => {
   });
 
   it("builds reps when the jump is too big and there is no harder variant", () => {
-    const p = progress("single_arm_db_overhead_press", { loadKg: lb(25), repRange: [8, 15], targetReps: 15 });
-    const r = progressExercise(p, sets("single_arm_db_overhead_press", lb(25), [15, 15, 15], 2), ctx);
+    const p = progress("db_floor_press", { loadKg: lb(25), repRange: [8, 15], targetReps: 15 });
+    const r = progressExercise(p, sets("db_floor_press", lb(25), [15, 15, 15], 2), ctx);
     expect(r.action).toBe("widen_range");
     expect(r.next.repRange).toEqual([8, 18]);
     expect(r.next.targetReps).toBe(16);
   });
 
   it("says so when the user has outgrown their equipment", () => {
-    const p = progress("single_arm_db_overhead_press", { loadKg: lb(30), repRange: [8, 30], targetReps: 30 });
-    const r = progressExercise(p, sets("single_arm_db_overhead_press", lb(30), [30, 30, 30], 2), ctx);
+    const p = progress("db_floor_press", { loadKg: lb(30), repRange: [8, 30], targetReps: 30 });
+    const r = progressExercise(p, sets("db_floor_press", lb(30), [30, 30, 30], 2), ctx);
     expect(r.action).toBe("maxed_out");
     expect(r.reason).toMatch(/heavier dumbbells/);
-    const again = progressExercise(r.next, sets("single_arm_db_overhead_press", lb(30), [30, 30, 30], 2), ctx);
+    const again = progressExercise(r.next, sets("db_floor_press", lb(30), [30, 30, 30], 2), ctx);
     expect(again.action).toBe("hold");
+  });
+
+  it("keeps one-sided exercises at 12 reps per side and moves on to tempo", () => {
+    const p = progress("single_arm_db_overhead_press", { loadKg: lb(30), repRange: [6, 12], targetReps: 12 });
+    const r = progressExercise(p, sets("single_arm_db_overhead_press", lb(30), [12, 12, 12], 2), ctx);
+    expect(r.action).toBe("maxed_out");
+    expect(r.next.repRange).toEqual([6, 12]);
+  });
+
+  it("brings a range saved above the cap back inside it", () => {
+    const p = progress("single_arm_db_overhead_press", { loadKg: lb(30), repRange: [8, 30], targetReps: 28 });
+    const r = progressExercise(p, sets("single_arm_db_overhead_press", lb(30), [12, 12, 12], 2), ctx);
+    expect(r.next.repRange).toEqual([8, 12]);
+    expect(r.action).toBe("maxed_out");
   });
 
   it("notes one tough session, then drops a dumbbell after the second", () => {
