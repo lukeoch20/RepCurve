@@ -163,7 +163,11 @@ export function progressExercise(progress: ExerciseProgress, logs: SetLog[], ctx
   const e = getExercise(progress.exerciseId);
   const units = ctx.profile.units;
   const workingLoad = isLoaded(e) ? (all[all.length - 1]!.loadKg ?? progress.loadKg) : null;
-  const sets = isLoaded(e) ? all.filter((s) => s.loadKg === workingLoad) : all;
+  const atWorking = isLoaded(e) ? all.filter((s) => s.loadKg === workingLoad) : all;
+  // Imported or hand-edited logs may have no set at the working load; judge them all then.
+  const sets = atWorking.length > 0 ? atWorking : all;
+  // After a mid-session weight change the old rep target belonged to the old weight.
+  const loadChanged = isLoaded(e) && workingLoad !== null && progress.loadKg !== null && Math.abs(workingLoad - progress.loadKg) > 1e-6;
   const [lo, hi] = progress.repRange;
   const rirT = progress.targetRir;
   const avgRir = sets.reduce((s, x) => s + x.rir, 0) / sets.length;
@@ -251,7 +255,7 @@ export function progressExercise(progress: ExerciseProgress, logs: SetLog[], ctx
 
   // One more rep, plus any reps the user said they had left beyond the target.
   const reserve = Math.max(0, Math.floor(avgRir - rirT));
-  const target = clamp(Math.max(progress.targetReps, minReps + 1 + reserve), lo, hi);
+  const target = clamp(Math.max(loadChanged ? 0 : progress.targetReps, minReps + 1 + reserve), lo, hi);
   return same({ stalls: 0, targetReps: target }, "add_rep",
     e.loadType === "time" ? "Same hold next time; add a few seconds if you can." : "Same weight next time; aim for one more rep.");
 }

@@ -1,0 +1,13 @@
+{
+  "name": "No pull-up bar, 3 × 30 min, dumbbells 10-40 lb, no treadmill",
+  "profile": {
+    "sex": "male", "age": 33, "heightCm": 178, "bodyweightKg": 84,
+    "trainingHistory": "a_little", "goal": "strength_muscle",
+    "daysPerWeek": 3, "minutesPerSession": 30,
+    "injuries": [], "units": "lb"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "fixed", "weights": [10, 15, 20, 25, 30, 35, 40], "unit": "lb", "pairs": true },
+    "treadmill": false, "mat": true, "abRoller": true, "pullupBar": false, "bench": false, "bands": []
+  }
+}

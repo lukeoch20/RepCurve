@@ -34,6 +34,13 @@ describe.each(loadFixtures())("16 simulated weeks: $name", (fx) => {
     expect(downs).toBeLessThanOrEqual(Math.ceil(acted.length * 0.1));
   });
 
+  it("never puts the same exercise in two slots of one session", () => {
+    for (const s of sessions) {
+      const ids = [...s.supersets.flatMap((ss) => ss.items.map((p) => p.exerciseId)), ...(s.finisher ? [s.finisher.exerciseId] : [])];
+      expect(new Set(ids).size, s.id).toBe(ids.length);
+    }
+  });
+
   it("never substitutes an exercise for itself", () => {
     for (const [from, to] of Object.entries(state.substitutions)) expect(to).not.toBe(from);
   });

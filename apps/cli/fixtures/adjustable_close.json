@@ -1,0 +1,13 @@
+{
+  "name": "Adjustable dumbbells in 2.5 lb steps, 4 × 20 min",
+  "profile": {
+    "sex": "female", "age": 41, "heightCm": 168, "bodyweightKg": 66,
+    "trainingHistory": "never", "goal": "both",
+    "daysPerWeek": 4, "minutesPerSession": 20,
+    "injuries": [], "units": "lb"
+  },
+  "equipment": {
+    "dumbbells": { "kind": "adjustable", "min": 5, "max": 50, "step": 2.5, "unit": "lb", "pairs": true },
+    "treadmill": true, "mat": true, "abRoller": false, "pullupBar": false, "bench": true, "bands": []
+  }
+}

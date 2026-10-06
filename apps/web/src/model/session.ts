@@ -93,6 +93,7 @@ export interface SetValues {
   loadKg: number | null;
   reps: number;
   rir: Rir;
+  /** true flags pain, false clears it, undefined keeps what an edited set had. */
   painFlag?: boolean;
 }
 
@@ -149,8 +150,9 @@ export function editSet(active: ActiveSession, slot: string, setIndex: number, v
   const existing = loggedSet(active, slot, setIndex);
   if (!existing) return active;
   const updated: LoggedSet = { ...existing, loadKg: existing.loadKg === null ? null : v.loadKg, reps: Math.max(0, Math.round(v.reps)), rir: v.rir };
-  if (v.painFlag) updated.painFlag = true;
-  else delete updated.painFlag;
+  // A pain report stays unless the user explicitly clears it.
+  if (v.painFlag === true) updated.painFlag = true;
+  else if (v.painFlag === false) delete updated.painFlag;
   const sets = active.sets.map((s) => (s === existing ? updated : s));
   return { ...active, sets, ...coach(active, slot, sets, core) };
 }

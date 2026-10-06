@@ -6,6 +6,7 @@ import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
 import {
   calibrate,
   freshProgress,
+  ladderNeighbour,
   progressExercise,
   type ExerciseProgress,
   type ProgressionAction,
@@ -46,13 +47,18 @@ function cloneState(s: TrainingState): TrainingState {
   return JSON.parse(JSON.stringify(s)) as TrainingState;
 }
 
-/** Every programmed exercise currently resolving to `fromId` resolves to `toId` from now on. */
+/**
+ * Every programmed exercise currently resolving to `fromId` resolves to `toId` from now on.
+ * The target is resolved first, so substitutions never chain.
+ */
 function redirect(state: TrainingState, fromId: string, toId: string): void {
+  const resolved = resolveExercise(state, toId);
+  const target = resolved === fromId ? toId : resolved;
   const programmed = new Set<string>([fromId, ...Object.keys(state.substitutions)]);
   const moving = [...programmed].filter((x) => resolveExercise(state, x) === fromId);
   for (const x of moving) {
-    if (x === toId) delete state.substitutions[x];
-    else state.substitutions[x] = toId;
+    if (x === target) delete state.substitutions[x];
+    else state.substitutions[x] = target;
   }
 }
 
@@ -171,10 +177,23 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
   const easier = deload || comeback;
   const inPool = new Set(ctx.pool.exercises.map((e) => e.id));
   const used = new Set<string>();
+  const usable = (id: string) => inPool.has(id) && !used.has(id);
 
-  const remap = (p: Prescription, sets: number): Prescription => {
-    let id = resolveExercise(state, p.exerciseId);
-    if (!inPool.has(id) || used.has(id)) id = p.exerciseId;
+  /** The exercise for a slot: its substitute, else what was programmed, else another exercise of the same movement. */
+  const pick = (p: Prescription): string | null => {
+    const resolved = resolveExercise(state, p.exerciseId);
+    if (usable(resolved)) return resolved;
+    if (usable(p.exerciseId)) return p.exerciseId;
+    const pattern = getExercise(p.exerciseId).pattern;
+    const alternatives = ctx.pool.exercises
+      .filter((e) => e.pattern === pattern && !used.has(e.id))
+      .sort((a, b) => Number(!!state.exercises[b.id]) - Number(!!state.exercises[a.id]) || a.ladderLevel - b.ladderLevel);
+    return alternatives[0]?.id ?? null;
+  };
+
+  const remap = (p: Prescription, sets: number): Prescription | null => {
+    const id = pick(p);
+    if (!id) return null;
     used.add(id);
     const exercise = getExercise(id);
     let np = prescriptionFor(exercise, p.slot, sets, state, ctx, id === p.exerciseId ? p : undefined);
@@ -183,10 +202,12 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
     return np;
   };
 
-  const supersets = session.supersets.map((ss) => {
-    const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
-    return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)) };
-  });
+  const supersets = session.supersets
+    .map((ss) => {
+      const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
+      return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)).filter((p): p is Prescription => p !== null) };
+    })
+    .filter((ss) => ss.items.length > 0);
   const finisher = session.finisher ? remap(session.finisher, session.finisher.sets) : null;
   return fitToBudget({ ...session, supersets, finisher, deload, comeback });
 }
@@ -199,9 +220,14 @@ export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds:
     .sort((a, b) => (a.ladder === b.ladder ? a.ladderLevel - b.ladderLevel : a.ladder.localeCompare(b.ladder)));
 }
 
-/** Swap an exercise for this session only, keeping the slot and the number of sets. */
+/**
+ * Swap an exercise for this session only, keeping the slot and the number of sets. A benchmark
+ * set carries over when the new exercise hasn't been calibrated yet.
+ */
 export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext): Prescription {
-  return prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
+  const np = prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
+  np.benchmarkSet = p.benchmarkSet && np.loadType !== "time" && !(state.exercises[newExerciseId]?.calibrated ?? false);
+  return np;
 }
 
 export interface ExerciseChange {
@@ -230,6 +256,11 @@ function progressFromPrescription(p: Prescription, ctx: EngineContext): Exercise
   };
 }
 
+function hasEasierOption(p: Prescription, ctx: EngineContext): boolean {
+  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg) !== null) return true;
+  return ladderNeighbour(getExercise(p.exerciseId), ctx, -1) !== null;
+}
+
 /** Grinder share above which a session counts as strained, and how many in a row trigger a deload. */
 export const STRAIN_THRESHOLD = 0.5;
 export const STRAINED_SESSIONS_FOR_DELOAD = 3;
@@ -245,7 +276,11 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
   const changes: ExerciseChange[] = [];
   const prescriptions = prescriptionsOf(session);
 
+  const processed = new Set<string>();
   for (const p of prescriptions) {
+    // Each exercise is progressed once per session, from all of its sets.
+    if (processed.has(p.exerciseId)) continue;
+    processed.add(p.exerciseId);
     const sets = logs.filter((l) => l.exerciseId === p.exerciseId);
     const progress = next.exercises[p.exerciseId] ?? progressFromPrescription(p, ctx);
     const snapshot = (x: ExerciseProgress) => ({ loadKg: x.loadKg, targetReps: x.targetReps, repRange: x.repRange });
@@ -256,7 +291,8 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
 
     let result: ProgressionResult;
     let action: ExerciseChange["action"];
-    if (session.deload || session.comeback) {
+    const pain = sets.some((l) => l.painFlag);
+    if ((session.deload || session.comeback) && !pain) {
       // Easier sessions don't move anything; they only refresh the strength estimate.
       const fromThis = progressExercise(progress, sets, ctx).performed;
       const performed = { ...progress, e1rmKg: fromThis.e1rmKg, bestE1rmKg: fromThis.bestE1rmKg, timesPerformed: progress.timesPerformed + 1 };
@@ -305,7 +341,10 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
       return p !== undefined && p.loadType !== "time";
     });
     if (counted.length > 0) {
-      const grinders = counted.filter((l) => l.rir === 0 || l.reps < byId.get(l.exerciseId)!.repRange[0]).length;
+      // A set below the range only counts as a grind when an easier option exists; on the
+      // easiest rung with the lightest weight, building up from below the range is the plan.
+      const canEase = new Map([...byId.values()].map((p) => [p.exerciseId, hasEasierOption(p, ctx)]));
+      const grinders = counted.filter((l) => l.rir === 0 || (l.reps < byId.get(l.exerciseId)!.repRange[0] && canEase.get(l.exerciseId))).length;
       next.strain = [...next.strain, grinders / counted.length].slice(-6);
     }
     const recent = next.strain.slice(-STRAINED_SESSIONS_FOR_DELOAD);
