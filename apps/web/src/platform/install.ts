@@ -62,7 +62,9 @@ export function installPromptReady(): boolean {
 
 export function onInstallPromptChange(fn: () => void): () => void {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 /** Show the browser's own install prompt where there is one. */

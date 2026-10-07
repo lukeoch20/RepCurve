@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useSyncExternalStore } from "react";
 import { canSuggestInstall, installPromptReady, iosBrowser, isIOS, onInstallPromptChange, promptInstall } from "../platform/install";
 import { Icon } from "./common";
 
@@ -17,8 +17,9 @@ function ShareGlyph(): React.ReactElement {
  * their own storage, separate from the browser.
  */
 export function InstallCard(props: { beforeSetup?: boolean }): React.ReactElement | null {
-  const [, refresh] = useState(0);
-  useEffect(() => onInstallPromptChange(() => refresh((n) => n + 1)), []);
+  // Subscribing this way re-reads the prompt state on subscribe, so a prompt the browser offers
+  // between the first render and the subscription isn't missed.
+  const promptReady = useSyncExternalStore(onInstallPromptChange, installPromptReady);
   if (!canSuggestInstall()) return null;
   const ios = isIOS();
   const browser = ios ? iosBrowser() : null;
@@ -40,7 +41,7 @@ export function InstallCard(props: { beforeSetup?: boolean }): React.ReactElemen
           <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
           <li>Open RepCurve from its new icon.</li>
         </ol>
-      ) : installPromptReady() ? (
+      ) : promptReady ? (
         <button type="button" className="btn primary" style={{ alignSelf: "flex-start" }} onClick={() => void promptInstall()}>
           Install app
         </button>
