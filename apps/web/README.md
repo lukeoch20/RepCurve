@@ -20,6 +20,16 @@ Saving is built to survive bad connections and multiple devices:
 - Stored and imported data is checked and migrated on load; anything the app can't use is dropped rather than crashing it, and if a screen still fails, a recovery screen offers a backup, a reload or starting over.
 - The installed app updates only when you tap "Update now", never during a session. The claude.ai page bundles everything it runs; it loads no third-party scripts.
 
+## Putting it on your iPhone
+
+1. Host it (below). With GitHub Pages the address is `https://<your-github-username>.github.io/RepCurve/`.
+2. Open that address in **Safari** on the iPhone (other iPhone browsers can't add web apps to the home screen as reliably).
+3. Tap **Share**, then **Add to Home Screen**, then **Add**. The welcome screen shows the same steps.
+4. Open RepCurve from the new icon and set up there, not in the Safari tab: the home-screen app keeps its own saved data, separate from Safari, and iOS doesn't clear it when you go a while without using it.
+5. Coming from the claude.ai version? Export a backup there (Settings → Export backup), then use **Restore from a backup** on the welcome screen.
+
+Updates arrive on their own: when a new version is published, the app shows "Update now" (never during a workout).
+
 ## Hosting the installable version
 
 The repository is private, and GitHub Pages only serves private repositories on paid GitHub plans. Pick one:

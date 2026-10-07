@@ -14,6 +14,16 @@ if (__RUNTIME__ === "pwa" && "serviceWorker" in navigator && import.meta.env.PRO
       const updateSW = registerSW({
         immediate: true,
         onNeedRefresh: () => setUpdateReady(() => updateSW(true)),
+        // A home-screen app resumes without reloading, so look for a new version whenever it
+        // comes back to the foreground, and hourly while it stays open.
+        onRegisteredSW: (_url, registration) => {
+          if (!registration) return;
+          const check = () => void registration.update().catch(() => {});
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") check();
+          });
+          setInterval(check, 60 * 60 * 1000);
+        },
       });
     })
     .catch(() => {

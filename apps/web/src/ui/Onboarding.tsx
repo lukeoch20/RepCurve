@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Icon, Seg, Toggle, type IconName } from "./common";
 import { Lineup } from "./Lineup";
 import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
+import { InstallCard } from "./Install";
+import { parseBackup } from "../model/backup";
+import type { AppData } from "../model/types";
+import { useStore } from "../store/useAppStore";
 
 const LB_WEIGHTS = [3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 const KG_WEIGHTS = [1, 2, 3, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 17.5, 20, 22.5, 25];
@@ -34,6 +38,7 @@ interface Draft {
   abRoller: boolean;
   pullupBar: boolean;
   bench: boolean;
+  flatBench: boolean;
   bands: Band[];
   injuries: Injury[];
 }
@@ -72,6 +77,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     abRoller: equipment?.abRoller ?? false,
     pullupBar: equipment?.pullupBar ?? false,
     bench: equipment?.bench ?? true,
+    flatBench: equipment?.flatBench ?? false,
     bands: equipment?.bands ?? [],
     injuries: profile?.injuries ?? [],
   };
@@ -118,7 +124,8 @@ function toEquipment(d: Draft): Equipment | null {
     if (!(min > 0 && max > min && step > 0 && (max - min) / step <= 200)) return null;
     dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
-  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench, bands: d.bands };
+  // A weight bench also works as a step or support, so it counts as a bench too.
+  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands };
 }
 
 type Step = "welcome" | "you" | "experience" | "schedule" | "equipment" | "body" | "review";
@@ -355,10 +362,11 @@ export function Onboarding(props: {
           {d.dbKind !== "none" ? <Toggle id="pairs" label="I have pairs" hint="Two of each weight, for presses and rows with both hands" checked={d.pairs} onChange={(pairs) => up({ pairs })} /> : null}
           <div className="field">
             <span className="label">What else do you have access to?</span>
-            <span className="meta small">Select all that apply. A sturdy chair or step counts as a bench.</span>
+            <span className="meta small">Select all that apply. A sturdy chair or step is enough for split squats and step-ups; a weight bench also adds bench presses.</span>
             <div className="tiles" style={{ marginTop: 4 }}>
               <Tile icon="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
-              <Tile icon="bench" label="Bench or chair" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Chair or step" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Weight bench" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
               <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
               <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
               <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
@@ -415,6 +423,7 @@ export function Onboarding(props: {
 function Welcome(): React.ReactElement {
   return (
     <section className="stack-lg">
+      <InstallCard beforeSetup />
       <div className="brand">
         <CurveMark size={34} />
         <span>RepCurve</span>
@@ -456,7 +465,79 @@ function Welcome(): React.ReactElement {
         </div>
         <p className="meta small">Pairs of exercises alternate, so one muscle rests while the other works. That's how a real workout fits in 20 minutes.</p>
       </div>
+      <RestoreBackup />
     </section>
+  );
+}
+
+/** Start from a backup instead of setting up, e.g. when moving from the claude.ai version. */
+function RestoreBackup(): React.ReactElement {
+  const store = useStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<AppData | null>(null);
+  const [pasting, setPasting] = useState(false);
+  const [text, setText] = useState("");
+  const [msg, setMsg] = useState<{ tone: "good" | "stop"; text: string } | null>(null);
+  const read = (text: string) => {
+    const r = parseBackup(text);
+    if (!r.ok) setMsg({ tone: "stop", text: r.error });
+    else if (!r.data.core) setMsg({ tone: "stop", text: "That backup has no profile in it, so there's nothing to restore." });
+    else {
+      setPending(r.data);
+      setMsg(null);
+    }
+  };
+  return (
+    <div className="stack">
+      <p className="meta small">Already use RepCurve somewhere else? Export a backup there (Settings → Export backup), then restore it here.</p>
+      <div className="row-wrap">
+        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+          Restore from a backup
+        </button>
+        <button type="button" className="btn ghost" onClick={() => setPasting(!pasting)} aria-expanded={pasting}>
+          Paste one instead
+        </button>
+      </div>
+      {pasting ? (
+        <div className="field">
+          <label htmlFor="restore-paste">Backup text</label>
+          <textarea id="restore-paste" className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder='{"format":"repcurve-backup", …}' />
+          <button type="button" className="btn" disabled={!text.trim()} onClick={() => read(text)}>Check backup</button>
+        </div>
+      ) : null}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void f.text().then(read);
+          e.target.value = "";
+        }}
+      />
+      {msg ? <div className={`banner ${msg.tone}`} role="status">{msg.text}</div> : null}
+      {pending ? (
+        <div className="banner info">
+          <b>Restore this backup?</b>
+          It has your profile and {pending.history.length} sessions.
+          <div className="row" style={{ marginTop: 10 }}>
+            <button type="button" className="btn" onClick={() => setPending(null)}>Cancel</button>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                const d = pending;
+                setPending(null);
+                void store.replaceAll(d).catch(() => setMsg({ tone: "stop", text: "That didn't finish saving. Try again." }));
+              }}
+            >
+              Restore
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -6,6 +6,7 @@ import { markBackedUp } from "../platform/backupReminder";
 import { backupFilename, saveTextFile } from "../platform/download";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
+import { InstallCard } from "./Install";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -123,6 +124,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         </button>
         <p className="meta small">Your progress is kept when you change these.</p>
       </section>
+
+      <InstallCard />
 
       <section className="card stack">
         <h2 className="h3">Your data</h2>

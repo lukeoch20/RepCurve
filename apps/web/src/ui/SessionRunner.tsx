@@ -18,6 +18,7 @@ import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
+import { ExerciseInfo } from "./ExerciseInfo";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -211,7 +212,7 @@ function ExerciseBlock(props: {
 }): React.ReactElement {
   const { core, active, p, tag, group, position, up } = props;
   const { dispatch } = useStore();
-  const [showCue, setShowCue] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const skipped = active.skippedSlots.includes(p.slot);
@@ -229,16 +230,16 @@ function ExerciseBlock(props: {
       <div className="block-head">
         <div className="block-tag">{tag}</div>
         <div className="grow">
-          <div className="block-name">{p.name}</div>
+          <div className="block-name">
+            <button type="button" className="exercise-link" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>{p.name}</button>
+          </div>
           <div className="block-target">{target}</div>
         </div>
       </div>
       <div className="menu">
-        {p.cue ? (
-          <button type="button" className="btn" onClick={() => setShowCue(!showCue)} aria-expanded={showCue}>
-            How to
-          </button>
-        ) : null}
+        <button type="button" className="btn" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>
+          How to
+        </button>
         {logged.length === 0 && !skipped ? (
           <button type="button" className="btn" onClick={() => setSwapOpen(true)}>
             Swap
@@ -254,7 +255,6 @@ function ExerciseBlock(props: {
           </button>
         )}
       </div>
-      {showCue && p.cue ? <p className="cue">{p.cue}</p> : null}
       {p.benchmarkSet && logged.length === 0 && !skipped ? (
         <div className="banner info bench">
           <b>Benchmark set</b>
@@ -327,6 +327,7 @@ function ExerciseBlock(props: {
           </div>
         );
       })}
+      {infoOpen ? <ExerciseInfo exerciseId={p.exerciseId} onClose={() => setInfoOpen(false)} /> : null}
       {swapOpen ? <SwapSheet core={core} active={active} p={p} onClose={() => setSwapOpen(false)} /> : null}
     </article>
   );

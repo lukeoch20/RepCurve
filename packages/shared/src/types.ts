@@ -37,6 +37,8 @@ export interface Equipment {
   pullupBar: boolean;
   /** A bench, sturdy chair or step that can be used for elevation and support. */
   bench: boolean;
+  /** A flat weight bench you can lie on and press from. Missing means no. */
+  flatBench?: boolean;
   bands: Band[];
 }
 
@@ -48,6 +50,7 @@ export type EquipmentItem =
   | "ab_roller"
   | "pullup_bar"
   | "bench"
+  | "flat_bench"
   | "bands";
 
 export type Pattern =
