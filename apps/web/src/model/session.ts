@@ -9,7 +9,7 @@ import {
   type Prescription,
   type SessionPlan,
 } from "@repcurve/engine";
-import { getExercise } from "@repcurve/exercises";
+import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
 import { contextFor, todayPlan } from "./plan";
 import type { ActiveSession, CardioProgress, CardioResult, Core, LoggedSet, SessionRecord, TimerState } from "./types";
@@ -84,7 +84,7 @@ export function prefill(active: ActiveSession, slot: string, setIndex: number): 
 
 export function describeRef(plan: SessionPlan, ref: SetRef): string {
   const p = prescriptionAt(plan, ref.slot);
-  const name = p?.name ?? getExercise(ref.exerciseId).name;
+  const name = p?.name ?? findExercise(ref.exerciseId)?.name ?? ref.exerciseId;
   const total = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (plan.supersets[ref.group]?.rounds ?? 1);
   return `${ref.label} ${name} · set ${ref.setIndex + 1} of ${total}`;
 }

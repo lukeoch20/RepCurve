@@ -1,6 +1,6 @@
 import React from "react";
 import type { ExerciseChange } from "@repcurve/engine";
-import { getExercise } from "@repcurve/exercises";
+import { findExercise } from "@repcurve/exercises";
 import { formatLoad } from "@repcurve/shared";
 import type { Units } from "@repcurve/shared";
 import type { SessionRecord } from "../model/types";
@@ -9,10 +9,12 @@ import { useStore } from "../store/useAppStore";
 const UP = new Set(["load_up", "ladder_up", "widen_range"]);
 const DOWN = new Set(["load_down", "ladder_down", "pain", "stall_noted"]);
 
+const nameOf = (id: string) => findExercise(id)?.name ?? id;
+
 function nextText(c: ExerciseChange, units: Units): string {
-  const e = getExercise(c.nextExerciseId);
-  const reps = e.loadType === "time" ? `${c.next.targetReps} s` : `${c.next.targetReps} reps`;
-  return c.next.loadKg !== null ? `${formatLoad(c.next.loadKg, e.loadType, units)} × ${reps}` : reps;
+  const loadType = findExercise(c.nextExerciseId)?.loadType ?? "dumbbell_pair";
+  const reps = loadType === "time" ? `${c.next.targetReps} s` : `${c.next.targetReps} reps`;
+  return c.next.loadKg !== null ? `${formatLoad(c.next.loadKg, loadType, units)} × ${reps}` : reps;
 }
 
 export function Finished(props: { record: SessionRecord; units: Units }): React.ReactElement {
@@ -45,7 +47,7 @@ export function Finished(props: { record: SessionRecord; units: Units }): React.
                 <span className="arrow" aria-hidden="true">{arrow}</span>
                 <div>
                   <div style={{ fontWeight: 700 }}>
-                    {moved ? `${getExercise(c.exerciseId).name} → ${getExercise(c.nextExerciseId).name}` : getExercise(c.exerciseId).name}
+                    {moved ? `${nameOf(c.exerciseId)} → ${nameOf(c.nextExerciseId)}` : nameOf(c.exerciseId)}
                   </div>
                   <div className="next">{nextText(c, props.units)}</div>
                   {c.reason ? <div className="why">{c.reason}</div> : null}

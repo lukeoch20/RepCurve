@@ -8,6 +8,9 @@ import { SessionRunner } from "./ui/SessionRunner";
 import { Settings } from "./ui/Settings";
 import { Today } from "./ui/Today";
 import { CurveMark } from "./ui/common";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
+import { EMPTY_DATA } from "./model/types";
+import { applyUpdate, onUpdateReady, updateReady } from "./platform/update";
 import { StoreContext, useAppStore } from "./store/useAppStore";
 
 type Tab = "today" | "plan" | "progress" | "settings";
@@ -31,6 +34,8 @@ export function App(): React.ReactElement {
   const store = useAppStore();
   const [tab, setTab] = useState<Tab>(rememberedTab);
   const [editingSetup, setEditingSetup] = useState(false);
+  const [update, setUpdate] = useState(updateReady);
+  useEffect(() => onUpdateReady(() => setUpdate(true)), []);
 
   useEffect(() => {
     try {
@@ -94,8 +99,24 @@ export function App(): React.ReactElement {
           {store.saveError}
           <button type="button" className="btn ghost" onClick={store.clearSaveError}>Dismiss</button>
         </div>
+      ) : store.notice ? (
+        <div className="toast banner info" role="status">
+          {store.notice}
+          <button type="button" className="btn ghost" onClick={store.clearNotice}>OK</button>
+        </div>
       ) : null}
-      {body}
+      {store.storageWarning ? (
+        <div className="banner stop storage-warning" role="alert">{store.storageWarning}</div>
+      ) : null}
+      {update && !active ? (
+        <div className="banner info storage-warning" role="status">
+          <b>A new version of RepCurve is ready</b>
+          <button type="button" className="btn" onClick={applyUpdate}>Update now</button>
+        </div>
+      ) : null}
+      <ErrorBoundary data={store.data} onReset={() => store.replaceAll(EMPTY_DATA)}>
+        {body}
+      </ErrorBoundary>
     </StoreContext.Provider>
   );
 }

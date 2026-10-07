@@ -1,5 +1,5 @@
 import { generateProgram, project, type LiftObservation, type Program, type Projection } from "@repcurve/engine";
-import { getExercise } from "@repcurve/exercises";
+import { findExercise } from "@repcurve/exercises";
 import { e1RM } from "@repcurve/shared";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { currentProgram } from "./plan";
@@ -31,7 +31,7 @@ export function liftObservations(history: SessionRecord[], startedAt: string): L
     if (r.kind !== "strength" || r.skipped || r.deload || r.comeback) continue;
     const best = new Map<string, number>();
     for (const s of r.sets) {
-      if (s.loadKg === null || s.reps <= 0 || getExercise(s.exerciseId).pattern === "core") continue;
+      if (s.loadKg === null || s.reps <= 0 || (findExercise(s.exerciseId)?.pattern ?? "core") === "core") continue;
       best.set(s.exerciseId, Math.max(best.get(s.exerciseId) ?? 0, e1RM(s.loadKg, s.reps, s.rir)));
     }
     for (const [exerciseId, e1rmKg] of best) out.push({ exerciseId, week: (r.finishedAt - start) / WEEK_MS, e1rmKg });

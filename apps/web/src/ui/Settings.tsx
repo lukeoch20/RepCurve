@@ -2,7 +2,8 @@ import React, { useRef, useState } from "react";
 import { exportBackup, parseBackup } from "../model/backup";
 import { clock } from "../model/format";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
-import { insideClaude, useCapability } from "../platform/runtime";
+import { markBackedUp } from "../platform/backupReminder";
+import { backupFilename, saveTextFile } from "../platform/download";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
 
@@ -26,31 +27,20 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
   const exportNow = async () => {
     const text = exportBackup(data, Date.now());
-    const filename = `repcurve-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    if (insideClaude()) {
-      const dl = await useCapability<{ save(r: { filename: string; data: string }): Promise<void> }>("downloads", 4000);
-      if (dl) {
-        try {
-          await dl.save({ filename, data: text });
-          setMsg({ tone: "good", text: "Backup saved." });
-          return;
-        } catch (e) {
-          if ((e as { code?: string })?.code === "declined") return;
-        }
-      }
-      setBackupText(text);
-      return;
-    }
+    const result = await saveTextFile(backupFilename(), text);
+    if (result === "saved") {
+      markBackedUp(Date.now());
+      setMsg({ tone: "good", text: "Backup saved." });
+    } else if (result === "failed") setBackupText(text);
+  };
+
+  /** Restore or reset, reporting failures; the store reloads from storage either way. */
+  const replaceWith = async (d: AppData, done: string) => {
     try {
-      const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setMsg({ tone: "good", text: "Backup downloaded." });
+      await store.replaceAll(d);
+      setMsg({ tone: "good", text: done });
     } catch {
-      setBackupText(text);
+      setMsg({ tone: "stop", text: "That didn't finish saving, so some data may not have changed. What you see now is what's saved; check it and try again." });
     }
   };
 
@@ -58,6 +48,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
     if (!backupText) return;
     try {
       await navigator.clipboard.writeText(backupText);
+      markBackedUp(Date.now());
       setMsg({ tone: "good", text: "Backup copied. Paste it somewhere safe, like a note to yourself." });
     } catch {
       setMsg({ tone: "stop", text: "Couldn't copy. Select the text below and copy it." });
@@ -75,7 +66,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
   const where =
     storage === "claude"
-      ? "Saved to your Claude account, private to you. It follows you to any device where you open this page."
+      ? "Saved to your Claude account, private to you, so it follows you to any device where you open this page. Use one device at a time: if another device saves first, this one loads its version."
       : storage === "device"
         ? "Saved on this device only. Export a backup now and then."
         : "Not being saved: storage isn't available here. Export a backup before closing.";
@@ -164,7 +155,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
                 const d = pendingImport;
                 setPendingImport(null);
                 setImportText("");
-                void store.replaceAll(d).then(() => setMsg({ tone: "good", text: "Backup restored." }));
+                void replaceWith(d, "Backup restored.");
               }}>Replace</button>
             </div>
           </div>
@@ -179,7 +170,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
             Your profile, progress and every logged session will be gone. Export a backup first if you might want it.
             <div className="row" style={{ marginTop: 10 }}>
               <button type="button" className="btn" onClick={() => setConfirmReset(false)}>Cancel</button>
-              <button type="button" className="btn danger solid" onClick={() => void store.replaceAll(EMPTY_DATA)}>Delete everything</button>
+              <button type="button" className="btn danger solid" onClick={() => void replaceWith(EMPTY_DATA, "Everything was deleted.")}>Delete everything</button>
             </div>
           </div>
         ) : (

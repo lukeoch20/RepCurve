@@ -32,7 +32,8 @@ export default defineConfig(({ mode }) => {
       ? []
       : [
           VitePWA({
-            registerType: "autoUpdate",
+            // Updates wait for the user (and never interrupt a session): see platform/update.ts.
+            registerType: "prompt",
             injectRegister: null,
             includeAssets: ["favicon.svg", "apple-touch-icon.png"],
             manifest: {

@@ -112,8 +112,8 @@ export function weekSlots(core: Core, history: SessionRecord[]): { week: number;
     const plan = done?.plan ?? planFor(core, i);
     slots.push({
       index: i,
-      kind: plan.kind,
-      name: plan.name,
+      kind: done?.kind ?? plan.kind,
+      name: done?.name ?? plan.name,
       status: done ? (done.skipped ? "skipped" : "done") : i === core.nextIndex ? "next" : "upcoming",
     });
   }
