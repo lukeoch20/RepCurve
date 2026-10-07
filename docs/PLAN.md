@@ -122,7 +122,7 @@ Short sessions mean every session is full-body. More days = more frequency, not 
 - Progression scheme per exercise: see §4.
 
 **Step 5 — Treadmill sessions**
-- Cardio days are prescribed like strength: incline walk, steady run, or intervals (e.g. 8 × 1 min hard / 1 min easy), scaled from the baseline test and the previous session's self-reported effort.
+- Cardio days are prescribed like strength: incline walk, steady run, or intervals (e.g. 8 × 1 min hard / 1 min easy), scaled from the previous session's self-reported effort (built: a very hard session holds the next one back, an easy one pushes it; steady sessions grow a strong-finish block week by week; the baseline test is not built yet).
 - Logged as duration, speed, incline, effort. Progression: a little more speed, incline or interval count each week; a reactive easy week when effort drifts up.
 
 **Step 6 — Explain it**
@@ -165,7 +165,7 @@ Barbell lifters add 2.5 kg, about 3% on a 80 kg lift. A home lifter going from a
 4. **Harder variant on the same ladder:** goblet squat → DB front squat → Bulgarian split squat → single-leg; push-up incline → floor → feet-elevated → one-arm progressions; two-arm row → one-arm row → chest-supported.
 5. **Heavier dumbbell**, resetting to the bottom of the rep range.
 
-Which axis to pull is a function of the available load step: if the next dumbbell is ≤ 15% heavier, step up when the top of the range is hit; if it's more, exhaust reps and variants first. When the user outgrows their heaviest dumbbell on a pattern, the ladder keeps progressing without buying anything.
+Which axis to pull is a function of the available load step. As built: when every set reaches the top of the range with reps to spare, the engine moves to the next owned dumbbell only if the user's e1RM says they can still reach the bottom of the range with it; otherwise it moves to a harder variant, and only then widens the rep range (to 30, or 12 per side for one-sided work, which takes twice as long), finally suggesting slower tempo. When the user outgrows their heaviest dumbbell on a pattern, the ladder keeps progressing without buying anything.
 
 ### Per-set (within a workout)
 - Each logged set yields an e1RM estimate (Epley, adjusted by reps in reserve).
@@ -181,14 +181,13 @@ else:
     keep load, target +1 rep on the weakest set
 ```
 
-### Per-block (every 4–6 weeks)
-- **Reactive deload**, not scheduled: trigger when effort drifts over target for a week, or e1RM on two or more patterns declines for two weeks. Deload = one week at −40% rounds. (Evidence for fixed scheduled deloads is weak; reactive is the defensible default. **[verify]**)
-- Volume ramp: start a block one round below target, add a round after week 2 if recovery allows.
-- Rotation: swap one accessory per block; keep the benchmarked movements stable so curves stay comparable.
+### Over the weeks
+- **Reactive deload**, not scheduled. As built: when at least half the sets in each of the last three strength sessions were grinders (0 reps in reserve, or below the range when an easier option exists), the next week runs one round fewer and one dumbbell lighter. Pain overrides this and still swaps the exercise. (Evidence for fixed scheduled deloads is weak; reactive is the defensible default. **[verify]**)
+- Not built yet: blocks with a volume ramp, and rotating one accessory per block. The programme is an open-ended sequence; brand-new lifters get a one-round-lighter first week.
 
 ### Safety rails
 - Never increase load more than one dumbbell step at a time.
-- Hard cap on weekly volume increase (+20%).
+- Volume changes stay small after week 1: sessions are fitted to the time budget with a 5% tolerance, cutting the smallest piece first and never dropping a movement pair to save under a minute. (A hard +20% weekly cap is not built; a brand-new lifter's ramp week to week 2 is one round per superset.)
 - "It hurt" is a separate button from effort → exercise swapped, flagged for review, "stop and see someone" language if repeated.
 
 ---
@@ -274,13 +273,13 @@ A is confirmed. The engine package doesn't change if we move to B or C later.
 - Compute the rest timer from a stored end time, not a running counter, so it is still correct after the app is backgrounded.
 - Timer end is signalled with sound; iPhone web apps cannot vibrate or post a lock-screen countdown. If that gap matters after a few weeks of use, wrap the app with Capacitor on the Mac.
 - Install: open the link in Safari, Share → Add to Home Screen.
-- Data lives on the phone; monthly JSON export reminder until sync exists.
+- Data lives on the phone; a monthly backup reminder (built: on Today, for device-only data) until sync exists.
 
 ### 7.3 Proposed stack for option A
 | Layer | Choice | Why |
 |---|---|---|
 | App | React + TypeScript, Vite, PWA plugin | Small, fast, installable |
-| Local data | IndexedDB via Dexie | Offline, structured, survives reloads; JSON export/import for backup |
+| Local data | IndexedDB via idb-keyval | Offline, structured, survives reloads; JSON export/import for backup |
 | Engine | `packages/engine` (pure TS, no deps) | Shared, unit-tested |
 | Exercise DB | JSON in `packages/exercises` | Reviewable in PRs |
 | Hosting | GitHub Pages or Vercel free tier | Zero cost |
@@ -366,7 +365,7 @@ Projection      created_at, horizon_weeks, metrics (per-pattern bands, lean mass
 ## 10. Immediate next steps
 1. ~~Confirm platform option A~~ Confirmed.
 2. ~~Scaffold the monorepo~~ Done: `packages/shared`, `packages/exercises`, `packages/engine`, `apps/cli`, Vitest, GitHub Actions.
-3. ~~Equipment model and first exercises with ladders~~ Done: 40 exercises across dumbbell, bodyweight, ab-roller and pull-up-bar ladders.
+3. ~~Equipment model and first exercises with ladders~~ Done: 44 exercises across dumbbell, bodyweight, ab-roller and pull-up-bar ladders.
 4. ~~`repcurve generate` for the reference persona~~ Done: `pnpm generate -- --profile fixtures/reference.json --week 2` fits 20 minutes with two supersets of three rounds plus a finisher.
 5. Draft `EVIDENCE.md` and verify every **[verify]** number.
 6. ~~Session-state model~~ Done: `planSession(index)` plans any session in the open-ended sequence, `applyState` personalises it (substitutions, working weights, rep targets, deloads, comebacks after 14+ days off), `recordSession` folds logged sets back in (benchmark calibration, double progression with e1RM-checked dumbbell steps, ladder moves applied everywhere an exercise is programmed, reactive deload after three grinding sessions), and `adviseNextSet` coaches between sets. `pnpm --filter @repcurve/cli exec tsx src/main.ts simulate` runs a virtual lifter through 12 weeks to eyeball progression.

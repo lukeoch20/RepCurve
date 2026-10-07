@@ -40,12 +40,12 @@
   },
   "modifiers": {
     "female_relative_hypertrophy": 1.0,
-    "female_relative_upper_strength": 1.3,
+    "female_relative_upper_strength": 1.0,
     "age_40_to_65_relative_gain": 0.9,
     "age_65_plus_relative_gain": 0.75,
-    "lapsed_early_speedup": 2.0,
+    "lapsed_early_speedup": 1.4,
     "trained_relative_rate": 0.5,
-    "notes": "female_relative_hypertrophy: high confidence (Roberts 2020 ES 0.07, p=0.31; Refalo 2025 relative difference 0.69% [-1.50, 2.88]). female_relative_upper_strength: ES -0.60 favouring women; the 1.3 multiplier is est. Age: relative strength gains are largely preserved (Ahtiainen 2016: 'age and sex did not affect the RT responses'), while lean-mass gains are smaller in older adults (Peterson 2011). Suggested split is strength 1.0 / hypertrophy 0.9 for ages 40-65 and 0.85 / 0.75 for 65+ (est, low). lapsed_early_speedup: Halonen 2024 regained the pre-break level in 5 wk after 10 wk of initial training (~2x); Staron 1991 regained 20 wk of gains in 6 wk (~3x). Apply only until the previous best is restored. trained_relative_rate: ACSM 2009 cites ~40% for untrained vs ~20% for moderately trained.",
+    "notes": "female_relative_hypertrophy: high confidence (Roberts 2020 ES 0.07, p=0.31; Refalo 2025 relative difference 0.69% [-1.50, 2.88]). female_relative_upper_strength: ES -0.60 favouring women; the 1.3 multiplier is est. Age: relative strength gains are largely preserved (Ahtiainen 2016: 'age and sex did not affect the RT responses'), while lean-mass gains are smaller in older adults (Peterson 2011). Suggested split is strength 1.0 / hypertrophy 0.9 for ages 40-65 and 0.85 / 0.75 for 65+ (est, low). lapsed_early_speedup: Halonen 2024 regained the pre-break level in 5 wk after 10 wk of initial training (~2x); Staron 1991 regained 20 wk of gains in 6 wk (~3x). Apply only until the previous best is restored. As built (projection.ts): lapsed lifters get x1.4 to week 12, easing to x1.15 strength and x1.1 muscle by week 26, with no previous-best check; the women's upper-body multiplier (evidence suggests ~1.3) is not applied yet, so both values here are what the code uses. trained_relative_rate: ACSM 2009 cites ~40% for untrained vs ~20% for moderately trained.",
     "source": "Roberts BM et al. 2020 J Strength Cond Res 34:1448; Refalo MC et al. 2025 PeerJ 13:e19042; Ahtiainen JP et al. 2016 Age 38:10; Peterson MD et al. 2011 Med Sci Sports Exerc 43:249; Halonen et al. 2024 Scand J Med Sci Sports 34:e14739; Staron RS et al. 1991 J Appl Physiol 70:631; ACSM 2009 Med Sci Sports Exerc 41:687",
     "confidence": "low"
   },

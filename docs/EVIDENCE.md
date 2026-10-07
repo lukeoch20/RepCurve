@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-10-04
 
-**How to read this.** Verdicts are supported, partly supported, not supported or unclear. I found and read the sources through web-search extracts of PubMed, PMC, journal and SportRxiv pages, which show abstract or full-text passages. The sandbox's network policy blocked direct page and PDF fetches, so the quotes are the wording those extracts showed. Before shipping user-facing copy, spot-check the quotes against the papers. "[est]" marks my own engineering estimate. "[unverified]" marks a number I could not confirm in a source. Lines marked **Engine** are design choices drawn from the evidence; no study reported them unless a line says so. "Sets" means hard sets per muscle per week, counted fractionally: a direct set counts 1 and a set for an assisting muscle counts 0.5, as in Pelland 2026.
+**How to read this.** Verdicts are supported, partly supported, not supported or unclear. I found and read the sources through web-search extracts of PubMed, PMC, journal and SportRxiv pages, which show abstract or full-text passages. The sandbox's network policy blocked direct page and PDF fetches, so the quotes are the wording those extracts showed. Before shipping user-facing copy, spot-check the quotes against the papers. "[est]" marks my own engineering estimate. "[unverified]" marks a number I could not confirm in a source. Lines marked **Engine** are design targets drawn from the evidence; no study reported them unless a line says so. Each is followed by a **Built** line saying what the code does today, so the two can be told apart; where they differ, the Built line is what users get. "Sets" means hard sets per muscle per week, counted fractionally: a direct set counts 1 and a set for an assisting muscle counts 0.5, as in Pelland 2026.
 
 ---
 
@@ -14,6 +14,8 @@ Last reviewed: 2026-10-04
 **Sources:** Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains. *Sports Med* 56:481–505. https://doi.org/10.1007/s40279-025-02344-w · Schoenfeld BJ, Ogborn D, Krieger JW (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass. *J Sports Sci* 35:1073–1082. https://doi.org/10.1080/02640414.2016.1210197
 **Engine:** hypertrophy relative effect = (S/10)^0.4 and strength = (S/10)^0.25 [est]. Novice default is 6–10 fractional sets; about 12 is the practical ceiling in 3×20 min.
 
+**Built:** the dose exponents are implemented (packages/engine/src/projection.ts). Weekly targets are 8–10 sets for novices and 12–16 for intermediates (level.ts); the plan explanation reports muscles under target with their numbers.
+
 ## 2. Proximity to failure (RIR)
 **Claim:** sets at ~0–3 RIR count fully for hypertrophy; strength is less sensitive.
 **Verdict: partly supported.** The direction holds and strength is insensitive to RIR. No study measured a "0–3 counts fully" threshold.
@@ -21,6 +23,8 @@ Last reviewed: 2026-10-04
 **Quote:** "...the relationship between proximity to failure and strength gain appears to differ from the relationship with muscle hypertrophy, with only the latter being meaningfully influenced by RIR."
 **Sources:** Robinson ZP, Pelland JC, Remmert JF, et al. (2024). Exploring the Dose–Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. *Sports Med* 54:2209–2231. https://doi.org/10.1007/s40279-024-02069-2 · Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ (2023). Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis. *Sports Med* 53:649–665. https://doi.org/10.1007/s40279-022-01784-y
 **Engine:** hypertrophy credit by RIR: 0–2 → 1.0, 3 → 0.9, 4 → 0.75, 5 → 0.6, ≥6 → 0.35 [est]. Strength credit: 1.0 up to RIR 5, then 0.8. Target 1–3 RIR.
+
+**Built:** every set targets 2 RIR. Volume counts planned sets; there is no per-set RIR credit yet.
 
 ## 3. Load range
 **Claim:** ~30–85% 1RM all build muscle if taken near failure; heavier loads favour strength.
@@ -30,6 +34,8 @@ Last reviewed: 2026-10-04
 **Sources:** Schoenfeld BJ, Grgic J, Ogborn D, Krieger JW (2017). Strength and Hypertrophy Adaptations Between Low- vs. High-Load Resistance Training: A Systematic Review and Meta-analysis. *J Strength Cond Res* 31:3508–3523. https://doi.org/10.1519/JSC.0000000000002200 · Lopez P, et al. (2021). Resistance Training Load Effects on Muscle Hypertrophy and Strength Gain: Systematic Review and Network Meta-analysis. *Med Sci Sports Exerc* 53:1206–1216. PMC8126497
 **Engine:** count sets of 6–30 reps at ≤3 RIR as hypertrophy-effective regardless of load. For the e1RM projection, weight sets by rep count: ≤10 reps → 1.0, 11–20 → 0.85, >20 → 0.7 [est]. Light dumbbells will push lower-body sets toward 20+ reps.
 
+**Built:** rep ranges are 8–15 (novice) or 6–12 for paired dumbbells, 8–20 for bodyweight, and 6–12 per side for one-sided loaded work (6–15 bodyweight). Ranges widen up to 30 reps (12 per side for one-sided work, which takes twice as long) when dumbbells run out. e1RM estimates are not yet weighted by rep count.
+
 ## 4. Frequency
 **Claim:** frequency matters mainly as a way to distribute volume.
 **Verdict: supported for hypertrophy.** Strength shows a small independent benefit from frequency.
@@ -37,6 +43,8 @@ Last reviewed: 2026-10-04
 **Quote:** "resistance training frequency does not significantly or meaningfully impact muscle hypertrophy when volume is equated"
 **Sources:** Schoenfeld BJ, Grgic J, Krieger J (2019). How many times per week should a muscle be trained to maximize muscle hypertrophy? *J Sports Sci* 37:1286–1295 (vuir.vu.edu.au/38370) · Grgic J, Schoenfeld BJ, Davies TB, et al. (2018). Effect of Resistance Training Frequency on Gains in Muscular Strength: A Systematic Review and Meta-Analysis. *Sports Med* 48:1207–1220. https://doi.org/10.1007/s40279-018-0872-x
 **Engine:** train each muscle in at least 2 of the 3 sessions. Hypertrophy frequency multiplier is 1.0. Strength at 3×/wk gets 1.03× the 2×/wk value [est].
+
+**Built:** three full-body variants rotate the movement pairs across the week; a pattern the user cannot do is replaced by another movement and named in the plan explanation. There is no frequency multiplier.
 
 ## 5. Rest intervals
 **Claim:** longer rest (~2–3 min) beats short rest (~1 min).
@@ -46,6 +54,8 @@ Last reviewed: 2026-10-04
 **Sources:** Singer A, et al. (2024). Give it a rest: a systematic review with Bayesian meta-analysis on the effect of inter-set rest interval duration on muscle hypertrophy. *Front Sports Act Living* 6:1429789. https://doi.org/10.3389/fspor.2024.1429789 · Schoenfeld BJ, Pope ZK, et al. (2016). Longer Interset Rest Periods Enhance Muscle Strength and Hypertrophy in Resistance-Trained Men. *J Strength Cond Res* 30:1805–1812. PMID 26605807
 **Engine:** keep at least 90 s between sets for the same muscle; superset pairing achieves this. A set with less than 60 s of same-muscle rest gets 0.9 credit [est].
 
+**Built:** the user sets the rest after each round (default 60 s) and the switch time inside a round (default 20 s); with a pair, same-muscle sets are about 2 minutes apart. There is no short-rest credit rule.
+
 ## 6. Supersets / time-efficient methods
 **Claim:** supersets keep most of the stimulus per minute.
 **Verdict: supported** for antagonist or upper/lower pairs.
@@ -54,6 +64,8 @@ Last reviewed: 2026-10-04
 **Sources:** Zhang X, Weakley J, Li H, Li Z, García-Ramos A (2025). Superset Versus Traditional Resistance Training Prescriptions: A Systematic Review and Meta-analysis... *Sports Med*. https://doi.org/10.1007/s40279-025-02176-8 · Iversen VM, Norum M, Schoenfeld BJ, Fimland MS (2021). No Time to Lift? Designing Time-Efficient Training Programs for Strength and Hypertrophy: A Narrative Review. *Sports Med* 51:2079–2095. https://doi.org/10.1007/s40279-021-01490-1
 **Engine:** a superset set counts 1.0. Never pair two exercises that share a prime mover. Plan on 35–50% time savings.
 
+**Built:** enforced. Pairs, including stand-ins for a missing pattern, never share a prime mover; superset sets count 1.0.
+
 ## 7. Minimum effective dose
 **Claim:** one hard set 2–3×/week produces meaningful strength gains.
 **Verdict: supported.** Strongest data are in trained men; for the general population it is supported qualitatively.
@@ -61,6 +73,8 @@ Last reviewed: 2026-10-04
 **Quote:** "...a single set of 6–12 repetitions with loads ranging from approximately 70–85% 1RM 2–3 times per week... can produce suboptimal, yet significant increases in SQ and BP 1RM strength".
 **Sources:** Androulakis-Korakakis P, Fisher JP, Steele J (2020). The Minimum Effective Training Dose Required to Increase 1RM Strength in Resistance-Trained Men: A Systematic Review and Meta-Analysis. *Sports Med* 50:751–765. https://doi.org/10.1007/s40279-019-01236-0 · Nuzzo JL, et al. (2024). Resistance Exercise Minimal Dose Strategies for Increasing Muscle Strength in the General Population: an Overview. *Sports Med*. PMID 38509414
 **Engine:** floor of 1 hard set per muscle in each of ≥2 sessions. At 2–3 sets/wk, project about 0.7× of the 10-set strength gain and 0.55× of the hypertrophy gain [model-derived].
+
+**Built:** not enforced as a floor. The plan explanation names movement patterns the week misses and volume gaps, with numbers.
 
 ## 8. Long muscle lengths / full ROM
 **Claim:** training at long lengths or full ROM is at least as good.
@@ -78,12 +92,16 @@ Last reviewed: 2026-10-04
 **Sources:** Coleman M, Burke R, Augustin F, et al. (2024). Gaining more from doing less? The effects of a one-week deload period during supervised resistance training on muscular adaptations. *PeerJ* 12:e16777. https://doi.org/10.7717/peerj.16777 · Bell L, et al. (2023). Integrating Deloading into Strength and Physique Sports Training Programmes: An International Delphi Consensus Approach. *Sports Med Open* 9:87. https://doi.org/10.1186/s40798-023-00633-0
 **Engine:** reactive deload when e1RM stalls on ≥2 lifts for 2 sessions or recovery is poor: half the sets, same load, RIR 3–4. Optional scheduled deload every 8–10 weeks. A deload week counts as 0.5 training week in projections [est].
 
+**Built:** a different trigger. When at least half the sets in each of the last 3 strength sessions were grinders (0 RIR, or below the range when an easier option exists), the next week's strength sessions drop one round and one dumbbell step. Pain overrides a deload or comeback. Projections do not discount deload weeks.
+
 ## 10. Novices progress on almost anything; double progression
 **Verdict: supported.**
 **Numbers:** Currier 2023 (178 strength studies, n=5,097): every prescription beat control. Plotkin 2022: adding reps and adding load gave similar results (muscle thickness +6.7–12.9% in both groups; strength difference 2.0 kg with a CI crossing 0). ACSM 2009: raise the load 2–10% when the lifter exceeds the target by 1–2 reps in two consecutive sessions.
 **Quote:** "All resistance training prescriptions were superior to control for muscle strength and hypertrophy".
 **Sources:** Currier BS, et al. (2023). Resistance training prescription for muscle strength and hypertrophy in healthy adults: a systematic review and Bayesian network meta-analysis. *Br J Sports Med*. https://doi.org/10.1136/bjsports-2023-106807 · Plotkin D, et al. (2022). Progressive overload without progressing load? The effects of load or repetition progression on muscular adaptations. *PeerJ* 10:e14142. https://doi.org/10.7717/peerj.14142
 **Engine:** double progression. Once every set hits the top of the rep range at ≤2 RIR in two consecutive sessions, move up the smallest dumbbell step. If that step is more than 10% of the load, add reps, sets or tempo first.
+
+**Built:** a simpler rule. One session with every set at the top of the range and average RIR at or above target moves to the next owned dumbbell when the e1RM says the bottom of the range is reachable there; otherwise to a harder variant; otherwise more reps (then slower tempo once maxed). Two too-hard sessions in a row step down. docs/PLAN.md section 4 describes the same rule.
 
 ## 11. "Exercise snacks" / short frequent sessions
 **Verdict: partly supported.** Splitting a matched weekly volume into shorter sessions is fine. Aerobic exercise snacks improve fitness. Evidence for very short resistance "snacks" is still emerging.
@@ -99,12 +117,16 @@ Last reviewed: 2026-10-04
 **Sources:** Halperin I, et al. (2022). Accuracy in Predicting Repetitions to Task Failure in Resistance Exercise: A Scoping Review and Exploratory Meta-analysis. *Sports Med* 52:377–390. https://doi.org/10.1007/s40279-021-01559-x · Nuzzo JL, Pinto MD, Nosaka K, Steele J (2024). Maximal Number of Repetitions at Percentages of the One Repetition Maximum... *Sports Med* 54:303–321. https://doi.org/10.1007/s40279-023-01937-7
 **Engine:** e1RM = w·(1+(reps+RIRadj)/30), using only sets where reps+RIRadj ≤ 12. RIRadj is the reported RIR plus 1 when the reported value is 2–4 during the first 8 weeks, and plus 0.5 after that. Ignore sets with reported RIR ≥5. Smooth with an EWMA (α≈0.3) [est].
 
+**Built:** not yet. e1RM is Epley on reps plus reported RIR, capped at 30 (packages/shared/src/formulas.ts), with the first exposure of each exercise ignored for recalibration.
+
 ## 13. Lapsed lifters regain faster
 **Verdict: supported** for regaining previous levels. Nothing shows faster gains beyond the previous peak.
 **Numbers:** Staron 1991: 6 weeks of retraining restored what 20 weeks had built, about a 3× speed-up. Halonen 2024 (untrained, age 32 ± 5): after a 10-week break, the pre-break level came back in 5 weeks, about 2×. Seaborne 2018: lean mass rose more on reloading. Psilander 2019: retraining did not boost hypertrophy.
 **Quote:** "after only five weeks of re-training, the pre-break level had already been reached." (University of Jyväskylä release on Halonen 2024)
 **Sources:** Halonen EJ, et al. (2024). Does Taking a Break Matter—Adaptations in Muscle Strength and Size Between Continuous and Periodic Resistance Training. *Scand J Med Sci Sports* 34:e14739. https://doi.org/10.1111/sms.14739 · Staron RS, et al. (1991). Strength and skeletal muscle adaptations in heavy-resistance-trained women after detraining and retraining. *J Appl Physiol* 70:631–640. https://doi.org/10.1152/jappl.1991.70.2.631
 **Engine:** speed-up factor 2.0 (range 1.5–3), applied only until the previous best is restored [est].
+
+**Built:** a smaller, time-limited boost: ×1.4 to week 12, easing to ×1.15 (strength) and ×1.1 (muscle) by week 26. There is no previous-best check yet.
 
 ## 14. Sex differences
 **Verdict: supported.**
@@ -113,12 +135,16 @@ Last reviewed: 2026-10-04
 **Sources:** Roberts BM, Nuckols G, Krieger JW (2020). Sex Differences in Resistance Training: A Systematic Review and Meta-Analysis. *J Strength Cond Res* 34:1448–1460. https://doi.org/10.1519/JSC.0000000000003521 · Refalo MC, Nuckols G, Galpin AJ, et al. (2025). Sex differences in absolute and relative changes in muscle size following resistance training in healthy adults... *PeerJ* 13:e19042. PMID 40028215
 **Engine:** multipliers on % change for women: hypertrophy 1.0, upper-body strength 1.3 [est from ES], lower-body strength 1.0.
 
+**Built:** not yet; women and men get the same multipliers.
+
 ## 15. Age
 **Verdict: partly supported / unclear.** Relative strength gains largely hold up with age, and hypertrophy is modestly blunted. No paper quantifies 40–65 vs younger cleanly.
 **Numbers:** Ahtiainen 2016 (n=287, ages 19–78, 20–24 wk): strength +21.1 ± 11.5%, muscle size +4.8 ± 6.1%, and "age and sex did not affect the RT responses". Peterson 2010 (age >50): strength +24–33% depending on the exercise. Peterson 2011: +1.1 kg lean body mass over about 20.5 wk, with less gain in older people.
 **Quote:** "Meta-regression revealed that higher-volume interventions were associated with significantly greater increases in lean body mass, whereas older individuals experienced less increase." (Peterson 2011)
 **Sources:** Ahtiainen JP, Walker S, et al. (2016). Heterogeneity in resistance training-induced muscle strength and mass responses in men and women of different ages. *Age* 38:10. PMC5005877 · Peterson MD, Sen A, Gordon PM (2011). Influence of resistance exercise on lean body mass in aging adults: a meta-analysis. *Med Sci Sports Exerc* 43:249–258. PMC2995836
 **Engine:** multipliers on % gain: age 40–65 → 0.9 for hypertrophy and 1.0 for strength; age 65+ → 0.75 for hypertrophy and 0.85 for strength [est, low confidence].
+
+**Built:** implemented as stated (projection.ts).
 
 ---
 

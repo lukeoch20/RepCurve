@@ -72,8 +72,7 @@ describe.each(fixtures)("program for $name", (fx) => {
     }
   });
 
-  it("week 1 flags benchmark sets on loaded exercises for novices", () => {
-    if (program.level !== "novice") return;
+  it("week 1 flags benchmark sets on loaded exercises at every level", () => {
     const w1 = program.sessions.filter((s) => s.week === 1 && s.kind === "strength");
     const loaded = w1.flatMap((s) => s.supersets.flatMap((ss) => ss.items)).filter((p) => p.loadKg !== null);
     for (const p of loaded) expect(p.benchmarkSet, p.exerciseId).toBe(true);

@@ -59,9 +59,15 @@ test("a new user sets up, logs sets with the rest timer, finishes, and keeps pro
 
 test("rest length can be set from settings and the plan adapts", async ({ page }) => {
   await onboard(page);
+  // The header summarises the session: estimated minutes, supersets and finisher.
+  const summary = page.locator("header .meta.num").first();
+  const before = (await summary.innerText()) + (await page.locator(".dose").allInnerTexts()).join("|");
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("group", { name: "Rest after each round" }).getByRole("button", { name: "2:00" }).click();
   await expect(page.getByRole("group", { name: "Rest after each round" }).getByRole("button", { name: "2:00" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Today" }).click();
   await expect(page.getByRole("button", { name: "Start session" })).toBeVisible();
+  // Two-minute rests take more of the time budget, so the session is re-planned.
+  const after = (await summary.innerText()) + (await page.locator(".dose").allInnerTexts()).join("|");
+  expect(after).not.toEqual(before);
 });
