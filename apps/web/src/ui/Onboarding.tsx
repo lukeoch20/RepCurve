@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
-import { Choice, CurveMark, Seg, Toggle } from "./common";
+import { Choice, CurveMark, Icon, Seg, Toggle, type IconName } from "./common";
 import { Lineup } from "./Lineup";
 import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
@@ -180,10 +180,20 @@ export function Onboarding(props: {
   return (
     <main className="app stack-lg" style={{ paddingBottom: 32 }}>
       {step !== "welcome" ? (
-        <div className="steps" aria-hidden="true">
-          {steps.filter((s) => s !== "welcome").map((s, k) => (
-            <i key={s} className={k <= i - (editing ? 0 : 1) ? "on" : ""} />
-          ))}
+        <div className="stack" style={{ gap: 10 }}>
+          <div className="spread">
+            <button type="button" className="icon-btn" aria-label={i === 0 ? "Cancel" : "Back"} onClick={back} style={{ border: 0, background: "transparent" }}>
+              <Icon name="chevronLeft" size={22} />
+            </button>
+            <span className="steps-count">
+              {i + (editing ? 1 : 0)} of {steps.filter((s) => s !== "welcome").length}
+            </span>
+          </div>
+          <div className="steps" aria-hidden="true">
+            {steps.filter((s) => s !== "welcome").map((s, k) => (
+              <i key={s} className={k <= i - (editing ? 0 : 1) ? "on" : ""} />
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -303,7 +313,7 @@ export function Onboarding(props: {
               label="Dumbbells"
               value={d.dbKind}
               onChange={(dbKind) => up({ dbKind })}
-              options={[{ value: "fixed", label: "Set of weights" }, { value: "adjustable", label: "Adjustable" }, { value: "none", label: "None" }]}
+              options={[{ value: "fixed", label: "Fixed set" }, { value: "adjustable", label: "Adjustable" }, { value: "none", label: "None" }]}
             />
           </div>
           {d.dbKind !== "none" ? (
@@ -343,13 +353,17 @@ export function Onboarding(props: {
             </div>
           ) : null}
           {d.dbKind !== "none" ? <Toggle id="pairs" label="I have pairs" hint="Two of each weight, for presses and rows with both hands" checked={d.pairs} onChange={(pairs) => up({ pairs })} /> : null}
-          <div className="card" style={{ paddingBlock: 4 }}>
-            <Toggle id="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
-            <Toggle id="bench" label="Sturdy chair, step or bench" hint="Most homes have one: used for split squats, step-ups and support" checked={d.bench} onChange={(bench) => up({ bench })} />
-            <Toggle id="mat" label="Exercise mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
-            <Toggle id="abroller" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
-            <Toggle id="pullup" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
-            <Toggle id="bands" label="Resistance bands" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
+          <div className="field">
+            <span className="label">What else do you have access to?</span>
+            <span className="meta small">Select all that apply. A sturdy chair or step counts as a bench.</span>
+            <div className="tiles" style={{ marginTop: 4 }}>
+              <Tile icon="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
+              <Tile icon="bench" label="Bench or chair" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
+              <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
+              <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
+              <Tile icon="band" label="Bands" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
+            </div>
           </div>
         </section>
       ) : null}
@@ -401,22 +415,23 @@ export function Onboarding(props: {
 function Welcome(): React.ReactElement {
   return (
     <section className="stack-lg">
-      <div className="row">
-        <CurveMark size={36} />
-        <span className="h3">RepCurve</span>
+      <div className="brand">
+        <CurveMark size={34} />
+        <span>RepCurve</span>
       </div>
       <header className="stack">
-        <h1 className="title" style={{ fontSize: "3.2rem" }}>Real training in the minutes you have</h1>
+        <h1 className="title" style={{ fontSize: "2.7rem" }}>Real training in the minutes you have</h1>
         <p className="meta">
           Tell RepCurve what equipment you own and how long you've got. It builds short, dense workouts, picks every weight and rep for you, and adjusts each session from how the last one felt.
         </p>
       </header>
       <svg className="hero-curve" viewBox="0 0 320 120" role="img" aria-label="A strength curve rising quickly at first, then levelling off">
-        <line x1="8" y1="108" x2="312" y2="108" stroke="var(--seam)" strokeWidth="2" />
-        <path d="M8 104 C 70 96, 110 60, 160 42 S 260 20, 312 16" fill="none" stroke="var(--cobalt)" strokeWidth="4" strokeLinecap="round" />
-        <circle cx="160" cy="42" r="5" fill="var(--cobalt)" />
-        <text x="166" y="62" fontSize="12" fill="var(--graphite)" fontFamily="var(--font-num)">week 12</text>
-        <text x="8" y="22" fontSize="12" fill="var(--graphite)" fontFamily="var(--font-num)">strength</text>
+        <line x1="8" y1="108" x2="312" y2="108" stroke="var(--line)" strokeWidth="1" />
+        <path d="M8 104 C 70 96, 110 60, 160 42 S 260 20, 312 16 L312 108 L8 108 Z" fill="var(--chart-wash)" />
+        <path d="M8 104 C 70 96, 110 60, 160 42 S 260 20, 312 16" fill="none" stroke="var(--chart)" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="160" cy="42" r="5" fill="var(--chart)" stroke="var(--card)" strokeWidth="2" />
+        <text x="168" y="60" fontSize="11" fill="var(--muted)">week 12</text>
+        <text x="8" y="22" fontSize="11" fill="var(--muted)">strength</text>
       </svg>
       <div className="card stack">
         <div className="spread">
@@ -473,5 +488,15 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
         </div>
       ) : null}
     </section>
+  );
+}
+
+function Tile(props: { icon: IconName; label: string; checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
+  return (
+    <button type="button" role="switch" aria-checked={props.checked} className="tile" onClick={() => props.onChange(!props.checked)}>
+      <span className="badge" aria-hidden="true"><Icon name="check" size={13} strokeWidth={2.6} /></span>
+      <Icon name={props.icon} size={26} />
+      {props.label}
+    </button>
   );
 }

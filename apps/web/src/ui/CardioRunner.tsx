@@ -4,7 +4,7 @@ import { cardioMinutesDone, cardioRemainingMs, elapsedMs } from "../model/sessio
 import type { ActiveSession, Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
-import { Sheet } from "./common";
+import { Sheet, TimerRing } from "./common";
 
 const INTENT: Record<string, string> = { warmup: "Warm-up", easy: "Easy", steady: "Steady", hard: "Hard", cooldown: "Cool-down" };
 
@@ -54,14 +54,19 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
       </header>
 
       <section className="cardio-clock" aria-label="Segment timer">
-        <div className="dock-label">
-          {INTENT[seg.intent]} · effort {seg.effort}/10
-          {c.finished ? " · done" : ""}
+        <div className="ring" role="timer">
+          <TimerRing fraction={c.finished ? 1 : remaining / Math.max(1, seg.minutes * 60_000)} size={132} />
+          <span className="face">
+            <span className="t">{c.finished ? "Done" : clock(remaining)}</span>
+            <span className="l">{running ? "running" : c.finished ? "finished" : "paused"}</span>
+          </span>
         </div>
-        <div className={`clock-digits${running ? "" : " ghost"}`} role="timer" style={{ minWidth: 0 }}>
-          {c.finished ? "DONE" : clock(remaining)}
+        <div style={{ minWidth: 0 }}>
+          <div className="dock-label">
+            {INTENT[seg.intent]} · effort {seg.effort}/10
+          </div>
+          <div className="dock-next" style={{ marginTop: 4 }}>{seg.note ?? effortWords(seg.effort)}</div>
         </div>
-        <div className="dock-next">{seg.note ?? effortWords(seg.effort)}</div>
       </section>
 
       <div className="row">

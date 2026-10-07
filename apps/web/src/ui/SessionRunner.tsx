@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { alternativesFor, type Prescription } from "@repcurve/engine";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
-import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, repsUnit } from "../model/format";
-import { contextFor } from "../model/plan";
+import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, plural, repsUnit } from "../model/format";
+import { contextFor, exerciseCount } from "../model/plan";
 import {
   elapsedMs,
   loggedSet,
@@ -17,7 +17,7 @@ import {
 import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
-import { Seg, Sheet, Toggle } from "./common";
+import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -48,29 +48,33 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
       {/* Any tap in the runner (re)enables sound, e.g. after the app was reloaded mid-session. */}
       <main className="app stack" onPointerDown={unlockAudio} style={{ paddingBottom: `calc(${active.timer ? 210 : 40}px + env(safe-area-inset-bottom, 0px))` }}>
         <div className="runner-head">
-          <div className="spread">
+          <div className="spread" style={{ alignItems: "flex-start" }}>
             <div className="grow">
               <p className="eyebrow">
                 Session {active.index + 1} · week {active.plan.week}
                 {active.plan.deload ? " · deload" : active.plan.comeback ? " · welcome back" : ""}
               </p>
-              <h1 className="h2">{active.plan.name}</h1>
+              <h1 className="h2" style={{ marginTop: 4 }}>{active.plan.name}</h1>
+              <p className="meta small num">
+                ~{Math.round(active.plan.estimatedMinutes)} min · {plural(exerciseCount(active.plan), "exercise")}
+              </p>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div className="num" style={{ fontSize: "1.3rem", fontWeight: 700 }} aria-label="Elapsed time">
+              <div className="runner-clock" aria-label="Elapsed time">
                 {clock(elapsedMs(active, now))}
               </div>
-              <div className="meta small num">of ~{Math.round(active.plan.estimatedMinutes)} min</div>
+              <div className="meta small">elapsed</div>
             </div>
           </div>
-          <div className="row" style={{ marginTop: 8 }}>
-            <button type="button" className="btn" style={{ minHeight: 40 }} onClick={() => dispatch({ type: paused ? "resume" : "pause", now: Date.now() })}>
+          <div className="row" style={{ marginTop: 10 }}>
+            <button type="button" className="btn small" onClick={() => dispatch({ type: paused ? "resume" : "pause", now: Date.now() })}>
+              <Icon name={paused ? "play" : "pause"} size={14} strokeWidth={2} />
               {paused ? "Resume" : "Pause"}
             </button>
             <span className="meta small num grow" style={{ textAlign: "center" }}>
               {done} of {total} sets
             </span>
-            <button type="button" className="btn" style={{ minHeight: 40 }} onClick={() => setEndOpen(true)}>
+            <button type="button" className="btn small" onClick={() => setEndOpen(true)}>
               End
             </button>
           </div>
@@ -103,7 +107,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         {active.plan.supersets.map((ss, g) => (
           <section key={ss.label} className="stack" aria-label={`Superset ${ss.label}`}>
             <div className="superset-label">
-              <span className="h3">Superset {ss.label}</span>
+              <span className="eyebrow">Superset {ss.label}</span>
               <span className="meta small num">
                 {ss.rounds} rounds · alternate {ss.items.map((_, i) => `${ss.label}${i + 1}`).join(" and ")}
               </span>
@@ -117,7 +121,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         {active.plan.finisher ? (
           <section className="stack" aria-label="Core finisher">
             <div className="superset-label">
-              <span className="h3">Core finisher</span>
+              <span className="eyebrow">Core finisher</span>
             </div>
             <ExerciseBlock core={core} active={active} p={active.plan.finisher} tag="Core" group={-1} position={0} up={up} />
           </section>
@@ -165,13 +169,14 @@ function Warmup(props: { active: ActiveSession }): React.ReactElement | null {
   const doneCount = items.filter((w) => props.active.warmupDone.includes(w.name)).length;
   return (
     <section className="block">
-      <button type="button" className="set-row" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="n">Warm</span>
-        <span className="v" style={{ fontFamily: "var(--font-body)", fontWeight: 700 }}>
-          Warm-up · {props.active.plan.warmupMinutes} min
+      <button type="button" className="block-head" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", paddingBottom: 14 }} onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="block-tag" aria-hidden="true"><Icon name="run" size={16} /></span>
+        <span className="grow">
+          <span className="block-name" style={{ display: "block" }}>Warm-up</span>
+          <span className="block-target" style={{ display: "block" }}>{props.active.plan.warmupMinutes} min · {doneCount} of {items.length} done</span>
         </span>
-        <span className="meta small num">
-          {doneCount}/{items.length}
+        <span style={{ display: "inline-flex", transform: open ? "rotate(90deg)" : undefined, color: "var(--muted)" }}>
+          <Icon name="chevronRight" size={18} />
         </span>
       </button>
       {open
@@ -179,13 +184,13 @@ function Warmup(props: { active: ActiveSession }): React.ReactElement | null {
             const on = props.active.warmupDone.includes(w.name);
             return (
               <div key={w.name} className={`set${on ? " done" : ""}`}>
-                <button type="button" className="set-row" onClick={() => dispatch({ type: "warmup", name: w.name })} aria-pressed={on}>
-                  <span className="tick" aria-hidden="true">{on ? "✓" : ""}</span>
+                <button type="button" className="set-row wide" onClick={() => dispatch({ type: "warmup", name: w.name })} aria-pressed={on}>
+                  <span />
                   <span>
-                    <b>{w.name}</b>
+                    <b style={{ fontWeight: 500 }}>{w.name}</b>
                     <span className="meta small" style={{ display: "block" }}>{w.prescription}</span>
                   </span>
-                  <span />
+                  <span className="tick" aria-hidden="true">{on ? <Icon name="check" size={20} strokeWidth={2.4} /> : null}</span>
                 </button>
               </div>
             );
@@ -215,7 +220,9 @@ function ExerciseBlock(props: {
   const units = loadUnitsFor(core.profile, core.equipment);
   const unit = repsUnit(p.loadType);
 
-  const target = `aim ${p.targetReps}${p.loadType === "time" ? " s" : ""}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
+  const target = `${p.sets} sets · ${p.targetReps}${p.loadType === "time" ? " s" : " reps"}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
+  const loaded = p.loadKg !== null;
+  const loadCell = (loadKg: number | null) => (loadKg !== null ? loadNumber(loadKg, units) : p.loadType === "band" ? "Band" : p.loadType === "time" ? "—" : "BW");
 
   return (
     <article className={`block${skipped ? " skipped" : ""}`}>
@@ -255,15 +262,31 @@ function ExerciseBlock(props: {
         </div>
       ) : null}
       {advice?.message ? (
-        <div className={`banner ${advice.tone === "good" ? "good" : advice.tone === "stop" ? "stop" : "adjust"} advice`} role="status">
-          {advice.message}
+        <div className={`suggestion${advice.tone === "good" ? "" : advice.tone === "stop" ? " stop" : " adjust"}`} role="status">
+          <span className="icon"><Icon name={advice.tone === "good" ? "trendUp" : "alert"} size={18} strokeWidth={2} /></span>
+          <span>
+            <b>{advice.tone === "good" ? "Suggestion" : advice.tone === "stop" ? "Stop here" : "Adjust"}</b>
+            <span style={{ display: "block" }}>{advice.message}</span>
+          </span>
         </div>
       ) : null}
+      <div className="set-table-head" aria-hidden="true">
+        <span style={{ textAlign: "center" }}>Set</span>
+        <span>{loaded ? units : "Load"}</span>
+        <span>{unit === "s" ? "Sec" : p.unilateral ? "Reps/side" : "Reps"}</span>
+        <span>Effort</span>
+        <span />
+      </div>
       {Array.from({ length: p.sets }, (_, setIndex) => {
         const done = loggedSet(active, p.slot, setIndex);
         const isUp = !!up && up.slot === p.slot && up.setIndex === setIndex;
         const open = !skipped && (editing === setIndex || (isUp && editing === null));
         const ref: SetRef = { slot: p.slot, exerciseId: p.exerciseId, setIndex, group, round: setIndex, position, label: tag };
+        const planned = done ? null : prefill(active, p.slot, setIndex);
+        const benchmark = !done && p.benchmarkSet && setIndex === 0;
+        const label = done
+          ? `Set ${setIndex + 1}: ${done.loadKg !== null ? `${loadNumber(done.loadKg, units)} ${units}, ` : ""}${done.reps}${unit === "s" ? " seconds" : " reps"}, ${effortLabel(done.rir)}${done.painFlag ? ", pain" : ""}`
+          : `Set ${setIndex + 1}: ${benchmark ? "benchmark" : isUp ? "up next" : "to do"}`;
         return (
           <div key={setIndex} className={`set${done ? (done.painFlag ? " pain" : " done") : ""}${isUp ? " current" : ""}`} data-current={isUp || undefined}>
             <button
@@ -271,19 +294,16 @@ function ExerciseBlock(props: {
               className="set-row"
               onClick={() => setEditing(open ? (isUp && editing === null ? -1 : null) : setIndex)}
               aria-expanded={open}
+              aria-label={label}
               disabled={skipped}
             >
-              <span className="n">Set {setIndex + 1}</span>
-              <span className="v">
-                {done
-                  ? `${done.loadKg !== null ? `${loadNumber(done.loadKg, units)} ${units} × ` : ""}${done.reps}${unit === "s" ? " s" : ""} · ${effortLabel(done.rir)}`
-                  : p.benchmarkSet && setIndex === 0
-                    ? "benchmark"
-                    : isUp
-                      ? "up next"
-                      : ""}
+              <span className="n">{setIndex + 1}</span>
+              <span className={`cell${done ? "" : " plan"}`}>{loadCell(done ? done.loadKg : planned!.loadKg)}</span>
+              <span className={`cell${done ? "" : " plan"}`}>{done ? done.reps : benchmark ? "Max" : planned!.reps}</span>
+              <span className={`cell${done ? "" : " plan"}`}>{done ? effortLabel(done.rir) : benchmark ? "2 left" : effortLabel(planned!.rir)}</span>
+              <span className="tick" aria-hidden="true">
+                {done ? done.painFlag ? "!" : <Icon name="check" size={20} strokeWidth={2.4} /> : null}
               </span>
-              <span className="tick" aria-hidden="true">{done ? (done.painFlag ? "!" : "✓") : ""}</span>
             </button>
             {open ? (
               <SetEditor
@@ -392,7 +412,7 @@ function SetEditor(props: {
         <button
           type="button"
           className="btn go grow"
-          style={{ minHeight: 54, fontSize: "1.05rem" }}
+          style={{ minHeight: 52 }}
           onClick={() => props.onSave(props.existing ? { loadKg, reps, rir, painFlag: pain } : { loadKg, reps, rir })}
         >
           {props.existing ? "Save changes" : `Done · set ${setIndex + 1}`}
@@ -469,21 +489,25 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
     <>
       <div className={`dock${over ? " go" : ""}`} role="timer" aria-live="off" onPointerDown={unlockAudio}>
         <div className="dock-inner">
-          <button type="button" className="clock-digits" onClick={() => setChooser(true)} aria-label={`Rest timer ${clock(remaining)}. Tap to change the rest length.`}>
-            {over ? "GO" : clock(remaining)}
+          <button type="button" className="ring" onClick={() => setChooser(true)} aria-label={`Rest timer ${clock(remaining)}. Tap to change the rest length.`}>
+            <TimerRing fraction={over ? 1 : remaining / Math.max(1, t.durationSec * 1000)} size={104} />
+            <span className="face">
+              <span className="t">{over ? "GO" : clock(remaining)}</span>
+              <span className="l">{over ? "Rest over" : t.kind === "transition" ? "Switch" : "Rest"}</span>
+            </span>
           </button>
           <div style={{ minWidth: 0 }}>
-            <div className="dock-label">{over ? "Rest over" : t.kind === "transition" ? "Switch" : "Rest"}</div>
-            <div className="dock-next">Next: {t.next}</div>
-          </div>
-          <div className="dock-actions">
-            <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: -15, now: Date.now() })} disabled={over}>
-              −15 s
-            </button>
-            <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: 15, now: Date.now() })}>
-              +15 s
-            </button>
-            <button type="button" onClick={() => dispatch({ type: "timerClear" })}>{over ? "Hide" : "Skip"}</button>
+            <div className="dock-label">Up next</div>
+            <div className="dock-next">{t.next}</div>
+            <div className="dock-actions">
+              <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: -15, now: Date.now() })} disabled={over}>
+                −15 s
+              </button>
+              <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: 15, now: Date.now() })}>
+                +15 s
+              </button>
+              <button type="button" className="go" onClick={() => dispatch({ type: "timerClear" })}>{over ? "Hide" : "Skip"}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -516,3 +540,4 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
     </>
   );
 }
+

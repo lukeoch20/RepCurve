@@ -32,7 +32,7 @@ export function Lineup(props: { plan: SessionPlan; units: Units }): React.ReactE
       ))}
       {plan.finisher ? (
         <div className="lineup-group">
-          <div className="lineup-tag" style={{ fontSize: "1.05rem", paddingTop: 2 }}>Core</div>
+          <div className="lineup-tag wide">Core</div>
           <div className="lineup-item">
             <span className="what">{plan.finisher.name}</span>
             <span className="dose">
