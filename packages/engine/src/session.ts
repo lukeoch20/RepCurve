@@ -1,8 +1,9 @@
+import { loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Exercise, Pattern, Profile, TrainingLevel } from "@repcurve/shared";
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
 import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
-import { TRANSITION_SEC, finisherMinutes, restSecondsForBudget, setSeconds, supersetSeconds, warmupMinutes } from "./timing.js";
+import { TRANSITION_SEC, finisherMinutes, finisherSeconds, finisherSets, restSecondsForBudget, supersetSeconds, warmupMinutes } from "./timing.js";
 import type { Pool, Prescription, SessionPlan, Superset, WarmupItem } from "./types.js";
 
 interface Variant {
@@ -61,13 +62,23 @@ export interface StrengthSessionInput {
 interface Chosen {
   exercise: Exercise;
   repRange: [number, number];
+  /** Reps (or seconds) each set is planned at; sets are timed from this. */
+  targetReps: number;
   slot: string;
 }
+
+function choose(exercise: Exercise, slot: string, input: StrengthSessionInput): Chosen {
+  const repRange = repRangeFor(exercise, input.level);
+  const targetReps = input.e1rmByExercise[exercise.id] ? startingTargetReps(repRange) : defaultTargetReps(repRange, exercise.loadType);
+  return { exercise, repRange, targetReps, slot };
+}
+
+const timed = (c: Chosen) => ({ exercise: c.exercise, repRange: c.repRange, reps: c.targetReps });
 
 function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchmark: boolean): Prescription {
   const e1rm = input.e1rmByExercise[c.exercise.id];
   const loadKg = startingLoadKg(c.exercise, input.profile, input.equipment, input.level, c.repRange, TARGET_RIR, e1rm);
-  const targetReps = e1rm ? startingTargetReps(c.repRange) : defaultTargetReps(c.repRange, c.exercise.loadType);
+  const targetReps = c.targetReps;
   return buildPrescription({
     exercise: c.exercise,
     slot: c.slot,
@@ -76,7 +87,7 @@ function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchma
     targetReps,
     loadKg,
     benchmarkSet: benchmark && c.exercise.loadType !== "time" && !e1rm,
-    units: input.profile.units,
+    units: loadUnitsFor(input.profile, input.equipment),
   });
 }
 
@@ -88,13 +99,42 @@ function bodyweightBoost(input: StrengthSessionInput): number {
   return input.profile.trainingHistory === "never" ? 0 : 1;
 }
 
-function choosePair(pair: [Pattern, Pattern], variant: Variant, input: StrengthSessionInput, used: Set<string>): Chosen[] | null {
+/** Patterns that can stand in when one side of a pair has no exercise the user can do. */
+const FALLBACK_PATTERNS: Pattern[] = ["row", "horizontal_push", "squat", "hinge", "vertical_push", "vertical_pull", "isolation"];
+
+const sharesPrimeMover = (a: Exercise, b: Exercise) => a.primary.some((m) => b.primary.includes(m));
+
+function choosePair(
+  pair: [Pattern, Pattern],
+  variant: Variant,
+  input: StrengthSessionInput,
+  used: Set<string>,
+  /** Patterns already in this session, which a stand-in should not repeat. */
+  taken: Set<Pattern>,
+): Chosen[] | null {
   const chosen: Chosen[] = [];
+  const pick = (pattern: Pattern, offset: number) =>
+    pickExercise(input.pool, pattern, input.level, input.strengthIndex, offset, used, bodyweightBoost(input), (e) =>
+      chosen.every((c) => !sharesPrimeMover(c.exercise, e)),
+    );
   for (const pattern of pair) {
-    const ex = pickExercise(input.pool, pattern, input.level, input.strengthIndex, variant.offsets[pattern] ?? 0, used, bodyweightBoost(input));
+    const ex = pick(pattern, variant.offsets[pattern] ?? 0);
     if (!ex) continue;
     used.add(ex.id);
-    chosen.push({ exercise: ex, repRange: repRangeFor(ex, input.level), slot: `${variant.key}.${pattern}` });
+    chosen.push(choose(ex, `${variant.key}.${pattern}`, input));
+  }
+  if (chosen.length === 1) {
+    // Pair the lone exercise with another movement rather than run a one-exercise superset.
+    // A movement not yet in the session is preferred; a second exercise of one already in it is next best.
+    const order = [...FALLBACK_PATTERNS.filter((p) => !taken.has(p)), ...FALLBACK_PATTERNS.filter((p) => taken.has(p))];
+    for (const pattern of order) {
+      if (pair.includes(pattern)) continue;
+      const ex = pick(pattern, 0);
+      if (!ex) continue;
+      used.add(ex.id);
+      chosen.push(choose(ex, `${variant.key}.${pattern}.alt`, input));
+      break;
+    }
   }
   return chosen.length > 0 ? chosen : null;
 }
@@ -113,26 +153,41 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const used = new Set<string>();
   const restSec = input.restSec ?? restSecondsForBudget(budget);
   const transitionSec = input.transitionSec ?? TRANSITION_SEC;
+  const notes: string[] = [];
+
+  // The core finisher is planned first so its real length, not a flat reservation, comes off the budget.
+  let finisher: Prescription | null = null;
+  let finisherSec = 0;
+  if (finisherMinutes(budget) > 0) {
+    const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input));
+    if (core) {
+      used.add(core.id);
+      const c = choose(core, `${variant.key}.core`, input);
+      const sets = finisherSets(core, c.repRange, budget, c.targetReps);
+      finisher = prescribe(c, input, sets, false);
+      finisherSec = finisherSeconds(core, c.repRange, sets, c.targetReps);
+    }
+  }
 
   const warmupMin = warmupMinutes(budget);
-  const finisherMin = finisherMinutes(budget);
-  let remainingSec = (budget - warmupMin - finisherMin) * 60;
+  let remainingSec = (budget - warmupMin) * 60 - finisherSec;
 
   const supersets: Superset[] = [];
   const pairsChosen: Chosen[][] = [];
   const maxRounds = input.maxRounds ?? (input.level === "novice" ? 3 : 4);
   const minRounds = Math.min(2, input.rounds);
+  const taken = new Set<Pattern>();
 
-  const tryAdd = (pair: [Pattern, Pattern], rounds: number): boolean => {
+  const tryAdd = (pair: [Pattern, Pattern], rounds: number, force = false): boolean => {
     if (input.maxSupersets !== undefined && supersets.length >= input.maxSupersets) return false;
-    const chosen = choosePair(pair, variant, input, used);
+    const chosen = choosePair(pair, variant, input, used, taken);
     if (!chosen) return false;
-    const items = chosen.map((c) => ({ exercise: c.exercise, repRange: c.repRange }));
-    const secs = supersetSeconds(items, rounds, transitionSec, restSec);
-    if (secs > remainingSec) {
+    const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec);
+    if (secs > remainingSec && !force) {
       for (const c of chosen) used.delete(c.exercise.id);
       return false;
     }
+    for (const c of chosen) taken.add(c.exercise.pattern);
     remainingSec -= secs;
     pairsChosen.push(chosen);
     supersets.push({
@@ -153,8 +208,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       added = false;
       supersets.forEach((ss, i) => {
         if (ss.rounds >= cap) return;
-        const items = pairsChosen[i]!.map((c) => ({ exercise: c.exercise, repRange: c.repRange }));
-        const extra = supersetSeconds(items, 1, transitionSec, restSec);
+        const extra = supersetSeconds(pairsChosen[i]!.map(timed), 1, transitionSec, restSec);
         if (extra <= remainingSec) {
           ss.rounds += 1;
           ss.estimatedSec += extra;
@@ -170,6 +224,15 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const corePairs = variant.pairs.slice(0, 2);
   const extraPairs = variant.pairs.slice(2);
   for (const pair of corePairs) tryAdd(pair, minRounds);
+  // A strength session always has at least one pair, even when rest and switch settings leave no room.
+  if (supersets.length === 0) {
+    for (const pair of corePairs) if (tryAdd(pair, 1, true)) break;
+    if (supersets.length > 0) {
+      notes.push(
+        `Your rest (${restSec} s) and switch (${transitionSec} s) settings leave little room in ${budget} minutes, so this session is one superset, one round. Shorter rests in Settings fit more work.`,
+      );
+    }
+  }
   // 2. Grow the core pairs to the planned rounds.
   grow(input.rounds);
   // 3. A third pair if there is still room, at planned rounds or at least two.
@@ -179,18 +242,8 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   // 4. Spend what is left on extra rounds, up to the cap.
   grow(maxRounds);
 
-  let finisher: Prescription | null = null;
-  if (finisherMin > 0) {
-    const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input));
-    if (core) {
-      const repRange = repRangeFor(core, input.level);
-      const sets = Math.max(1, Math.min(3, Math.floor((finisherMin * 60) / (setSeconds(core, repRange) + 30))));
-      finisher = prescribe({ exercise: core, repRange, slot: `${variant.key}.core` }, input, sets, false);
-    }
-  }
-
   const supersetMin = supersets.reduce((s, ss) => s + ss.estimatedSec, 0) / 60;
-  const estimatedMinutes = Math.round((warmupMin + supersetMin + (finisher ? finisherMin : 0)) * 10) / 10;
+  const estimatedMinutes = Math.round((warmupMin + supersetMin + finisherSec / 60) * 10) / 10;
 
   return {
     id: `w${input.week}d${input.dayIndex + 1}`,
@@ -209,5 +262,6 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     cardio: null,
     deload: false,
     comeback: false,
+    ...(notes.length > 0 ? { notes } : {}),
   };
 }

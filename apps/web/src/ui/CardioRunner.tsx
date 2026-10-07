@@ -16,6 +16,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
   const running = c.started && !c.finished && active.pausedAt === null;
   const now = useNow(true, 250);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const lastSegment = useRef(c.segmentIndex);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
   const remaining = cardioRemainingMs(active, now);
 
   return (
-    <main className="app stack-lg" style={{ paddingBottom: 40 }}>
+    <main className="app stack-lg" style={{ paddingBottom: 40 }} onPointerDown={unlockAudio}>
       <header className="stack">
         <p className="eyebrow">
           Session {active.index + 1} · week {active.plan.week} · {plan.mode === "treadmill" ? "treadmill" : "outdoors"}
@@ -98,10 +99,21 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         <button type="button" className="btn grow" onClick={() => setFinishOpen(true)}>
           {c.finished ? "Log it" : "Finish early"}
         </button>
-        <button type="button" className="btn danger" onClick={() => dispatch({ type: "discard" })}>
+        <button type="button" className="btn danger" onClick={() => setDiscardOpen(true)}>
           Discard
         </button>
       </div>
+
+      {discardOpen ? (
+        <div className="banner stop" role="alertdialog" aria-label="Discard this session?">
+          <b>Discard this session?</b>
+          Nothing from it will be saved.
+          <div className="row" style={{ marginTop: 10 }}>
+            <button type="button" className="btn" onClick={() => setDiscardOpen(false)}>Keep going</button>
+            <button type="button" className="btn danger solid" onClick={() => dispatch({ type: "discard" })}>Discard</button>
+          </div>
+        </div>
+      ) : null}
 
       {finishOpen ? <CardioFinish active={active} now={now} onClose={() => setFinishOpen(false)} /> : null}
     </main>

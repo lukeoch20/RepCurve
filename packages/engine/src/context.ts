@@ -1,5 +1,5 @@
-import { availableDumbbellLoadsKg } from "@repcurve/shared";
-import type { Equipment, Profile, TrainingLevel } from "@repcurve/shared";
+import { availableDumbbellLoadsKg, loadUnitsFor } from "@repcurve/shared";
+import type { Equipment, Profile, TrainingLevel, Units } from "@repcurve/shared";
 import { trainingLevel } from "./level.js";
 import { buildPool } from "./pool.js";
 import { weeklyTemplate } from "./template.js";
@@ -15,6 +15,8 @@ export interface EngineContext {
   ownedLoadsKg: number[];
   template: SessionKind[];
   strengthPerWeek: number;
+  /** Units loads are shown in (the dumbbells' own unit when there are dumbbells). */
+  loadUnits: Units;
 }
 
 export function makeContext(profile: Profile, equipment: Equipment): EngineContext {
@@ -27,5 +29,6 @@ export function makeContext(profile: Profile, equipment: Equipment): EngineConte
     ownedLoadsKg: availableDumbbellLoadsKg(equipment.dumbbells),
     template,
     strengthPerWeek: template.filter((k) => k === "strength").length,
+    loadUnits: loadUnitsFor(profile, equipment),
   };
 }

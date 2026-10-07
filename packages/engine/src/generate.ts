@@ -3,6 +3,8 @@ import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
 import { volumeTarget } from "./level.js";
 import { buildStrengthSession, type StrengthSessionInput } from "./session.js";
+import { applyState } from "./state.js";
+import type { Pattern } from "@repcurve/shared";
 import type { GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
 import { hardSets, weeklyVolume } from "./volume.js";
 
@@ -16,6 +18,8 @@ export interface PlanOptions {
   /** Seconds between exercises within a round. */
   transitionSec?: number;
   e1rmByExercise?: Record<string, number>;
+  /** Effort (1–10) reported for the last cardio session; steers the next one. */
+  lastCardioEffort?: number;
 }
 
 /** Week and day for a position in the session sequence. */
@@ -38,7 +42,17 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
   const before = ctx.template.slice(0, dayIndex);
   if (kind === "cardio") {
     const cardioIndex = before.filter((k) => k === "cardio").length;
-    return buildCardioSession({ profile, equipment: ctx.equipment, level: ctx.level, cardioIndex, index, week, dayIndex });
+    return buildCardioSession({
+      profile,
+      equipment: ctx.equipment,
+      level: ctx.level,
+      cardioIndex,
+      index,
+      week,
+      dayIndex,
+      cardioPerWeek: ctx.template.filter((k) => k === "cardio").length,
+      ...(opts.lastCardioEffort !== undefined ? { lastEffort: opts.lastCardioEffort } : {}),
+    });
   }
   const base: StrengthSessionInput = {
     profile,
@@ -77,11 +91,14 @@ export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}
   const planOpts: PlanOptions = {
     e1rmByExercise: opts.e1rmByExercise ?? {},
     ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
+    ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),
   };
   const sessions: SessionPlan[] = [];
   for (let i = 0; i < weeks * ctx.template.length; i++) sessions.push(planSessionWith(ctx, i, planOpts));
 
-  const steadyWeek = sessions.filter((s) => s.week === Math.min(2, weeks));
+  const plannedWeek = sessions.filter((s) => s.week === Math.min(2, weeks));
+  const steadyState = opts.state ? { ...opts.state, deloadRemaining: 0 } : null;
+  const steadyWeek = steadyState ? plannedWeek.map((s) => applyState(s, steadyState, ctx)) : plannedWeek;
   const volume = weeklyVolume(steadyWeek);
   const target = volumeTarget(ctx.level);
   const strengthSessions = steadyWeek.filter((s) => s.kind === "strength");
@@ -97,6 +114,18 @@ export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}
     sessions,
     weeklyVolume: volume,
     volumeTarget: target,
-    explanation: explain(input.profile, input.equipment, ctx.level, ctx.template, volume, target, avgHardSets),
+    explanation: explain(input.profile, input.equipment, ctx.level, ctx.template, volume, target, avgHardSets, {
+      benchmarkWeek: sessions.some((s) => s.week === 1 && s.supersets.some((ss) => ss.items.some((p) => p.benchmarkSet))),
+      missingPatterns: missingPatterns(steadyWeek),
+    }),
   };
+}
+
+/** Main movement patterns that no strength session of the week trains. */
+export function missingPatterns(week: SessionPlan[]): Pattern[] {
+  const strength = week.filter((s) => s.kind === "strength");
+  if (strength.length === 0) return [];
+  const trained = new Set(strength.flatMap((s) => s.supersets.flatMap((ss) => ss.items.map((p) => p.pattern))));
+  const main: Pattern[] = ["squat", "hinge", "horizontal_push", "vertical_push", "row"];
+  return main.filter((p) => !trained.has(p));
 }

@@ -3,7 +3,7 @@ import { e1RM, formatLoad, nextOwnedLoad, prevOwnedLoad, repsAtLoad, roundDownTo
 import type { Exercise, Rir, SetLog } from "@repcurve/shared";
 import type { EngineContext } from "./context.js";
 import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
-import { MAX_HOLD_SEC, MAX_REPS, TARGET_RIR, clamp, defaultTargetReps } from "./prescribe.js";
+import { TARGET_RIR, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
 
 /** Everything the engine remembers about one exercise between sessions. */
 export interface ExerciseProgress {
@@ -93,9 +93,7 @@ export function convertLoad(from: Exercise, to: Exercise, loadKg: number | null,
   return startingLoadKg(to, ctx.profile, ctx.equipment, ctx.level, repRangeFor(to, ctx.level), TARGET_RIR);
 }
 
-function maxFor(e: Exercise): number {
-  return e.loadType === "time" ? MAX_HOLD_SEC : MAX_REPS;
-}
+const maxFor = maxRepsFor;
 
 function sessionE1rm(sets: SetLog[]): number | null {
   let best: number | null = null;
@@ -135,7 +133,7 @@ function widen(e: Exercise, performed: ExerciseProgress, why: string): Progressi
   const [lo, hi] = performed.repRange;
   const step = e.loadType === "time" ? 15 : 3;
   const newHi = Math.min(maxFor(e), hi + step);
-  if (newHi === hi) {
+  if (newHi <= hi) {
     const next = { ...performed, stalls: 0, targetReps: hi, maxedOut: true };
     if (performed.maxedOut) {
       return { next, performed: next, action: "hold", reason: "Same again: slow 3-second lowering, pause at the bottom." };
@@ -151,19 +149,32 @@ function widen(e: Exercise, performed: ExerciseProgress, why: string): Progressi
   return { next, performed: next, action: "widen_range", reason: why };
 }
 
+/** Ranges saved before a cap existed (e.g. 30 reps per side) are brought back inside it. */
+function withinCap(p: ExerciseProgress, e: Exercise): ExerciseProgress {
+  const cap = maxFor(e);
+  if (p.repRange[1] <= cap) return p;
+  const repRange: [number, number] = [Math.min(p.repRange[0], cap), cap];
+  return { ...p, repRange, targetReps: Math.min(p.targetReps, cap) };
+}
+
 /**
  * Between-session progression for one exercise (double progression with
  * dumbbell-aware steps). Loads follow what the user actually lifted: the last
  * set's load is the working load, so mid-session changes carry forward.
  */
-export function progressExercise(progress: ExerciseProgress, logs: SetLog[], ctx: EngineContext): ProgressionResult {
+export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: EngineContext): ProgressionResult {
+  const e = getExercise(saved.exerciseId);
+  const progress = withinCap(saved, e);
   const all = setsFor(progress, logs);
   if (all.length === 0) return { next: progress, performed: progress, action: "hold", reason: "No sets logged." };
 
-  const e = getExercise(progress.exerciseId);
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const workingLoad = isLoaded(e) ? (all[all.length - 1]!.loadKg ?? progress.loadKg) : null;
-  const sets = isLoaded(e) ? all.filter((s) => s.loadKg === workingLoad) : all;
+  const atWorking = isLoaded(e) ? all.filter((s) => s.loadKg === workingLoad) : all;
+  // Imported or hand-edited logs may have no set at the working load; judge them all then.
+  const sets = atWorking.length > 0 ? atWorking : all;
+  // After a mid-session weight change the old rep target belonged to the old weight.
+  const loadChanged = isLoaded(e) && workingLoad !== null && progress.loadKg !== null && Math.abs(workingLoad - progress.loadKg) > 1e-6;
   const [lo, hi] = progress.repRange;
   const rirT = progress.targetRir;
   const avgRir = sets.reduce((s, x) => s + x.rir, 0) / sets.length;
@@ -251,7 +262,7 @@ export function progressExercise(progress: ExerciseProgress, logs: SetLog[], ctx
 
   // One more rep, plus any reps the user said they had left beyond the target.
   const reserve = Math.max(0, Math.floor(avgRir - rirT));
-  const target = clamp(Math.max(progress.targetReps, minReps + 1 + reserve), lo, hi);
+  const target = clamp(Math.max(loadChanged ? 0 : progress.targetReps, minReps + 1 + reserve), lo, hi);
   return same({ stalls: 0, targetReps: target }, "add_rep",
     e.loadType === "time" ? "Same hold next time; add a few seconds if you can." : "Same weight next time; aim for one more rep.");
 }
@@ -268,7 +279,7 @@ export function calibrate(progress: ExerciseProgress, logs: SetLog[], ctx: Engin
   if (all.some((s) => s.painFlag)) return progressExercise(progress, logs, ctx);
 
   const e = getExercise(progress.exerciseId);
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const [lo, hi] = progress.repRange;
   const rirT = progress.targetRir;
   const e1 = sessionE1rm(all);
@@ -305,7 +316,7 @@ export function calibrate(progress: ExerciseProgress, logs: SetLog[], ctx: Engin
     if (capacity > hi && chosen === owned[owned.length - 1]) {
       const up = ladderNeighbour(e, ctx, 1);
       if (up) return move(up, convertLoad(e, up, chosen, ctx), `Benchmark: your heaviest dumbbell is light for ${e.name}, so you'll move up to ${up.name}.`);
-      const newHi = Math.min(MAX_REPS, capacity);
+      const newHi = Math.max(hi, Math.min(maxFor(e), capacity));
       return same({ loadKg: chosen, repRange: [lo, newHi], targetReps: newHi },
         `Benchmark: your heaviest dumbbell is light here, so sets run longer (up to ${newHi} reps).`);
     }
@@ -319,7 +330,7 @@ export function calibrate(progress: ExerciseProgress, logs: SetLog[], ctx: Engin
   if (capacity > hi) {
     const up = ladderNeighbour(e, ctx, 1);
     if (up) return move(up, convertLoad(e, up, null, ctx), `Benchmark: ${e.name} is easy for you, so you'll start on ${up.name}.`);
-    const newHi = Math.min(maxFor(e), capacity);
+    const newHi = Math.max(hi, Math.min(maxFor(e), capacity));
     return same({ repRange: [lo, newHi], targetReps: newHi }, `Benchmark: aim for ${newHi} reps.`);
   }
   if (capacity < lo) {

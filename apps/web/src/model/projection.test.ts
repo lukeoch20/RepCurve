@@ -35,10 +35,14 @@ describe("projection glue", () => {
     expect(obs[1]!.week).toBeCloseTo(2);
   });
 
-  it("measures adherence only after the first week", () => {
+  it("measures adherence from the first session, after two full weeks (RC-30)", () => {
     const core = newCore(profile, equipment, T0);
-    expect(adherence(core, [], T0 + 3 * DAY)).toBeUndefined();
-    expect(adherence(core, [rec(0, 1, 10, 10), rec(1, 3, 10, 10)], T0 + 7 * DAY)).toBeCloseTo(0.5);
+    expect(adherence(core, [], T0 + 30 * DAY)).toBeUndefined();
+    // Set up on day 0, first session on day 7: a week later it's too early to judge.
+    expect(adherence(core, [rec(0, 7, 10, 10)], T0 + 15 * DAY)).toBeUndefined();
+    const eight = Array.from({ length: 8 }, (_, i) => rec(i, 7 + i * 1.75, 10, 10));
+    expect(adherence(core, eight, T0 + 21 * DAY)).toBeCloseTo(1);
+    expect(adherence(core, eight.slice(0, 4), T0 + 21 * DAY)).toBeCloseTo(0.5);
   });
 
   it("projects for a user with history", () => {

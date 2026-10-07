@@ -1,5 +1,5 @@
 import type { Equipment, Profile } from "@repcurve/shared";
-import { newCore } from "../model/plan";
+import { newCore, rescheduled } from "../model/plan";
 import {
   adjustTimer,
   clearTimer,
@@ -67,9 +67,7 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, data: a.data, ready: true };
     case "setup": {
       // First run creates the training record; later edits keep history and progress.
-      const nextCore = core
-        ? { ...core, profile: a.profile, equipment: a.equipment }
-        : newCore(a.profile, a.equipment, a.now);
+      const nextCore = core ? rescheduled(core, a.profile, a.equipment) : newCore(a.profile, a.equipment, a.now);
       return { ...s, data: { ...s.data, core: nextCore } };
     }
     case "settings":

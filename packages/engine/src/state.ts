@@ -6,13 +6,14 @@ import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
 import {
   calibrate,
   freshProgress,
+  ladderNeighbour,
   progressExercise,
   type ExerciseProgress,
   type ProgressionAction,
   type ProgressionResult,
 } from "./progression.js";
-import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps } from "./prescribe.js";
-import { finisherMinutes, supersetSeconds } from "./timing.js";
+import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
+import { finisherSeconds, supersetSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
 
 /** Everything that carries over from one session to the next. Plain JSON, safe to persist. */
@@ -46,13 +47,18 @@ function cloneState(s: TrainingState): TrainingState {
   return JSON.parse(JSON.stringify(s)) as TrainingState;
 }
 
-/** Every programmed exercise currently resolving to `fromId` resolves to `toId` from now on. */
+/**
+ * Every programmed exercise currently resolving to `fromId` resolves to `toId` from now on.
+ * The target is resolved first, so substitutions never chain.
+ */
 function redirect(state: TrainingState, fromId: string, toId: string): void {
+  const resolved = resolveExercise(state, toId);
+  const target = resolved === fromId ? toId : resolved;
   const programmed = new Set<string>([fromId, ...Object.keys(state.substitutions)]);
   const moving = [...programmed].filter((x) => resolveExercise(state, x) === fromId);
   for (const x of moving) {
-    if (x === toId) delete state.substitutions[x];
-    else state.substitutions[x] = toId;
+    if (x === target) delete state.substitutions[x];
+    else state.substitutions[x] = target;
   }
 }
 
@@ -82,7 +88,10 @@ export function prescriptionFor(
   fallback?: Prescription,
 ): Prescription {
   const progress = state.exercises[exercise.id];
-  const repRange = progress?.repRange ?? fallback?.repRange ?? repRangeFor(exercise, ctx.level);
+  const stored = progress?.repRange ?? fallback?.repRange ?? repRangeFor(exercise, ctx.level);
+  // Ranges saved before a cap existed (e.g. 30 reps per side) are brought back inside it.
+  const cap = maxRepsFor(exercise);
+  const repRange: [number, number] = [Math.min(stored[0], cap), Math.min(stored[1], cap)];
   let loadKg: number | null = null;
   if (isLoaded(exercise) && ctx.ownedLoadsKg.length > 0) {
     const remembered = progress?.loadKg ?? fallback?.loadKg ?? null;
@@ -104,7 +113,7 @@ export function prescriptionFor(
     loadKg,
     targetRir: progress?.targetRir ?? TARGET_RIR,
     benchmarkSet: false,
-    units: ctx.profile.units,
+    units: ctx.loadUnits,
   });
 }
 
@@ -122,7 +131,7 @@ function lighter(p: Prescription, ctx: EngineContext): Prescription {
     loadKg: prev,
     targetRir: p.targetRir,
     benchmarkSet: false,
-    units: ctx.profile.units,
+    units: ctx.loadUnits,
   });
 }
 
@@ -131,28 +140,82 @@ function lighter(p: Prescription, ctx: EngineContext): Prescription {
  * the last superset first (not below two), then the finisher, then whole
  * supersets. Needed when swaps or ladder moves bring in slower exercises.
  */
+/** Sessions may run this far over budget before anything is cut. */
+export const BUDGET_TOLERANCE = 0.05;
+/** A whole pattern pair is only dropped to save at least this much. */
+const MIN_PAIR_SAVING_SEC = 60;
+
+/**
+ * Re-time a personalised session and fit it to its budget. Sets are timed from the
+ * reps the user will actually do. When over budget (beyond a small tolerance) the
+ * smallest cut that helps goes first: one round of a superset above two rounds,
+ * then a finisher set, then rounds down to one, and a whole pair only when that
+ * saves at least a minute. Anything cut that fits again afterwards is put back.
+ */
 export function fitToBudget(session: SessionPlan): SessionPlan {
   if (session.kind !== "strength") return session;
-  const supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
-  let finisher = session.finisher;
-  const finisherMin = finisherMinutes(session.budgetMinutes);
-  const secsFor = (ss: Superset) =>
-    supersetSeconds(ss.items.map((p) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange })), ss.rounds, ss.transitionSec, ss.restSec);
-  const total = () => session.warmupMinutes + supersets.reduce((s, ss) => s + secsFor(ss), 0) / 60 + (finisher ? finisherMin : 0);
+  const planned = session.supersets.map((ss) => ss.rounds);
+  let supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
+  const plannedFinisher = session.finisher;
+  let finisher = plannedFinisher ? { ...plannedFinisher } : null;
+
+  const timedItem = (p: Prescription) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps });
+  const secsFor = (ss: Superset, rounds = ss.rounds) => supersetSeconds(ss.items.map(timedItem), rounds, ss.transitionSec, ss.restSec);
+  const finisherSecs = (f: Prescription | null) => (f ? finisherSeconds(getExercise(f.exerciseId), f.repRange, f.sets, f.targetReps) : 0);
+  const totalSec = () => session.warmupMinutes * 60 + supersets.reduce((s, ss) => s + secsFor(ss), 0) + finisherSecs(finisher);
+  const budgetSec = session.budgetMinutes * 60;
+  const limitSec = budgetSec * (1 + BUDGET_TOLERANCE);
   const setRounds = (ss: Superset, rounds: number) => {
     ss.rounds = rounds;
     for (const p of ss.items) p.sets = rounds;
   };
-  while (total() > session.budgetMinutes + 1e-9) {
-    const reducible = [...supersets].reverse().find((ss) => ss.rounds > 2);
-    if (reducible) setRounds(reducible, reducible.rounds - 1);
+  /** Of the supersets that can lose a round, the cheapest round that clears the overage, else the most expensive. */
+  const roundToCut = (minRounds: number): Superset | undefined => {
+    const over = totalSec() - limitSec;
+    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => secsFor(a, 1) - secsFor(b, 1));
+    return options.find((ss) => secsFor(ss, 1) >= over) ?? options[options.length - 1];
+  };
+
+  while (totalSec() > limitSec + 1e-9) {
+    const over = totalSec() - budgetSec;
+    const aboveTwo = roundToCut(2);
+    if (aboveTwo) setRounds(aboveTwo, aboveTwo.rounds - 1);
+    else if (finisher && finisher.sets > 1) finisher = { ...finisher, sets: finisher.sets - 1 };
     else if (finisher) finisher = null;
-    else if (supersets.length > 1) supersets.pop();
-    else if (supersets[0] && supersets[0].rounds > 1) setRounds(supersets[0], supersets[0].rounds - 1);
+    else if (roundToCut(1)) {
+      const ss = roundToCut(1)!;
+      setRounds(ss, ss.rounds - 1);
+    } else if (supersets.length > 1 && over >= MIN_PAIR_SAVING_SEC) supersets = supersets.slice(0, -1);
     else break;
   }
+
+  // Put back what fits within the budget itself: rounds first (cheapest first, up to the
+  // session's largest planned superset), then the finisher.
+  const roundCap = Math.max(0, ...planned);
+  let restored = true;
+  while (restored) {
+    restored = false;
+    const candidates = supersets
+      .map((ss) => ({ ss, planned: roundCap }))
+      .filter((c) => c.ss.rounds < c.planned)
+      .sort((a, b) => secsFor(a.ss, 1) - secsFor(b.ss, 1));
+    for (const c of candidates) {
+      if (totalSec() + secsFor(c.ss, 1) <= budgetSec) {
+        setRounds(c.ss, c.ss.rounds + 1);
+        restored = true;
+        break;
+      }
+    }
+    if (restored || !plannedFinisher) continue;
+    const next = finisher ? (finisher.sets < plannedFinisher.sets ? { ...finisher, sets: finisher.sets + 1 } : null) : { ...plannedFinisher, sets: 1 };
+    if (next && totalSec() - finisherSecs(finisher) + finisherSecs(next) <= budgetSec) {
+      finisher = next;
+      restored = true;
+    }
+  }
+
   for (const ss of supersets) ss.estimatedSec = secsFor(ss);
-  return { ...session, supersets, finisher, estimatedMinutes: Math.round(total() * 10) / 10 };
+  return { ...session, supersets, finisher, estimatedMinutes: Math.round((totalSec() / 60) * 10) / 10 };
 }
 
 export interface ApplyOptions {
@@ -171,10 +234,23 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
   const easier = deload || comeback;
   const inPool = new Set(ctx.pool.exercises.map((e) => e.id));
   const used = new Set<string>();
+  const usable = (id: string) => inPool.has(id) && !used.has(id);
 
-  const remap = (p: Prescription, sets: number): Prescription => {
-    let id = resolveExercise(state, p.exerciseId);
-    if (!inPool.has(id) || used.has(id)) id = p.exerciseId;
+  /** The exercise for a slot: its substitute, else what was programmed, else another exercise of the same movement. */
+  const pick = (p: Prescription): string | null => {
+    const resolved = resolveExercise(state, p.exerciseId);
+    if (usable(resolved)) return resolved;
+    if (usable(p.exerciseId)) return p.exerciseId;
+    const pattern = getExercise(p.exerciseId).pattern;
+    const alternatives = ctx.pool.exercises
+      .filter((e) => e.pattern === pattern && !used.has(e.id))
+      .sort((a, b) => Number(!!state.exercises[b.id]) - Number(!!state.exercises[a.id]) || a.ladderLevel - b.ladderLevel);
+    return alternatives[0]?.id ?? null;
+  };
+
+  const remap = (p: Prescription, sets: number): Prescription | null => {
+    const id = pick(p);
+    if (!id) return null;
     used.add(id);
     const exercise = getExercise(id);
     let np = prescriptionFor(exercise, p.slot, sets, state, ctx, id === p.exerciseId ? p : undefined);
@@ -183,10 +259,12 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
     return np;
   };
 
-  const supersets = session.supersets.map((ss) => {
-    const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
-    return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)) };
-  });
+  const supersets = session.supersets
+    .map((ss) => {
+      const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
+      return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)).filter((p): p is Prescription => p !== null) };
+    })
+    .filter((ss) => ss.items.length > 0);
   const finisher = session.finisher ? remap(session.finisher, session.finisher.sets) : null;
   return fitToBudget({ ...session, supersets, finisher, deload, comeback });
 }
@@ -199,9 +277,14 @@ export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds:
     .sort((a, b) => (a.ladder === b.ladder ? a.ladderLevel - b.ladderLevel : a.ladder.localeCompare(b.ladder)));
 }
 
-/** Swap an exercise for this session only, keeping the slot and the number of sets. */
+/**
+ * Swap an exercise for this session only, keeping the slot and the number of sets. A benchmark
+ * set carries over when the new exercise hasn't been calibrated yet.
+ */
 export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext): Prescription {
-  return prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
+  const np = prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
+  np.benchmarkSet = p.benchmarkSet && np.loadType !== "time" && !(state.exercises[newExerciseId]?.calibrated ?? false);
+  return np;
 }
 
 export interface ExerciseChange {
@@ -230,6 +313,11 @@ function progressFromPrescription(p: Prescription, ctx: EngineContext): Exercise
   };
 }
 
+function hasEasierOption(p: Prescription, ctx: EngineContext): boolean {
+  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg) !== null) return true;
+  return ladderNeighbour(getExercise(p.exerciseId), ctx, -1) !== null;
+}
+
 /** Grinder share above which a session counts as strained, and how many in a row trigger a deload. */
 export const STRAIN_THRESHOLD = 0.5;
 export const STRAINED_SESSIONS_FOR_DELOAD = 3;
@@ -245,7 +333,11 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
   const changes: ExerciseChange[] = [];
   const prescriptions = prescriptionsOf(session);
 
+  const processed = new Set<string>();
   for (const p of prescriptions) {
+    // Each exercise is progressed once per session, from all of its sets.
+    if (processed.has(p.exerciseId)) continue;
+    processed.add(p.exerciseId);
     const sets = logs.filter((l) => l.exerciseId === p.exerciseId);
     const progress = next.exercises[p.exerciseId] ?? progressFromPrescription(p, ctx);
     const snapshot = (x: ExerciseProgress) => ({ loadKg: x.loadKg, targetReps: x.targetReps, repRange: x.repRange });
@@ -256,7 +348,8 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
 
     let result: ProgressionResult;
     let action: ExerciseChange["action"];
-    if (session.deload || session.comeback) {
+    const pain = sets.some((l) => l.painFlag);
+    if ((session.deload || session.comeback) && !pain) {
       // Easier sessions don't move anything; they only refresh the strength estimate.
       const fromThis = progressExercise(progress, sets, ctx).performed;
       const performed = { ...progress, e1rmKg: fromThis.e1rmKg, bestE1rmKg: fromThis.bestE1rmKg, timesPerformed: progress.timesPerformed + 1 };
@@ -305,7 +398,10 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
       return p !== undefined && p.loadType !== "time";
     });
     if (counted.length > 0) {
-      const grinders = counted.filter((l) => l.rir === 0 || l.reps < byId.get(l.exerciseId)!.repRange[0]).length;
+      // A set below the range only counts as a grind when an easier option exists; on the
+      // easiest rung with the lightest weight, building up from below the range is the plan.
+      const canEase = new Map([...byId.values()].map((p) => [p.exerciseId, hasEasierOption(p, ctx)]));
+      const grinders = counted.filter((l) => l.rir === 0 || (l.reps < byId.get(l.exerciseId)!.repRange[0] && canEase.get(l.exerciseId))).length;
       next.strain = [...next.strain, grinders / counted.length].slice(-6);
     }
     const recent = next.strain.slice(-STRAINED_SESSIONS_FOR_DELOAD);

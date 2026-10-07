@@ -3,7 +3,7 @@ import { e1RM, formatLoad, nextOwnedLoad, prevOwnedLoad, repsAtLoad } from "@rep
 import type { SetLog } from "@repcurve/shared";
 import type { EngineContext } from "./context.js";
 import { isLoaded } from "./loads.js";
-import { MAX_HOLD_SEC, MAX_REPS, clamp } from "./prescribe.js";
+import { clamp, maxRepsFor } from "./prescribe.js";
 import type { Prescription } from "./types.js";
 
 export interface SetAdvice {
@@ -34,11 +34,11 @@ export function adviseNextSet(p: Prescription, done: SetLog[], ctx: EngineContex
   }
 
   const e = getExercise(p.exerciseId);
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const rirT = p.targetRir;
   const fmt = (w: number) => formatLoad(w, e.loadType, units);
   const unit = e.loadType === "time" ? "seconds" : "reps";
-  const cap = e.loadType === "time" ? MAX_HOLD_SEC : MAX_REPS;
+  const cap = maxRepsFor(e);
 
   if (isLoaded(e) && last.loadKg !== null) {
     const e1 = e1RM(last.loadKg, last.reps, last.rir);

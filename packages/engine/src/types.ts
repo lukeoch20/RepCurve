@@ -1,4 +1,5 @@
 import type { Equipment, Exercise, LoadType, Muscle, Pattern, Profile, Rir, TrainingLevel } from "@repcurve/shared";
+import type { TrainingState } from "./state.js";
 
 export type SessionKind = "strength" | "cardio";
 
@@ -79,6 +80,8 @@ export interface SessionPlan {
   /** Lighter session: part of a deload, or the first session back after a break. */
   deload: boolean;
   comeback: boolean;
+  /** Plain-language notes about compromises in this session, e.g. settings that leave little room. */
+  notes?: string[];
 }
 
 export interface Program {
@@ -99,6 +102,13 @@ export interface GenerateOptions {
   e1rmByExercise?: Record<string, number>;
   /** Rest after each superset round, seconds. Defaults by time budget. */
   restSec?: number;
+  /** Seconds between exercises within a round. */
+  transitionSec?: number;
+  /**
+   * The user's training state. When given, the weekly volume and explanation describe the
+   * sessions the user actually gets now (their exercises, rep targets and fitted rounds).
+   */
+  state?: TrainingState;
   createdAt?: string;
 }
 

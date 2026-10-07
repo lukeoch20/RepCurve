@@ -1,18 +1,23 @@
 import React, { useMemo, useState } from "react";
+import { loadUnitsFor } from "@repcurve/shared";
 import { dayLabel, plural } from "../model/format";
 import { todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
+import { backupDue } from "../platform/backupReminder";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
 import { CardioLineup, Lineup } from "./Lineup";
 
 export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
   const { core, history } = props;
-  const { dispatch } = useStore();
+  const { dispatch, storage } = useStore();
   const [minutes, setMinutes] = useState<number | null>(null);
   const [skipAsk, setSkipAsk] = useState(false);
   const now = Date.now();
-  const plan = useMemo(() => todayPlan(core, history, now, minutes), [core, history, minutes]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-plan at least hourly so "days since your last session" (and a comeback) stays current.
+  const hour = Math.floor(now / 3_600_000);
+  const plan = useMemo(() => todayPlan(core, history, hour * 3_600_000, minutes), [core, history, minutes, hour]);
+  const remindBackup = backupDue(storage, history[0]?.finishedAt ?? null, now);
   const { week, slots } = useMemo(() => weekSlots(core, history), [core, history]);
   const last = [...history].reverse().find((r) => !r.skipped);
   const streak = weekStreak(history, now);
@@ -39,12 +44,18 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {plan.comeback ? (
         <div className="banner info"><b>Welcome back</b>It's been a couple of weeks, so today eases you back in.</div>
       ) : null}
+      {remindBackup ? (
+        <div className="banner adjust"><b>Time for a backup</b>Your training is saved only on this device, and it's been a month since the last backup. Export one in Settings.</div>
+      ) : null}
+      {plan.notes?.map((n) => (
+        <div key={n} className="banner info"><b>Short on room</b>{n}</div>
+      ))}
       {benchmarks ? (
         <div className="banner info"><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
       ) : null}
 
       <section className="card">
-        {plan.kind === "strength" ? <Lineup plan={plan} units={core.profile.units} /> : <CardioLineup plan={plan} />}
+        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} /> : <CardioLineup plan={plan} />}
       </section>
 
       <div className="stack">

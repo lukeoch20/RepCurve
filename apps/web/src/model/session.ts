@@ -9,7 +9,7 @@ import {
   type Prescription,
   type SessionPlan,
 } from "@repcurve/engine";
-import { getExercise } from "@repcurve/exercises";
+import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
 import { contextFor, todayPlan } from "./plan";
 import type { ActiveSession, CardioProgress, CardioResult, Core, LoggedSet, SessionRecord, TimerState } from "./types";
@@ -57,7 +57,7 @@ export function setsForSlot(active: ActiveSession, slot: string): LoggedSet[] {
   return active.sets.filter((s) => s.slot === slot).sort((a, b) => a.setIndex - b.setIndex);
 }
 
-function pending(active: ActiveSession, sets = active.sets): SetRef[] {
+export function pending(active: ActiveSession, sets = active.sets): SetRef[] {
   return setOrder(active.plan).filter(
     (r) => !active.skippedSlots.includes(r.slot) && !sets.some((s) => s.slot === r.slot && s.setIndex === r.setIndex),
   );
@@ -84,7 +84,7 @@ export function prefill(active: ActiveSession, slot: string, setIndex: number): 
 
 export function describeRef(plan: SessionPlan, ref: SetRef): string {
   const p = prescriptionAt(plan, ref.slot);
-  const name = p?.name ?? getExercise(ref.exerciseId).name;
+  const name = p?.name ?? findExercise(ref.exerciseId)?.name ?? ref.exerciseId;
   const total = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (plan.supersets[ref.group]?.rounds ?? 1);
   return `${ref.label} ${name} · set ${ref.setIndex + 1} of ${total}`;
 }
@@ -93,6 +93,7 @@ export interface SetValues {
   loadKg: number | null;
   reps: number;
   rir: Rir;
+  /** true flags pain, false clears it, undefined keeps what an edited set had. */
   painFlag?: boolean;
 }
 
@@ -149,8 +150,9 @@ export function editSet(active: ActiveSession, slot: string, setIndex: number, v
   const existing = loggedSet(active, slot, setIndex);
   if (!existing) return active;
   const updated: LoggedSet = { ...existing, loadKg: existing.loadKg === null ? null : v.loadKg, reps: Math.max(0, Math.round(v.reps)), rir: v.rir };
-  if (v.painFlag) updated.painFlag = true;
-  else delete updated.painFlag;
+  // A pain report stays unless the user explicitly clears it.
+  if (v.painFlag === true) updated.painFlag = true;
+  else if (v.painFlag === false) delete updated.painFlag;
   const sets = active.sets.map((s) => (s === existing ? updated : s));
   return { ...active, sets, ...coach(active, slot, sets, core) };
 }
@@ -203,6 +205,11 @@ export function adjustTimer(active: ActiveSession, deltaSec: number, now: number
   const t = active.timer;
   if (!t) return active;
   const ref = active.pausedAt ?? now;
+  // A timer that already ran out starts a fresh countdown for the extra time.
+  if (t.endsAt <= ref) {
+    if (deltaSec <= 0) return active;
+    return { ...active, timer: { ...t, endsAt: ref + deltaSec * 1000, durationSec: deltaSec } };
+  }
   const endsAt = Math.max(ref, t.endsAt + deltaSec * 1000);
   return { ...active, timer: { ...t, endsAt, durationSec: Math.max(0, t.durationSec + deltaSec) } };
 }
@@ -254,6 +261,13 @@ export function startCardio(active: ActiveSession, now: number): ActiveSession {
   return { ...active, cardio: { ...c, started: true, segmentEndsAt: now + c.remainingMs } };
 }
 
+/** Time already spent in segments before the current one; older saved sessions lack the counter. */
+function doneBefore(active: ActiveSession): number {
+  const c = active.cardio!;
+  if (c.doneMs !== undefined) return c.doneMs;
+  return (active.plan.cardio?.segments ?? []).slice(0, c.segmentIndex).reduce((n, s) => n + s.minutes * 60_000, 0);
+}
+
 /** Move past any segments that have ended. Returns how many segment boundaries were crossed. */
 export function tickCardio(active: ActiveSession, now: number): { active: ActiveSession; crossed: number } {
   const c = active.cardio;
@@ -261,10 +275,12 @@ export function tickCardio(active: ActiveSession, now: number): { active: Active
   if (!c || !c.started || c.finished || c.segmentEndsAt === null || now < c.segmentEndsAt) return { active, crossed: 0 };
   let segmentIndex = c.segmentIndex;
   let segmentEndsAt: number | null = c.segmentEndsAt;
+  let doneMs = doneBefore(active);
   let crossed = 0;
   let finished = false;
   while (segmentEndsAt !== null && now >= segmentEndsAt) {
     crossed++;
+    doneMs += segmentMs(active.plan, segmentIndex);
     segmentIndex++;
     if (segmentIndex >= segs.length) {
       finished = true;
@@ -275,20 +291,23 @@ export function tickCardio(active: ActiveSession, now: number): { active: Active
     }
   }
   const remainingMs = segmentEndsAt === null ? 0 : segmentEndsAt - now;
-  return { active: { ...active, cardio: { ...c, segmentIndex, segmentEndsAt, remainingMs, finished } }, crossed };
+  return { active: { ...active, cardio: { ...c, segmentIndex, segmentEndsAt, remainingMs, finished, doneMs } }, crossed };
 }
 
+/** Move to the next part now. Only the time actually spent in the skipped part counts as done. */
 export function skipSegment(active: ActiveSession, now: number): ActiveSession {
   const c = active.cardio;
   const segs = active.plan.cardio?.segments ?? [];
   if (!c || c.finished) return active;
+  const spent = c.started ? Math.max(0, segmentMs(active.plan, c.segmentIndex) - cardioRemainingMs(active, now)) : 0;
+  const doneMs = doneBefore(active) + spent;
   const nextIndex = c.segmentIndex + 1;
-  if (nextIndex >= segs.length) return { ...active, cardio: { ...c, finished: true, segmentEndsAt: null, remainingMs: 0 } };
+  if (nextIndex >= segs.length) return { ...active, cardio: { ...c, finished: true, segmentEndsAt: null, remainingMs: 0, doneMs } };
   const ms = segmentMs(active.plan, nextIndex);
   const running = c.started && active.pausedAt === null;
   return {
     ...active,
-    cardio: { ...c, started: true, segmentIndex: nextIndex, remainingMs: ms, segmentEndsAt: running ? now + ms : c.started ? null : now + ms },
+    cardio: { ...c, started: true, segmentIndex: nextIndex, remainingMs: ms, segmentEndsAt: running ? now + ms : c.started ? null : now + ms, doneMs },
   };
 }
 
@@ -299,15 +318,12 @@ export function cardioRemainingMs(active: ActiveSession, now: number): number {
   return c.remainingMs;
 }
 
-/** Minutes of cardio done so far: finished segments plus the elapsed part of the current one. */
+/** Minutes of cardio actually done: time spent in earlier segments plus the elapsed part of the current one. */
 export function cardioMinutesDone(active: ActiveSession, now: number): number {
   const c = active.cardio;
-  const segs = active.plan.cardio?.segments ?? [];
   if (!c || !c.started) return 0;
-  if (c.finished) return segs.reduce((n, s) => n + s.minutes, 0);
-  const before = segs.slice(0, c.segmentIndex).reduce((n, s) => n + s.minutes, 0);
-  const current = (segs[c.segmentIndex]?.minutes ?? 0) - cardioRemainingMs(active, now) / 60_000;
-  return Math.round((before + Math.max(0, current)) * 10) / 10;
+  const current = c.finished ? 0 : Math.max(0, segmentMs(active.plan, c.segmentIndex) - cardioRemainingMs(active, now));
+  return Math.round(((doneBefore(active) + current) / 60_000) * 10) / 10;
 }
 
 // ---------------------------------------------------------------- lifecycle
@@ -327,7 +343,7 @@ export function startSession(core: Core, history: SessionRecord[], now: number, 
     timer: null,
     cardio:
       plan.kind === "cardio"
-        ? { segmentIndex: 0, segmentEndsAt: null, remainingMs: segmentMs(plan, 0), started: false, finished: false }
+        ? { segmentIndex: 0, doneMs: 0, segmentEndsAt: null, remainingMs: segmentMs(plan, 0), started: false, finished: false }
         : null,
     advice: {},
     nextSet: {},

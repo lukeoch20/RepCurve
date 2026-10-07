@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { alternativesFor, type Prescription } from "@repcurve/engine";
+import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
 import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, repsUnit } from "../model/format";
 import { contextFor } from "../model/plan";
@@ -14,9 +15,9 @@ import {
   type SetRef,
 } from "../model/session";
 import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
-import { beep, keepAwake } from "../platform/device";
+import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
-import { Seg, Sheet } from "./common";
+import { Seg, Sheet, Toggle } from "./common";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -33,8 +34,9 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
     return () => keepAwake(false);
   }, [core.settings.keepAwake]);
 
+  // Finishing with sets still to do always asks first, so a stray tap can't end the workout.
   const finish = () => {
-    if (active.sets.length === 0) {
+    if (active.sets.length === 0 || up) {
       setEndOpen(true);
       return;
     }
@@ -43,7 +45,8 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
 
   return (
     <>
-      <main className="app stack" style={{ paddingBottom: `calc(${active.timer ? 210 : 40}px + env(safe-area-inset-bottom, 0px))` }}>
+      {/* Any tap in the runner (re)enables sound, e.g. after the app was reloaded mid-session. */}
+      <main className="app stack" onPointerDown={unlockAudio} style={{ paddingBottom: `calc(${active.timer ? 210 : 40}px + env(safe-area-inset-bottom, 0px))` }}>
         <div className="runner-head">
           <div className="spread">
             <div className="grow">
@@ -131,7 +134,10 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         <Sheet title="End this session?" onClose={() => setEndOpen(false)}>
           {active.sets.length > 0 ? (
             <>
-              <p className="prose">Your {active.sets.length} logged sets count, and next time's weights update from them.</p>
+              <p className="prose">
+                Your {active.sets.length} logged sets count, and next time's weights update from them.
+                {up ? " Sets you haven't logged are counted as skipped." : ""}
+              </p>
               <button type="button" className="btn go big" onClick={() => dispatch({ type: "finish", now: Date.now() })}>
                 Finish and save
               </button>
@@ -206,7 +212,7 @@ function ExerciseBlock(props: {
   const skipped = active.skippedSlots.includes(p.slot);
   const logged = setsForSlot(active, p.slot);
   const advice = active.advice[p.slot];
-  const units = core.profile.units;
+  const units = loadUnitsFor(core.profile, core.equipment);
   const unit = repsUnit(p.loadType);
 
   const target = `aim ${p.targetReps}${p.loadType === "time" ? " s" : ""}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
@@ -321,8 +327,9 @@ function SetEditor(props: {
   const [loadKg, setLoadKg] = useState<number | null>(initial.loadKg);
   const [reps, setReps] = useState(initial.reps);
   const [rir, setRir] = useState<Rir>(initial.rir);
+  const [pain, setPain] = useState(loggedSet(active, p.slot, setIndex)?.painFlag === true);
   const ref = useRef<HTMLDivElement>(null);
-  const units = core.profile.units;
+  const units = loadUnitsFor(core.profile, core.equipment);
   const isTime = p.loadType === "time";
   const step = isTime ? 5 : 1;
 
@@ -378,8 +385,16 @@ function SetEditor(props: {
         <Seg label="Effort" value={rir} onChange={setRir} options={EFFORT_OPTIONS.map((o) => ({ value: o.rir, label: o.label }))} />
         <span className="effort-hint">{isBenchmark ? "For the benchmark, stop when you have about 2 left." : effortHint}</span>
       </div>
+      {props.existing ? (
+        <Toggle id={`pain-${p.slot}-${setIndex}`} label="It hurt" hint="Flags pain: this exercise is swapped for an easier one next time." checked={pain} onChange={setPain} />
+      ) : null}
       <div className="row">
-        <button type="button" className="btn go grow" style={{ minHeight: 54, fontSize: "1.05rem" }} onClick={() => props.onSave({ loadKg, reps, rir })}>
+        <button
+          type="button"
+          className="btn go grow"
+          style={{ minHeight: 54, fontSize: "1.05rem" }}
+          onClick={() => props.onSave(props.existing ? { loadKg, reps, rir, painFlag: pain } : { loadKg, reps, rir })}
+        >
           {props.existing ? "Save changes" : `Done · set ${setIndex + 1}`}
         </button>
         {props.existing ? (
@@ -452,7 +467,7 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
 
   return (
     <>
-      <div className={`dock${over ? " go" : ""}`} role="timer" aria-live="off">
+      <div className={`dock${over ? " go" : ""}`} role="timer" aria-live="off" onPointerDown={unlockAudio}>
         <div className="dock-inner">
           <button type="button" className="clock-digits" onClick={() => setChooser(true)} aria-label={`Rest timer ${clock(remaining)}. Tap to change the rest length.`}>
             {over ? "GO" : clock(remaining)}

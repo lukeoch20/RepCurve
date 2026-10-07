@@ -4,6 +4,8 @@ import type { Prescription } from "./types.js";
 
 export const TARGET_RIR: Rir = 2;
 export const MAX_REPS = 30;
+/** One-sided sets stop growing earlier: 20 reps a side already takes two minutes. */
+export const MAX_REPS_UNILATERAL = 12;
 export const MAX_HOLD_SEC = 120;
 
 export const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, n));
@@ -44,4 +46,10 @@ export function buildPrescription(a: PrescriptionArgs): Prescription {
   };
   if (a.exercise.cue) p.cue = a.exercise.cue;
   return p;
+}
+
+/** The most reps (or seconds) a set of this exercise is allowed to grow to. */
+export function maxRepsFor(e: Exercise): number {
+  if (e.loadType === "time") return MAX_HOLD_SEC;
+  return e.unilateral ? MAX_REPS_UNILATERAL : MAX_REPS;
 }

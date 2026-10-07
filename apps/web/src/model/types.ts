@@ -26,6 +26,11 @@ export interface Core {
   startedAt: string;
   /** Position of the next session in the sequence. */
   nextIndex: number;
+  /**
+   * Programme position minus session count. Changes when days per week change, so the
+   * user stays in the same week of the programme. Missing means 0.
+   */
+  positionOffset?: number;
 }
 
 export interface LoggedSet extends SetLog {
@@ -52,6 +57,8 @@ export interface CardioProgress {
   remainingMs: number;
   started: boolean;
   finished: boolean;
+  /** Milliseconds actually spent in segments already left behind (a skipped segment counts only its elapsed part). */
+  doneMs?: number;
 }
 
 export type Tone = "good" | "adjust" | "stop";

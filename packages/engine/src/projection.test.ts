@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateProgram } from "./generate.js";
-import { HORIZONS, leanBodyMassKg, personalFactor, project, type ProjectionInput } from "./projection.js";
+import { HORIZONS, leanBodyMassKg, personalFactor, project, typicalStrengthPct, type LiftObservation, type ProjectionInput } from "./projection.js";
 import { referenceEquipment, referenceProfile } from "./testkit.js";
 
 const program = generateProgram({ profile: referenceProfile, equipment: referenceEquipment }, { weeks: 2, createdAt: "t" });
@@ -71,16 +71,54 @@ describe("personal recalibration", () => {
     ]);
 
   it("needs a few weeks of data", () => {
-    expect(personalFactor(lifts(0.02).filter((l) => l.week <= 1), 1)).toBeNull();
+    expect(personalFactor(lifts(0.02).filter((l) => l.week <= 1), typicalStrengthPct)).toBeNull();
   });
 
   it("nudges the curve up for fast responders and down for slow ones", () => {
-    const fast = personalFactor(lifts(0.04), 1)!;
-    const slow = personalFactor(lifts(0.003), 1)!;
+    const fast = personalFactor(lifts(0.04), typicalStrengthPct)!;
+    const slow = personalFactor(lifts(0.003), typicalStrengthPct)!;
     expect(fast.factor).toBeGreaterThan(1);
     expect(slow.factor).toBeLessThan(1);
     const pFast = project({ ...base, weeksIn: 10, lifts: lifts(0.04) });
     expect(pFast.tracking).toMatch(/faster than typical/);
     expect(pFast.points[4]!.strengthPct.mid).toBeGreaterThan(project(base).points[4]!.strengthPct.mid);
+  });
+});
+
+describe("RC-05: an on-track lifter is told they're on track, whatever their history", () => {
+  for (const history of ["never", "a_little", "lapsed", "regular"] as const) {
+    it(`${history}`, () => {
+      const profile = { ...referenceProfile, trainingHistory: history };
+      const typical = project({ ...base, profile });
+      // e1RM rising exactly along the projection's own median curve.
+      const at = (w: number) => {
+        const pts = [{ week: 0, strengthPct: { mid: 0 } }, ...typical.points];
+        const i = pts.findIndex((x) => x.week >= w);
+        const a = pts[i - 1]!, b = pts[i]!;
+        return a.strengthPct.mid + ((b.strengthPct.mid - a.strengthPct.mid) * (w - a.week)) / (b.week - a.week);
+      };
+      const lifts: LiftObservation[] = [1, 4, 6, 8, 10, 12].map((week) => ({ exerciseId: "goblet_squat", week, e1rmKg: 20 * (1 + at(week) / 100) }));
+      const p = project({ ...base, profile, weeksIn: 12, lifts });
+      expect(p.personalFactor!).toBeGreaterThan(0.9);
+      expect(p.personalFactor!).toBeLessThan(1.1);
+      expect(p.tracking).toMatch(/tracking the typical curve/);
+    });
+  }
+});
+
+describe("RC-09: the curve doesn't jump as the user passes a horizon", () => {
+  it("moves smoothly across week 12 for a fast responder", () => {
+    const fast: LiftObservation[] = [1, 3, 6, 9, 11.9].map((week) => ({ exerciseId: "goblet_squat", week, e1rmKg: 20 * (1 + 0.05 * week) }));
+    const before = project({ ...base, weeksIn: 11.9, lifts: fast });
+    const after = project({ ...base, weeksIn: 12.1, lifts: fast });
+    const w12 = (x: typeof before) => x.points.find((pt) => pt.week === 12)!.strengthPct.mid;
+    expect(before.personalFactor!).toBeGreaterThan(1.1);
+    expect(Math.abs(w12(before) - w12(after))).toBeLessThanOrEqual(1);
+  });
+
+  it("never lets a returning lifter's curve dip after week 12", () => {
+    const p = project({ ...base, profile: { ...referenceProfile, trainingHistory: "lapsed" } });
+    const mids = p.points.map((x) => x.strengthPct.mid);
+    expect([...mids].sort((a, b) => a - b)).toEqual(mids);
   });
 });

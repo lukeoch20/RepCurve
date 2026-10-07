@@ -44,6 +44,8 @@ export function repRangeFor(e: Exercise, level: TrainingLevel): [number, number]
   if (e.pattern === "core") return [8, 15];
   if (e.pattern === "vertical_pull") return e.ladderLevel === 1 ? [3, 6] : [3, 10];
   if (e.pattern === "isolation") return [10, 20];
+  // One-sided sets take twice as long, so they stay in a lower range per side.
+  if (e.unilateral && e.loadType !== "band") return e.loadType === "bodyweight" ? [6, 15] : [6, 12];
   if (e.loadType === "bodyweight") return [8, 20];
   if (e.loadType === "band") return [10, 20];
   return level === "novice" ? [8, 15] : [6, 12];

@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { generateProgram } from "@repcurve/engine";
-import { kgToLb, lbToKg } from "@repcurve/shared";
+import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Seg, Toggle } from "./common";
 import { Lineup } from "./Lineup";
-import { previewProjection } from "../model/projection";
+import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
 
 const LB_WEIGHTS = [3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
@@ -23,6 +22,8 @@ interface Draft {
   days: number;
   minutes: number;
   dbKind: Dumbbells["kind"];
+  /** The unit printed on the dumbbells, which can differ from the body units. */
+  dbUnits: Units;
   weights: number[];
   pairs: boolean;
   adjMin: string;
@@ -46,6 +47,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
   const units = profile?.units ?? defaultUnits();
   const totalIn = profile ? profile.heightCm / 2.54 : 0;
   const d = equipment?.dumbbells;
+  const dbUnits = d && d.kind !== "none" ? d.unit : units;
   return {
     units,
     sex: profile?.sex,
@@ -59,11 +61,12 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     days: profile?.daysPerWeek ?? 4,
     minutes: profile?.minutesPerSession ?? 20,
     dbKind: d?.kind ?? "fixed",
+    dbUnits,
     weights: d?.kind === "fixed" ? d.weights : [],
     pairs: d && d.kind !== "none" ? d.pairs : true,
-    adjMin: d?.kind === "adjustable" ? String(d.min) : units === "lb" ? "5" : "2",
-    adjMax: d?.kind === "adjustable" ? String(d.max) : units === "lb" ? "52.5" : "24",
-    adjStep: d?.kind === "adjustable" ? String(d.step) : units === "lb" ? "2.5" : "2",
+    adjMin: d?.kind === "adjustable" ? String(d.min) : dbUnits === "lb" ? "5" : "2",
+    adjMax: d?.kind === "adjustable" ? String(d.max) : dbUnits === "lb" ? "52.5" : "24",
+    adjStep: d?.kind === "adjustable" ? String(d.step) : dbUnits === "lb" ? "2.5" : "2",
     treadmill: equipment?.treadmill ?? false,
     mat: equipment?.mat ?? true,
     abRoller: equipment?.abRoller ?? false,
@@ -107,13 +110,13 @@ function toEquipment(d: Draft): Equipment | null {
   let dumbbells: Dumbbells = { kind: "none" };
   if (d.dbKind === "fixed") {
     if (d.weights.length === 0) return null;
-    dumbbells = { kind: "fixed", weights: [...d.weights].sort((a, b) => a - b), unit: d.units, pairs: d.pairs };
+    dumbbells = { kind: "fixed", weights: [...d.weights].sort((a, b) => a - b), unit: d.dbUnits, pairs: d.pairs };
   } else if (d.dbKind === "adjustable") {
     const min = num(d.adjMin);
     const max = num(d.adjMax);
     const step = num(d.adjStep);
     if (!(min > 0 && max > min && step > 0 && (max - min) / step <= 200)) return null;
-    dumbbells = { kind: "adjustable", min, max, step, unit: d.units, pairs: d.pairs };
+    dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
   return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench, bands: d.bands };
 }
@@ -153,11 +156,14 @@ export function Onboarding(props: {
       heightCm: Number.isFinite(cm) ? String(Math.round(cm)) : "",
       heightFt: Number.isFinite(inches) ? String(Math.floor(inches / 12)) : "",
       heightIn: Number.isFinite(inches) ? String(Math.round(inches % 12)) : "",
-      weights: [],
-      adjMin: toLb ? "5" : "2",
-      adjMax: toLb ? "52.5" : "24",
-      adjStep: toLb ? "2.5" : "2",
     });
+  };
+
+  /** Dumbbells keep their own unit; changing it means re-picking what's printed on them. */
+  const switchDbUnits = (dbUnits: Units) => {
+    if (dbUnits === d.dbUnits) return;
+    const toLb = dbUnits === "lb";
+    up({ dbUnits, weights: [], adjMin: toLb ? "5" : "2", adjMax: toLb ? "52.5" : "24", adjStep: toLb ? "2.5" : "2" });
   };
 
   const next = () => {
@@ -300,11 +306,17 @@ export function Onboarding(props: {
               options={[{ value: "fixed", label: "Set of weights" }, { value: "adjustable", label: "Adjustable" }, { value: "none", label: "None" }]}
             />
           </div>
+          {d.dbKind !== "none" ? (
+            <div className="field">
+              <span className="label">Marked in</span>
+              <Seg label="Dumbbell units" value={d.dbUnits} onChange={switchDbUnits} options={[{ value: "lb", label: "lb" }, { value: "kg", label: "kg" }]} />
+            </div>
+          ) : null}
           {d.dbKind === "fixed" ? (
             <div className="field">
-              <span className="label">Tap every weight you own ({d.units})</span>
+              <span className="label">Tap every weight you own ({d.dbUnits})</span>
               <div className="weights" role="group" aria-label="Dumbbell weights">
-                {(d.units === "lb" ? LB_WEIGHTS : KG_WEIGHTS).map((w) => {
+                {(d.dbUnits === "lb" ? LB_WEIGHTS : KG_WEIGHTS).map((w) => {
                   const on = d.weights.includes(w);
                   return (
                     <button key={w} type="button" className="chip" aria-pressed={on} onClick={() => up({ weights: on ? d.weights.filter((x) => x !== w) : [...d.weights, w] })}>
@@ -324,7 +336,7 @@ export function Onboarding(props: {
                 ["adjStep", "Step"],
               ] as const).map(([k, label]) => (
                 <div className="field" key={k} style={{ flex: "1 1 5rem" }}>
-                  <label htmlFor={k}>{label} ({d.units})</label>
+                  <label htmlFor={k}>{label} ({d.dbUnits})</label>
                   <input id={k} className="input num" inputMode="decimal" value={d[k]} onChange={(e) => up({ [k]: e.target.value } as Partial<Draft>)} />
                 </div>
               ))}
@@ -434,7 +446,7 @@ function Welcome(): React.ReactElement {
 }
 
 function Review(props: { profile: Profile; equipment: Equipment }): React.ReactElement {
-  const program = useMemo(() => generateProgram({ profile: props.profile, equipment: props.equipment }, { weeks: 2, createdAt: "preview" }), [props.profile, props.equipment]);
+  const program = useMemo(() => previewProgram(props.profile, props.equipment), [props.profile, props.equipment]);
   const first = program.sessions.find((s) => s.kind === "strength");
   const projection = useMemo(() => previewProjection(props.profile, props.equipment), [props.profile, props.equipment]);
   return (
@@ -457,7 +469,7 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
             <span className="h3">First session · {first.name}</span>
             <span className="meta num">~{Math.round(first.estimatedMinutes)} min</span>
           </div>
-          <Lineup plan={first} units={props.profile.units} />
+          <Lineup plan={first} units={loadUnitsFor(props.profile, props.equipment)} />
         </div>
       ) : null}
     </section>

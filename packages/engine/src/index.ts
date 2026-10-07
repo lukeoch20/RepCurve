@@ -1,5 +1,5 @@
 export * from "./types.js";
-export { generateProgram, planSession, planSessionWith, weekAndDay, BASE_ROUNDS } from "./generate.js";
+export { generateProgram, missingPatterns, planSession, planSessionWith, weekAndDay, BASE_ROUNDS } from "./generate.js";
 export type { PlanOptions } from "./generate.js";
 export { makeContext } from "./context.js";
 export type { EngineContext } from "./context.js";

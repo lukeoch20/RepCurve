@@ -11,6 +11,7 @@ import {
   finishSession,
   logSet,
   nextUp,
+  pending,
   pause,
   prefill,
   progressSummary,
@@ -102,7 +103,10 @@ describe("logging sets", () => {
     const a = logSet(active, ref, { loadKg: lbToKg(30), reps: 6, rir: 2, painFlag: true }, core, T0 + 1000);
     expect(a.skippedSlots).toContain(ref.slot);
     expect(a.advice[ref.slot]?.tone).toBe("stop");
-    expect(setOrder(a.plan).filter((r) => r.slot === ref.slot && r.setIndex > 0).every((r) => nextUp(a)?.slot !== r.slot || true)).toBe(true);
+    // None of that exercise's remaining sets is still waiting to be done.
+    const remaining = setOrder(a.plan).filter((r) => r.slot === ref.slot && r.setIndex > 0);
+    expect(remaining.length).toBeGreaterThan(0);
+    expect(pending(a).some((r) => r.slot === ref.slot)).toBe(false);
     expect(nextUp(a)?.slot).not.toBe(ref.slot);
   });
 
@@ -140,12 +144,19 @@ describe("swaps", () => {
 
 describe("timers and pausing", () => {
   it("adjusts and re-lengthens the rest timer", () => {
-    const { core, active } = fresh(4);
-    let a = logAll({ ...active }, core);
-    a = { ...active, timer: { kind: "rest", endsAt: T0 + 60_000, durationSec: 60, next: "x" } };
+    const { active } = fresh(4);
+    const a: typeof active = { ...active, timer: { kind: "rest", endsAt: T0 + 60_000, durationSec: 60, next: "x" } };
     expect(adjustTimer(a, 15, T0).timer!.endsAt).toBe(T0 + 75_000);
     expect(adjustTimer(a, -90, T0).timer!.endsAt).toBe(T0);
     expect(setTimerLength(a, 90).timer!.endsAt).toBe(T0 + 90_000);
+  });
+
+  it("starts a fresh 15 s countdown when +15 is tapped after the timer ran out (RC-19)", () => {
+    const { active } = fresh(4);
+    const a: typeof active = { ...active, timer: { kind: "rest", endsAt: T0 + 60_000, durationSec: 60, next: "x" } };
+    const later = T0 + 4 * 60_000;
+    expect(adjustTimer(a, 15, later).timer!.endsAt).toBe(later + 15_000);
+    expect(adjustTimer(a, -15, later)).toBe(a);
   });
 
   it("freezes the clock and the timer while paused", () => {
@@ -174,7 +185,17 @@ describe("cardio", () => {
     expect(a.cardio!.segmentIndex).toBe(2);
     const end = tickCardio(a, T0 + 10 * 3_600_000);
     expect(end.active.cardio!.finished).toBe(true);
-    expect(cardioMinutesDone(end.active, T0 + 10 * 3_600_000)).toBe(segs.reduce((n, s) => n + s.minutes, 0));
+    // The skipped second part counts only the 10 seconds actually spent in it (RC-17).
+    const total = segs.reduce((n, s) => n + s.minutes, 0);
+    expect(cardioMinutesDone(end.active, T0 + 10 * 3_600_000)).toBeCloseTo(total - segs[1]!.minutes + 10 / 60, 1);
+  });
+
+  it("logs only real minutes when every part is skipped", () => {
+    const { active } = fresh(2);
+    let a = startCardio(active, T0);
+    for (let i = 0; i < active.plan.cardio!.segments.length; i++) a = skipSegment(a, T0 + (i + 1) * 3_000);
+    expect(a.cardio!.finished).toBe(true);
+    expect(cardioMinutesDone(a, T0 + 60_000)).toBeLessThan(1);
   });
 });
 

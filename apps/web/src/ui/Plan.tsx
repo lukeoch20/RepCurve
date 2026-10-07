@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { generateProgram, MUSCLES } from "@repcurve/engine";
+import { MUSCLES } from "@repcurve/engine";
+import { currentProgram } from "../model/plan";
 import type { Core } from "../model/types";
 
 const MUSCLE_NAMES: Record<string, string> = {
@@ -9,10 +10,8 @@ const MUSCLE_NAMES: Record<string, string> = {
 
 export function Plan(props: { core: Core }): React.ReactElement {
   const { core } = props;
-  const program = useMemo(
-    () => generateProgram({ profile: core.profile, equipment: core.equipment }, { weeks: 2, restSec: core.settings.restSec, createdAt: "plan" }),
-    [core.profile, core.equipment, core.settings.restSec],
-  );
+  // Volume comes from the sessions as the user gets them now, so progress that changes them shows here.
+  const program = useMemo(() => currentProgram(core), [core]);
   const [lo, hi] = program.volumeTarget;
   const max = Math.max(hi + 4, ...MUSCLES.map((m) => program.weeklyVolume[m]));
   return (

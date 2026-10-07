@@ -77,6 +77,14 @@ export function meetsRequirements(requires: EquipmentItem[][], eq: Equipment): b
   return requires.some((set) => set.every((item) => hasItem(eq, item)));
 }
 
+/**
+ * Units loads are shown in: the dumbbells' own unit when the user has dumbbells, so every
+ * prescription matches a label they own; otherwise the profile's units.
+ */
+export function loadUnitsFor(profile: { units: Units }, equipment: { dumbbells: { kind: string; unit?: Units } }): Units {
+  return equipment.dumbbells.kind !== "none" && equipment.dumbbells.unit ? equipment.dumbbells.unit : profile.units;
+}
+
 /** Load in the user's units, rounded to the nearest 0.5 lb or 0.25 kg so owned weights round-trip exactly. */
 export function displayLoad(loadKg: number, units: Units): number {
   return units === "lb" ? Math.round(kgToLb(loadKg) * 2) / 2 : Math.round(loadKg * 4) / 4;

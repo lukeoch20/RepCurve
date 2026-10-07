@@ -12,9 +12,14 @@ describe("weekly template", () => {
     expect(weeklyTemplate(6, "fitness", withTreadmill)).toEqual(["strength", "cardio", "strength", "cardio", "strength", "cardio"]);
   });
 
-  it("turns cardio into strength without a treadmill, up to four strength days", () => {
-    expect(weeklyTemplate(3, "both", noTreadmill)).toEqual(["strength", "strength", "strength"]);
-    expect(weeklyTemplate(6, "fitness", noTreadmill).filter((k) => k === "strength")).toHaveLength(4);
+  it("turns cardio into strength without a treadmill only for a strength-first goal", () => {
+    expect(weeklyTemplate(4, "strength_muscle", noTreadmill)).toEqual(["strength", "strength", "strength", "strength"]);
+    expect(weeklyTemplate(6, "strength_muscle", noTreadmill).filter((k) => k === "strength")).toHaveLength(4);
+  });
+
+  it("keeps outdoor cardio for cardio-led goals without a treadmill (RC-12)", () => {
+    expect(weeklyTemplate(3, "both", noTreadmill)).toEqual(weeklyTemplate(3, "both", withTreadmill));
+    for (const d of [2, 3, 4]) expect(weeklyTemplate(d, "fitness", noTreadmill).filter((k) => k === "cardio").length, `${d}`).toBeGreaterThan(0);
   });
 
   it("always returns exactly days entries", () => {

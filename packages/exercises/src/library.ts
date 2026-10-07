@@ -329,6 +329,11 @@ export const EXERCISES: Exercise[] = [
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 
+/** The exercise with this id, or undefined if the library no longer has it. */
+export function findExercise(id: string): Exercise | undefined {
+  return byId.get(id);
+}
+
 export function getExercise(id: string): Exercise {
   const e = byId.get(id);
   if (!e) throw new Error(`Unknown exercise: ${id}`);
