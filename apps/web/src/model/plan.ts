@@ -130,6 +130,31 @@ export function weekSlots(core: Core, history: SessionRecord[]): { week: number;
   return { week, slots };
 }
 
+export interface WeekSession extends WeekSlot {
+  /** What was done (for finished sessions) or what is planned, personalised from the training state. */
+  plan: SessionPlan;
+}
+
+/** The current week's sessions with their plans, for the week strip and the Plan tab. */
+export function weekSessions(core: Core, history: SessionRecord[], now: number): { week: number; sessions: WeekSession[] } {
+  const ctx = contextFor(core);
+  const { week, slots } = weekSlots(core, history);
+  const byIndex = new Map(history.map((r) => [r.index, r]));
+  const sessions = slots.map((slot) => {
+    const done = byIndex.get(slot.index);
+    const usable = done && !done.skipped && Array.isArray(done.plan?.supersets) ? done.plan : null;
+    const plan = usable ?? (slot.status === "next" ? todayPlan(core, history, now) : applyState(planFor(core, slot.index), core.state, ctx));
+    return { ...slot, plan };
+  });
+  return { week, sessions };
+}
+
+/** Exercises in a plan (cardio counts its segments as one). */
+export function exerciseCount(plan: SessionPlan): number {
+  if (plan.kind === "cardio") return 1;
+  return plan.supersets.reduce((n, ss) => n + ss.items.length, 0) + (plan.finisher ? 1 : 0);
+}
+
 /** Monday-start week number of a moment, in the user's own time zone. */
 export function localWeek(t: number): number {
   const d = new Date(t);

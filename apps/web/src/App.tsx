@@ -8,7 +8,7 @@ import { Progress } from "./ui/Progress";
 import { SessionRunner } from "./ui/SessionRunner";
 import { Settings } from "./ui/Settings";
 import { Today } from "./ui/Today";
-import { CurveMark } from "./ui/common";
+import { CurveMark, Icon } from "./ui/common";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
 import { applyUpdate, onUpdateReady, updateReady } from "./platform/update";
@@ -76,7 +76,7 @@ export function App(): React.ReactElement {
       <>
         <main className="app">
           {tab === "today" ? <Today core={core} history={history} /> : null}
-          {tab === "plan" ? <Plan core={core} /> : null}
+          {tab === "plan" ? <Plan core={core} history={history} /> : null}
           {tab === "progress" ? <Progress core={core} history={history} /> : null}
           {tab === "settings" ? <Settings core={core} onEditSetup={() => setEditingSetup(true)} /> : null}
         </main>
@@ -84,6 +84,7 @@ export function App(): React.ReactElement {
           <nav aria-label="Sections">
             {TABS.map((t) => (
               <button key={t.id} type="button" aria-current={tab === t.id ? "page" : undefined} onClick={() => { setTab(t.id); window.scrollTo(0, 0); }}>
+                <Icon name={t.id} size={22} strokeWidth={tab === t.id ? 2 : 1.7} />
                 {t.label}
               </button>
             ))}

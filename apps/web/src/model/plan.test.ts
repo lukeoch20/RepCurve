@@ -92,3 +92,16 @@ describe("RC-20: week streak follows local weeks", () => {
     expect(weekStreak(recs, sunday(0, 21))).toBe(4);
   });
 });
+
+describe("weekSessions", () => {
+  it("gives every slot of the week a plan, with the next one personalised", async () => {
+    const { weekSessions, exerciseCount } = await import("./plan");
+    const core = newCore(profile, equipment, 0);
+    const { week, sessions } = weekSessions(core, [], 0);
+    expect(week).toBe(1);
+    expect(sessions).toHaveLength(4);
+    expect(sessions[0]!.status).toBe("next");
+    for (const s of sessions) expect(s.plan.kind).toBe(s.kind);
+    expect(exerciseCount(sessions[0]!.plan)).toBeGreaterThan(2);
+  });
+});
