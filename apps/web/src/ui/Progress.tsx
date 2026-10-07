@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { e1RM, formatLoad, displayLoad } from "@repcurve/shared";
+import { e1RM, formatLoad, displayLoad, loadUnitsFor } from "@repcurve/shared";
 import { findExercise } from "@repcurve/exercises";
 import { dayLabel } from "../model/format";
 import { weekStreak } from "../model/plan";
@@ -18,7 +18,7 @@ interface LiftSeries {
 }
 
 function series(history: SessionRecord[], core: Core): LiftSeries[] {
-  const units = core.profile.units;
+  const units = loadUnitsFor(core.profile, core.equipment);
   const map = new Map<string, LiftSeries>();
   for (const r of history) {
     if (r.kind !== "strength" || r.skipped) continue;
@@ -82,7 +82,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
             const change = l.firstY > 0 ? Math.round(((l.lastY - l.firstY) / l.firstY) * 100) : 0;
             const st = core.state.exercises[l.id];
             const now = st
-              ? `${st.loadKg !== null ? `${formatLoad(st.loadKg, findExercise(l.id)?.loadType ?? "dumbbell_pair", units)} × ` : ""}${st.targetReps} next`
+              ? `${st.loadKg !== null ? `${formatLoad(st.loadKg, findExercise(l.id)?.loadType ?? "dumbbell_pair", loadUnitsFor(core.profile, core.equipment))} × ` : ""}${st.targetReps} next`
               : "";
             return (
               <div className="lift" key={l.id}>

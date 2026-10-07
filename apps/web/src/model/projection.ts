@@ -39,12 +39,17 @@ export function liftObservations(history: SessionRecord[], startedAt: string): L
   return out;
 }
 
-/** Share of planned sessions done, once at least a week has passed. */
+/**
+ * Share of planned sessions done, counted from the first session (not from setup) and only
+ * once two full weeks have passed, so a late start or the first days don't drag it down.
+ */
 export function adherence(core: Core, history: SessionRecord[], now: number): number | undefined {
-  const weeks = weeksSince(core.startedAt, now);
-  if (weeks < 1) return undefined;
+  const first = history.find((r) => !r.skipped);
+  if (!first) return undefined;
+  const weeks = (now - first.startedAt) / WEEK_MS;
+  if (weeks < 2) return undefined;
   const planned = weeks * core.profile.daysPerWeek;
-  const done = history.filter((r) => !r.skipped).length;
+  const done = history.filter((r) => !r.skipped && r.finishedAt >= first.startedAt).length;
   return Math.min(1, done / planned);
 }
 

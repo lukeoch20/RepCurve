@@ -236,3 +236,13 @@ describe("RC-32: a strength session always has exercises", () => {
     expect(s.notes?.join(" ")).toMatch(/Shorter rests/);
   });
 });
+
+describe("RC-21: loads show in the dumbbells' own unit", () => {
+  it("prints lb dumbbells as lb for a user whose body units are kg", () => {
+    const ctx = referenceContext({ profile: { units: "kg" } });
+    const s = planSessionWith(ctx, 4);
+    const loaded = prescriptionsOf(s).filter((p) => p.loadKg !== null);
+    expect(loaded.length).toBeGreaterThan(0);
+    for (const p of loaded) expect(p.loadDisplay, p.exerciseId).toMatch(/^(10|15|20|25|30) lb/);
+  });
+});

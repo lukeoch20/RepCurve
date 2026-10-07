@@ -1,3 +1,4 @@
+import { loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Exercise, Pattern, Profile, TrainingLevel } from "@repcurve/shared";
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
@@ -86,7 +87,7 @@ function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchma
     targetReps,
     loadKg,
     benchmarkSet: benchmark && c.exercise.loadType !== "time" && !e1rm,
-    units: input.profile.units,
+    units: loadUnitsFor(input.profile, input.equipment),
   });
 }
 

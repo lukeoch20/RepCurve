@@ -17,7 +17,11 @@ export function unlockAudio(): void {
 /** Three short beeps; the last one higher, like a gym interval clock. */
 export function beep(pattern: "go" | "segment" = "go"): void {
   try {
+    // After a reload no tap has created the context yet; try anyway (some browsers allow it),
+    // and wake a context the system suspended or interrupted.
+    if (!audio) unlockAudio();
     if (!audio) return;
+    if (audio.state !== "running") void audio.resume().catch(() => {});
     const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
     if (session) session.type = "transient";
     const t0 = audio.currentTime + 0.02;

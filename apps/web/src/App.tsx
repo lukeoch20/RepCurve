@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { loadUnitsFor } from "@repcurve/shared";
 import { CardioRunner } from "./ui/CardioRunner";
 import { Finished } from "./ui/Finished";
 import { Onboarding } from "./ui/Onboarding";
@@ -67,7 +68,7 @@ export function App(): React.ReactElement {
       />
     );
   } else if (store.finished) {
-    body = <Finished record={store.finished} units={core.profile.units} />;
+    body = <Finished record={store.finished} units={loadUnitsFor(core.profile, core.equipment)} />;
   } else if (active) {
     body = active.plan.kind === "cardio" ? <CardioRunner core={core} active={active} /> : <SessionRunner core={core} active={active} />;
   } else {

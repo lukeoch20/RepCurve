@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { loadUnitsFor } from "@repcurve/shared";
 import { dayLabel, plural } from "../model/format";
 import { todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
@@ -54,7 +55,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       ) : null}
 
       <section className="card">
-        {plan.kind === "strength" ? <Lineup plan={plan} units={core.profile.units} /> : <CardioLineup plan={plan} />}
+        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} /> : <CardioLineup plan={plan} />}
       </section>
 
       <div className="stack">

@@ -63,13 +63,23 @@ export function rescheduled(core: Core, profile: Profile, equipment: Equipment):
   return { ...next, positionOffset: week * after + day - core.nextIndex };
 }
 
-export function planFor(core: Core, index: number, minutes?: number | null): SessionPlan {
+export function planFor(core: Core, index: number, minutes?: number | null, lastCardioEffort?: number): SessionPlan {
   const ctx = contextFor(core);
   return planSessionWith(ctx, positionOf(core, index), {
     restSec: core.settings.restSec,
     transitionSec: core.settings.transitionSec,
     ...(minutes ? { minutes } : {}),
+    ...(lastCardioEffort !== undefined ? { lastCardioEffort } : {}),
   });
+}
+
+/** Effort the user reported for their most recent cardio session. */
+export function lastCardioEffort(history: SessionRecord[]): number | undefined {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const r = history[i]!;
+    if (r.kind === "cardio" && !r.skipped && r.cardio) return r.cardio.effort;
+  }
+  return undefined;
 }
 
 /**
@@ -87,7 +97,7 @@ export function currentProgram(core: Core): Program {
 export function todayPlan(core: Core, history: SessionRecord[], now: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
   const days = daysSinceLastStrength(history, now);
-  return applyState(planFor(core, core.nextIndex, minutes), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
+  return applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
 }
 
 export interface WeekSlot {
@@ -120,13 +130,21 @@ export function weekSlots(core: Core, history: SessionRecord[]): { week: number;
   return { week, slots };
 }
 
-/** Consecutive weeks (ending with the current or last week) with at least one session done. */
+/** Monday-start week number of a moment, in the user's own time zone. */
+export function localWeek(t: number): number {
+  const d = new Date(t);
+  const daysSinceMonday = (d.getDay() + 6) % 7;
+  // Calendar dates in local time, counted as whole days, so DST shifts don't matter.
+  const monday = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() - daysSinceMonday);
+  return Math.round(monday / (7 * DAY_MS));
+}
+
+/** Consecutive local weeks (ending with the current or last week) with at least one session done. */
 export function weekStreak(history: SessionRecord[], now: number): number {
   const done = history.filter((r) => !r.skipped);
   if (done.length === 0) return 0;
-  const weekOf = (t: number) => Math.floor((t - Date.UTC(2024, 0, 1)) / (7 * DAY_MS));
-  const weeks = new Set(done.map((r) => weekOf(r.finishedAt)));
-  let w = weekOf(now);
+  const weeks = new Set(done.map((r) => localWeek(r.finishedAt)));
+  let w = localWeek(now);
   if (!weeks.has(w)) w -= 1;
   let streak = 0;
   while (weeks.has(w)) {

@@ -79,3 +79,16 @@ describe("RC-11: onboarding preview uses the app's rest and switch times", () =>
     }
   });
 });
+
+describe("RC-20: week streak follows local weeks", () => {
+  it("counts four local Sundays, evening or not, as four weeks", async () => {
+    const { weekStreak } = await import("./plan");
+    const sunday = (weeksAgo: number, hour: number) => {
+      const d = new Date(2026, 9, 4, hour); // Sunday 4 October 2026, local time
+      d.setDate(d.getDate() - 7 * weeksAgo);
+      return d.getTime();
+    };
+    const recs = [3, 2, 1, 0].map((w, i) => ({ id: `s${i}`, index: i, skipped: false, finishedAt: sunday(w, i === 0 ? 15 : 20) }) as never);
+    expect(weekStreak(recs, sunday(0, 21))).toBe(4);
+  });
+});

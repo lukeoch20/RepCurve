@@ -1,17 +1,12 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
-// Serves the claude.ai build the way the Artifact publisher would (wrapped in a document), with React from
-// node_modules instead of cdnjs, and a stand-in for the claude.ai runtime whose database persists in localStorage.
-const require = createRequire(import.meta.url);
+// Serves the claude.ai build the way the Artifact publisher would (wrapped in a document), with a stand-in
+// for the claude.ai runtime whose database persists in localStorage. The page must need no third-party scripts.
 const here = dirname(fileURLToPath(import.meta.url));
 const page = readFileSync(resolve(here, "../artifact/repcurve.html"), "utf8");
-const pkgDir = (name: string) => dirname(require.resolve(`${name}/package.json`));
-const react = readFileSync(resolve(pkgDir("react"), "umd/react.production.min.js"), "utf8");
-const reactDom = readFileSync(resolve(pkgDir("react-dom"), "umd/react-dom.production.min.js"), "utf8");
 const doc = `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>${page}</body></html>`;
 
 function fakeClaude() {
@@ -55,12 +50,15 @@ function fakeClaude() {
 }
 
 test.beforeEach(async ({ page: p }) => {
-  await p.route("https://cdnjs.cloudflare.com/**", (route) =>
-    route.fulfill({ contentType: "text/javascript", body: route.request().url().includes("react-dom") ? reactDom : react }),
-  );
+  // Any script from elsewhere would mean the page trusts a third party with the user's data (RC-35).
+  await p.route("**/*.js", (route) => (route.request().url().startsWith("http://artifact.test/") ? route.continue() : route.abort()));
   await p.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ contentType: "text/css", body: "" }));
   await p.route("http://artifact.test/**", (route) => route.fulfill({ contentType: "text/html", body: doc }));
   await p.addInitScript(fakeClaude);
+});
+
+test("the claude.ai page loads no third-party scripts", () => {
+  expect(page).not.toMatch(/<script[^>]+src=/i);
 });
 
 test("the claude.ai page saves to the account database and survives a reload", async ({ page: p }) => {

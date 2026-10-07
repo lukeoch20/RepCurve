@@ -3,7 +3,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // Two builds from one codebase:
 // - default: an installable web app (bundled React, service worker for offline use, on-device storage)
-// - "artifact": a single page for claude.ai (React from cdnjs, no service worker, account storage)
+// - "artifact": a single page for claude.ai (React bundled in, no service worker, account storage)
 export default defineConfig(({ mode }) => {
   const artifact = mode === "artifact";
   return {
@@ -17,13 +17,13 @@ export default defineConfig(({ mode }) => {
           cssCodeSplit: false,
           rollupOptions: {
             input: "src/main.tsx",
-            external: ["react", "react-dom", "react-dom/client", "virtual:pwa-register"],
+            external: ["virtual:pwa-register"],
             output: {
               format: "iife",
               entryFileNames: "app.js",
               assetFileNames: "app[extname]",
               inlineDynamicImports: true,
-              globals: { react: "React", "react-dom": "ReactDOM", "react-dom/client": "ReactDOM", "virtual:pwa-register": "undefined" },
+              globals: { "virtual:pwa-register": "undefined" },
             },
           },
         }

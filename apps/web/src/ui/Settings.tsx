@@ -112,8 +112,11 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
       <section className="card stack">
         <h2 className="h3">You and your equipment</h2>
         <div className="field">
-          <span className="label">Units</span>
+          <span className="label">Body units</span>
           <Seg label="Units" value={units} onChange={setUnits} options={[{ value: "lb", label: "Pounds" }, { value: "kg", label: "Kilograms" }]} />
+          {core.equipment.dumbbells.kind !== "none" ? (
+            <span className="meta small">Weights always show in {core.equipment.dumbbells.unit}, as marked on your dumbbells. Change that under equipment.</span>
+          ) : null}
         </div>
         <button type="button" className="btn" onClick={props.onEditSetup}>
           Edit profile, schedule and equipment

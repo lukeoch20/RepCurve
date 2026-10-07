@@ -109,6 +109,11 @@ function interp(curve: [number, number][], x: number): number {
   return yb + (((yb - ya) / (xb - xa)) * (x - xb)) / 2;
 }
 
+/** Typical strength gain (%) by week for the reference dose, before any personal factors. */
+export function typicalStrengthPct(week: number): number {
+  return interp(STRENGTH_CURVE, week);
+}
+
 /** Boer (1984) lean body mass estimate. */
 export function leanBodyMassKg(p: Pick<Profile, "sex" | "bodyweightKg" | "heightCm">): number {
   const lbm = p.sex === "male"
@@ -121,9 +126,12 @@ function experienceFactor(p: Profile, week: number): { strength: number; muscle:
   switch (p.trainingHistory) {
     case "regular":
       return { strength: 0.5, muscle: 0.5 };
-    case "lapsed":
-      // Regaining is faster than first building, but only back to the old level.
-      return week <= 12 ? { strength: 1.4, muscle: 1.4 } : { strength: 1.15, muscle: 1.1 };
+    case "lapsed": {
+      // Regaining is faster than first building, but only back to the old level: the boost
+      // eases from x1.4 at week 12 to its long-run value at week 26, so the curve never dips.
+      const t = Math.max(0, Math.min(1, (week - 12) / 14));
+      return { strength: 1.4 + (1.15 - 1.4) * t, muscle: 1.4 + (1.1 - 1.4) * t };
+    }
     default:
       return { strength: 1, muscle: 1 };
   }
@@ -140,8 +148,12 @@ const mass = (kg: number, units: Profile["units"]) => (units === "lb" ? `${round
 const band = (mid: number, spread: { low: number; high: number }): Band => ({ low: mid * spread.low, mid, high: mid * spread.high });
 const roundBand = (b: Band, r: (n: number) => number): Band => ({ low: r(b.low), mid: r(b.mid), high: r(b.high) });
 
-/** The user's progress rate relative to the typical curve, from their own e1RM history. */
-export function personalFactor(lifts: LiftObservation[], baseRate: number): { factor: number; weeks: number } | null {
+/**
+ * The user's progress rate relative to the typical curve, from their own e1RM history.
+ * `expectedPct(week)` is the strength gain (%) the projection itself expects by that week
+ * for this user, with every factor it applies (dose, age, experience).
+ */
+export function personalFactor(lifts: LiftObservation[], expectedPct: (week: number) => number): { factor: number; weeks: number } | null {
   const byEx = new Map<string, LiftObservation[]>();
   for (const l of lifts) byEx.set(l.exerciseId, [...(byEx.get(l.exerciseId) ?? []), l]);
   const ratios: number[] = [];
@@ -153,7 +165,7 @@ export function personalFactor(lifts: LiftObservation[], baseRate: number): { fa
     const first = sorted[1]!;
     const last = sorted[sorted.length - 1]!;
     if (last.week - first.week < 2) continue;
-    const predicted = ((1 + (baseRate * interp(STRENGTH_CURVE, last.week)) / 100) / (1 + (baseRate * interp(STRENGTH_CURVE, first.week)) / 100)) - 1;
+    const predicted = (1 + expectedPct(last.week) / 100) / (1 + expectedPct(first.week) / 100) - 1;
     if (predicted < 0.02) continue;
     const observed = last.e1rmKg / first.e1rmKg - 1;
     ratios.push(observed / predicted);
@@ -180,15 +192,21 @@ export function project(input: ProjectionInput): Projection {
   const cardioMinutes = input.cardioMinutesPerWeek * adherence;
   const cardioAt = (col: 1 | 2 | 3) => interp(CARDIO_BY_MINUTES.map((r) => [r[0], r[col]] as [number, number]), cardioMinutes);
 
-  const pf = input.lifts && input.lifts.length > 0 ? personalFactor(input.lifts, strengthDose * age.strength) : null;
+  /** Typical gains for this user by week, before personal recalibration. */
+  const strengthAt = (week: number) => interp(STRENGTH_CURVE, week) * strengthDose * age.strength * experienceFactor(p, week).strength;
+  const muscleAt = (week: number) => interp(LEAN_CURVE, week) * muscleDose * age.muscle * experienceFactor(p, week).muscle;
+
+  const pf = input.lifts && input.lifts.length > 0 ? personalFactor(input.lifts, strengthAt) : null;
   const k = pf?.factor ?? 1;
   const weeksIn = input.weeksIn ?? 0;
+  /** The personal factor scales only the gain still ahead, so the curve stays continuous. */
+  const ahead = (at: (w: number) => number, week: number, factor: number) =>
+    week <= weeksIn ? at(week) : at(weeksIn) + factor * (at(week) - at(weeksIn));
 
   const points = HORIZONS.map((week) => {
-    const exp = experienceFactor(p, week);
-    // Personal factor applies to time still ahead; muscle follows strength only partly.
-    const strengthMid = interp(STRENGTH_CURVE, week) * strengthDose * age.strength * exp.strength * (week > weeksIn ? k : 1);
-    const muscleMidPct = interp(LEAN_CURVE, week) * muscleDose * age.muscle * exp.muscle * Math.sqrt(week > weeksIn ? k : 1);
+    // Muscle follows a faster or slower strength response only partly.
+    const strengthMid = ahead(strengthAt, week, k);
+    const muscleMidPct = ahead(muscleAt, week, Math.sqrt(k));
     const cardioShare = interp(CARDIO_TIME, week);
     // Personal data narrows the range a little.
     const narrow = pf ? 0.75 : 1;

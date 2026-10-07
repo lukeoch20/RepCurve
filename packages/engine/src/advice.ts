@@ -34,7 +34,7 @@ export function adviseNextSet(p: Prescription, done: SetLog[], ctx: EngineContex
   }
 
   const e = getExercise(p.exerciseId);
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const rirT = p.targetRir;
   const fmt = (w: number) => formatLoad(w, e.loadType, units);
   const unit = e.loadType === "time" ? "seconds" : "reps";

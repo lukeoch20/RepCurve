@@ -19,9 +19,9 @@ function split(days: number, goal: Goal): { strength: number; cardio: number } {
  */
 export function weeklyTemplate(days: number, goal: Goal, equipment: Equipment): SessionKind[] {
   let { strength, cardio } = split(days, goal);
-  // Without a treadmill, cardio days become extra strength days up to four,
-  // and anything beyond that stays cardio as an outdoor walk/jog.
-  if (!equipment.treadmill) {
+  // Without a treadmill, a strength-first plan turns cardio days into extra strength days
+  // (up to four); cardio-led goals keep them as outdoor walk/jog sessions.
+  if (!equipment.treadmill && goal === "strength_muscle") {
     while (cardio > 0 && strength < 4) {
       strength += 1;
       cardio -= 1;

@@ -113,7 +113,7 @@ export function prescriptionFor(
     loadKg,
     targetRir: progress?.targetRir ?? TARGET_RIR,
     benchmarkSet: false,
-    units: ctx.profile.units,
+    units: ctx.loadUnits,
   });
 }
 
@@ -131,7 +131,7 @@ function lighter(p: Prescription, ctx: EngineContext): Prescription {
     loadKg: prev,
     targetRir: p.targetRir,
     benchmarkSet: false,
-    units: ctx.profile.units,
+    units: ctx.loadUnits,
   });
 }
 

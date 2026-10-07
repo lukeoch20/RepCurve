@@ -18,6 +18,8 @@ export interface PlanOptions {
   /** Seconds between exercises within a round. */
   transitionSec?: number;
   e1rmByExercise?: Record<string, number>;
+  /** Effort (1–10) reported for the last cardio session; steers the next one. */
+  lastCardioEffort?: number;
 }
 
 /** Week and day for a position in the session sequence. */
@@ -40,7 +42,17 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
   const before = ctx.template.slice(0, dayIndex);
   if (kind === "cardio") {
     const cardioIndex = before.filter((k) => k === "cardio").length;
-    return buildCardioSession({ profile, equipment: ctx.equipment, level: ctx.level, cardioIndex, index, week, dayIndex });
+    return buildCardioSession({
+      profile,
+      equipment: ctx.equipment,
+      level: ctx.level,
+      cardioIndex,
+      index,
+      week,
+      dayIndex,
+      cardioPerWeek: ctx.template.filter((k) => k === "cardio").length,
+      ...(opts.lastCardioEffort !== undefined ? { lastEffort: opts.lastCardioEffort } : {}),
+    });
   }
   const base: StrengthSessionInput = {
     profile,

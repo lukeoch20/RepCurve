@@ -1,5 +1,5 @@
 // Assemble the claude.ai page from the "artifact" Vite build: one HTML file with the app's CSS and JS inline,
-// React 18 from cdnjs, and no document wrapper tags (the Artifact publisher adds its own skeleton).
+// React bundled in (no third-party scripts to trust), and no document wrapper tags (the Artifact publisher adds its own skeleton).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,8 +21,6 @@ const html = `<title>RepCurve</title>
 ${css}
 </style>
 <div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script>
 ${js}
 </script>

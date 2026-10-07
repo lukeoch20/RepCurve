@@ -84,7 +84,11 @@ export function ProjectionCard(props: { projection: Projection; units: Units; in
       {!props.compact ? <p className="meta small">{projection.headline}</p> : null}
       {projection.tracking ? <div className="banner info small">{projection.tracking}</div> : null}
       {pt.cardioPct.mid <= 5 ? (
-        <p className="meta small">Cardio gains are small at this dose. A second treadmill day, especially with intervals, roughly doubles them.</p>
+        <p className="meta small">
+          {projection.dose.cardioMinutesPerWeek > 0
+            ? "Cardio gains are small at this dose. Another cardio day a week, especially with intervals, roughly doubles them."
+            : "Your plan has no cardio days, so cardio gains come only from the lifting. Choosing a goal with cardio adds walk or treadmill sessions."}
+        </p>
       ) : null}
       <button type="button" className="btn ghost" style={{ alignSelf: "flex-start" }} onClick={() => setShowAssumptions(!showAssumptions)} aria-expanded={showAssumptions}>
         {showAssumptions ? "Hide" : "How this is worked out"}

@@ -168,7 +168,7 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
   const all = setsFor(progress, logs);
   if (all.length === 0) return { next: progress, performed: progress, action: "hold", reason: "No sets logged." };
 
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const workingLoad = isLoaded(e) ? (all[all.length - 1]!.loadKg ?? progress.loadKg) : null;
   const atWorking = isLoaded(e) ? all.filter((s) => s.loadKg === workingLoad) : all;
   // Imported or hand-edited logs may have no set at the working load; judge them all then.
@@ -279,7 +279,7 @@ export function calibrate(progress: ExerciseProgress, logs: SetLog[], ctx: Engin
   if (all.some((s) => s.painFlag)) return progressExercise(progress, logs, ctx);
 
   const e = getExercise(progress.exerciseId);
-  const units = ctx.profile.units;
+  const units = ctx.loadUnits;
   const [lo, hi] = progress.repRange;
   const rirT = progress.targetRir;
   const e1 = sessionE1rm(all);
