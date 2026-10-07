@@ -2,6 +2,7 @@ import React from "react";
 import type { Prescription, SessionPlan } from "@repcurve/engine";
 import type { Units } from "@repcurve/shared";
 import { repsUnit } from "../model/format";
+import { ExerciseName } from "./ExerciseInfo";
 
 function dose(p: Prescription): string {
   const reps = p.loadType === "time" ? `${p.targetReps} s` : `${p.targetReps}`;
@@ -20,7 +21,7 @@ export function Lineup(props: { plan: SessionPlan; units: Units }): React.ReactE
           <div>
             {ss.items.map((p) => (
               <div className="lineup-item" key={p.slot}>
-                <span className="what">{p.name}</span>
+                <span className="what"><ExerciseName id={p.exerciseId} name={p.name} /></span>
                 <span className="dose">
                   {dose(p)}
                   {p.loadKg !== null ? <><br />{p.loadDisplay}</> : null}
@@ -34,7 +35,7 @@ export function Lineup(props: { plan: SessionPlan; units: Units }): React.ReactE
         <div className="lineup-group">
           <div className="lineup-tag wide">Core</div>
           <div className="lineup-item">
-            <span className="what">{plan.finisher.name}</span>
+            <span className="what"><ExerciseName id={plan.finisher.exerciseId} name={plan.finisher.name} /></span>
             <span className="dose">
               {plan.finisher.sets} × {plan.finisher.targetReps} {repsUnit(plan.finisher.loadType)}
             </span>

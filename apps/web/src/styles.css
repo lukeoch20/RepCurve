@@ -374,3 +374,13 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .range-mid { position: absolute; top: -4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--chart); box-shadow: 0 0 0 2px var(--card); }
 .storage-warning { margin: calc(12px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 32rem; }
 @media (min-width: 34rem) { .storage-warning { margin-left: auto; margin-right: auto; } }
+
+/* exercise how-to */
+.exercise-link { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--accent-line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.exercise-link:hover { text-decoration-color: var(--accent); }
+.howto { display: flex; flex-direction: column; gap: 6px; }
+.howto .eyebrow { color: var(--accent); }
+.howto-steps, .howto-list { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+.howto-steps li::marker { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.howto-list li::marker { color: var(--accent); }
+.howto-list.avoid li::marker { color: var(--stop); }
