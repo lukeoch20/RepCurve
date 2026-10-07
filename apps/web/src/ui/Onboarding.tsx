@@ -38,6 +38,7 @@ interface Draft {
   abRoller: boolean;
   pullupBar: boolean;
   bench: boolean;
+  flatBench: boolean;
   bands: Band[];
   injuries: Injury[];
 }
@@ -76,6 +77,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     abRoller: equipment?.abRoller ?? false,
     pullupBar: equipment?.pullupBar ?? false,
     bench: equipment?.bench ?? true,
+    flatBench: equipment?.flatBench ?? false,
     bands: equipment?.bands ?? [],
     injuries: profile?.injuries ?? [],
   };
@@ -122,7 +124,8 @@ function toEquipment(d: Draft): Equipment | null {
     if (!(min > 0 && max > min && step > 0 && (max - min) / step <= 200)) return null;
     dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
-  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench, bands: d.bands };
+  // A weight bench also works as a step or support, so it counts as a bench too.
+  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands };
 }
 
 type Step = "welcome" | "you" | "experience" | "schedule" | "equipment" | "body" | "review";
@@ -359,10 +362,11 @@ export function Onboarding(props: {
           {d.dbKind !== "none" ? <Toggle id="pairs" label="I have pairs" hint="Two of each weight, for presses and rows with both hands" checked={d.pairs} onChange={(pairs) => up({ pairs })} /> : null}
           <div className="field">
             <span className="label">What else do you have access to?</span>
-            <span className="meta small">Select all that apply. A sturdy chair or step counts as a bench.</span>
+            <span className="meta small">Select all that apply. A sturdy chair or step is enough for split squats and step-ups; a weight bench also adds bench presses.</span>
             <div className="tiles" style={{ marginTop: 4 }}>
               <Tile icon="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
-              <Tile icon="bench" label="Bench or chair" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Chair or step" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Weight bench" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
               <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
               <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
               <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
@@ -471,6 +475,8 @@ function RestoreBackup(): React.ReactElement {
   const store = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<AppData | null>(null);
+  const [pasting, setPasting] = useState(false);
+  const [text, setText] = useState("");
   const [msg, setMsg] = useState<{ tone: "good" | "stop"; text: string } | null>(null);
   const read = (text: string) => {
     const r = parseBackup(text);
@@ -484,9 +490,21 @@ function RestoreBackup(): React.ReactElement {
   return (
     <div className="stack">
       <p className="meta small">Already use RepCurve somewhere else? Export a backup there (Settings → Export backup), then restore it here.</p>
-      <button type="button" className="btn" style={{ alignSelf: "flex-start" }} onClick={() => fileRef.current?.click()}>
-        Restore from a backup
-      </button>
+      <div className="row-wrap">
+        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+          Restore from a backup
+        </button>
+        <button type="button" className="btn ghost" onClick={() => setPasting(!pasting)} aria-expanded={pasting}>
+          Paste one instead
+        </button>
+      </div>
+      {pasting ? (
+        <div className="field">
+          <label htmlFor="restore-paste">Backup text</label>
+          <textarea id="restore-paste" className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder='{"format":"repcurve-backup", …}' />
+          <button type="button" className="btn" disabled={!text.trim()} onClick={() => read(text)}>Check backup</button>
+        </div>
+      ) : null}
       <input
         ref={fileRef}
         type="file"

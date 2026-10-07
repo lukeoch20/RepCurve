@@ -37,9 +37,23 @@ export function isIOS(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 }
 
+export type IOSBrowser = "safari" | "other" | "in-app";
+
+/**
+ * Which iPhone browser this is. Only Safari reliably adds web apps to the home screen;
+ * in-app browsers (Gmail, Instagram and so on) can't at all.
+ */
+export function iosBrowser(ua = typeof navigator === "undefined" ? "" : navigator.userAgent): IOSBrowser {
+  if (/FBAN|FBAV|Instagram|GSA\/|Line\/|Twitter|LinkedInApp|Snapchat|; wv\)/.test(ua)) return "in-app";
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|Brave/.test(ua)) return "other";
+  return /Safari\//.test(ua) ? "safari" : "in-app";
+}
+
 /** Whether to suggest installing: the installable build, opened in a browser tab. */
 export function canSuggestInstall(): boolean {
-  return __RUNTIME__ === "pwa" && !isStandalone();
+  // Defined by Vite in both builds; absent in unit tests, where there is nothing to install.
+  const runtime = typeof __RUNTIME__ === "undefined" ? "artifact" : __RUNTIME__;
+  return runtime === "pwa" && !isStandalone();
 }
 
 export function installPromptReady(): boolean {

@@ -65,7 +65,9 @@ export function hasItem(eq: Equipment, item: EquipmentItem): boolean {
     case "pullup_bar":
       return eq.pullupBar;
     case "bench":
-      return eq.bench;
+      return eq.bench || eq.flatBench === true;
+    case "flat_bench":
+      return eq.flatBench === true;
     case "bands":
       return eq.bands.length > 0;
   }

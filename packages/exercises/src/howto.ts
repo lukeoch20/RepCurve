@@ -48,7 +48,7 @@ export const HOW_TO: Record<string, HowTo> = {
       SWITCH,
     ],
     cues: ["Front shin roughly upright", "Hips square to the front", "Slight forward lean of the torso is fine"],
-    mistakes: ["Stepping back too short so the front knee shoots far forward", "Pushing off mainly with the back leg", "Wobbling: slow down and hold something for balance if needed"],
+    mistakes: ["Stepping back too short so the front knee shoots far forward", "Pushing off mainly with the back leg", "Wobbling: slow down, or do it with no dumbbells and one hand on a wall until it feels steady"],
   },
   db_bulgarian_split_squat: {
     setup: "Stand about two feet in front of a bench or sturdy chair, facing away from it. Rest the top of one foot on it behind you. Hold a dumbbell in each hand.",
@@ -213,7 +213,7 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Hips sagging or piking up", "Half reps", "Using something that can slide or tip"],
   },
   knee_push_up: {
-    setup: "Kneel on a mat with hands slightly wider than your shoulders. Walk your hands forward until your body is straight from knees to head.",
+    setup: "Kneel on a mat, rug or folded towel with hands slightly wider than your shoulders. Walk your hands forward until your body is straight from knees to head.",
     steps: [
       "Brace your stomach.",
       "Lower your chest toward the floor, elbows angled back about 45°.",
@@ -256,7 +256,7 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Elbows flaring straight out", "Slamming the elbows down", "Dumbbells drifting toward your face"],
   },
   db_bench_press: {
-    setup: "Lie on a sturdy bench with feet flat on the floor. Hold a dumbbell in each hand above your chest, arms straight.",
+    setup: "Lie on your back on a flat weight bench with feet flat on the floor (a chair or step isn't safe for this; use the floor press instead). Hold a dumbbell in each hand above your chest, arms straight.",
     steps: [
       "Squeeze your shoulder blades together and down.",
       "Lower the dumbbells to the sides of your chest, elbows about 45° from your body.",
@@ -339,20 +339,20 @@ export const HOW_TO: Record<string, HowTo> = {
       "Brace your stomach and squeeze your glutes.",
       "Pull one dumbbell up toward your hip while pushing the other into the floor.",
       "Lower it back down with control.",
-      SWITCH,
+      "Row with the other arm. Alternate arms; one row on each side counts as one rep.",
     ],
     cues: ["Hips stay level and square to the floor", "Wider feet = more stable", "Slow and deliberate"],
     mistakes: ["Hips rocking or rotating", "Using round dumbbells that roll", "Sagging hips"],
   },
   towel_door_row: {
-    setup: "Close a sturdy door and loop a towel around both handles (or the handle on your side), holding one end in each hand. Feet close to the door, lean back with straight arms.",
+    setup: "Use a solid door that opens away from you, so pulling only presses it shut. Close it (lock it if you can), loop a towel around the handle on your side and hold one end in each hand. Test with a gentle lean before you trust it. Feet close to the door, lean back with straight arms.",
     steps: [
       "Keep your body straight from head to heels.",
       "Pull your chest toward your hands, squeezing your shoulder blades together.",
       "Lower back slowly until your arms are straight.",
     ],
     cues: ["Walk your feet closer to the door to make it harder", "Body stays rigid", "Elbows pull back past your sides"],
-    mistakes: ["Using a door that can open toward you", "Hips sagging", "Letting go suddenly: always lower under control"],
+    mistakes: ["Using a door that opens toward you, which can swing open as you pull", "Towel slipping off a lever handle: wrap it twice and test first", "Letting go suddenly: always lower under control"],
   },
   band_row: {
     setup: "Sit on the floor with legs straight. Loop a resistance band around your feet (or anchor it to a post at chest height and stand). Hold one end in each hand, arms straight.",
@@ -404,7 +404,7 @@ export const HOW_TO: Record<string, HowTo> = {
     steps: [
       "Press your lower back gently into the floor and keep it there.",
       "Slowly extend one arm overhead and the opposite leg out straight, just above the floor.",
-      "Return to the start and repeat on the other side.",
+      "Return to the start and repeat on the other side. Each side counts as one rep.",
     ],
     cues: ["Lower back stays flat on the floor", "Breathe out as you extend", "Slow is harder and better"],
     mistakes: ["Lower back arching off the floor", "Moving too fast", "Holding your breath"],
@@ -430,7 +430,7 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Lower back lifting", "Legs too low to control", "Holding your breath"],
   },
   kneeling_ab_rollout: {
-    setup: "Kneel on a mat holding the ab roller handles, roller on the floor under your shoulders.",
+    setup: "Kneel on a mat, rug or folded towel holding the ab roller handles, roller on the floor under your shoulders.",
     steps: [
       "Brace your stomach and tuck your pelvis slightly.",
       "Roll forward slowly, letting your hips and arms extend together.",
@@ -447,8 +447,8 @@ export const HOW_TO: Record<string, HowTo> = {
       "Roll forward slowly as far as you can control.",
       "Pull back to standing using your abs.",
     ],
-    cues: ["Very advanced: only progress here after easy kneeling rollouts", "Stop short of any lower-back sag", "Slow and controlled"],
-    mistakes: ["Collapsing at the bottom", "Going to full extension too soon", "Holding your breath"],
+    cues: ["Stop short of any lower-back sag", "Slow and controlled", "Upper back slightly rounded, like a shallow hollow"],
+    mistakes: ["Trying it before full kneeling rollouts feel easy: it's very advanced", "Collapsing at the bottom", "Going to full extension too soon"],
   },
   hanging_knee_raise: {
     setup: "Hang from a pull-up bar with your arms straight and your shoulders pulled slightly down.",
@@ -493,9 +493,9 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Elbows flaring wide", "Arching the lower back", "Hitting the back of your head: go slower"],
   },
   db_calf_raise: {
-    setup: "Stand on the edge of a step with the balls of your feet on it and heels hanging off. Hold a dumbbell in one hand and a wall or rail with the other.",
+    setup: "Stand on the edge of a step with the balls of your feet on it and heels hanging off, or flat on the floor if you have no step. Hold a dumbbell in one hand and steady yourself on a wall or rail with the other.",
     steps: [
-      "Lower your heels below the step until you feel a stretch in your calves.",
+      "Lower your heels until you feel a stretch in your calves (below the step, if you're on one).",
       "Rise up onto your toes as high as you can.",
       "Pause at the top, then lower slowly.",
     ],

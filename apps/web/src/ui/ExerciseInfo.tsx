@@ -8,7 +8,7 @@ const MUSCLE: Record<Muscle, string> = {
   triceps: "triceps", biceps: "biceps", back: "back", core: "core", calves: "calves",
 };
 const EQUIPMENT: Record<EquipmentItem, string> = {
-  dumbbells: "dumbbells", bench: "a bench or sturdy chair", pullup_bar: "a pull-up bar", ab_roller: "an ab roller",
+  dumbbells: "dumbbells", bench: "a bench or sturdy chair", flat_bench: "a flat weight bench", pullup_bar: "a pull-up bar", ab_roller: "an ab roller",
   bands: "a resistance band", mat: "a mat", treadmill: "a treadmill",
 };
 
@@ -41,6 +41,7 @@ export function ExerciseInfo(props: { exerciseId: string; onClose: () => void })
         {needs.length > 0 ? ` Needs ${list(needs)}.` : " No equipment needed."}
         {e.unilateral ? " One side at a time." : ""}
       </p>
+      {how && e.cue ? <p className="prose"><b style={{ fontWeight: 600 }}>In short:</b> {e.cue}</p> : null}
       {how ? (
         <>
           <section className="howto">
@@ -48,7 +49,7 @@ export function ExerciseInfo(props: { exerciseId: string; onClose: () => void })
             <p className="prose">{how.setup}</p>
           </section>
           <section className="howto">
-            <h3 className="eyebrow">Each rep</h3>
+            <h3 className="eyebrow">{e.loadType === "time" ? "Each hold" : "Each rep"}</h3>
             <ol className="howto-steps">
               {how.steps.map((s) => (
                 <li key={s}>{s}</li>

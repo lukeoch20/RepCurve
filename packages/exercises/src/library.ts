@@ -180,7 +180,7 @@ export const EXERCISES: Exercise[] = [
   {
     id: "db_bench_press", name: "Dumbbell bench press", pattern: "horizontal_push",
     primary: ["chest", "triceps"], secondary: ["shoulders"],
-    requires: DB_BENCH, loadType: "dumbbell_pair", ladder: "hpush_db", ladderLevel: 2,
+    requires: [["dumbbells", "flat_bench"]], loadType: "dumbbell_pair", ladder: "hpush_db", ladderLevel: 2,
     unilateral: false, repTimeSec: 2.5, avoidWith: [],
   },
   // ---------------- Vertical push ----------------
@@ -233,7 +233,7 @@ export const EXERCISES: Exercise[] = [
     primary: ["back", "biceps"], secondary: ["shoulders", "core"],
     requires: BW, loadType: "bodyweight", ladder: "row_bw", ladderLevel: 1,
     unilateral: false, repTimeSec: 2.5, avoidWith: [], bodyweightFraction: 0.5,
-    cue: "Towel looped around a door handle (door closed, handle side), lean back with straight arms, row your chest to your hands. Walk your feet forward to make it harder.",
+    cue: "Towel looped around the handle of a closed door that opens away from you, lean back with straight arms, row your chest to your hands. Walk your feet forward to make it harder.",
   },
   {
     id: "band_row", name: "Band row", pattern: "row",

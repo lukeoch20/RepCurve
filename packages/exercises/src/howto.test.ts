@@ -24,11 +24,39 @@ describe("how-to guides", () => {
     }
   });
 
-  it("tells one-sided exercises to switch sides, and only those", () => {
+  it("tells one-sided exercises how sides work, and only those", () => {
     for (const e of EXERCISES) {
-      const switches = getHowTo(e.id)!.steps.some((s) => /switch sides/i.test(s));
-      // The renegade row alternates arms within the set, which is still one side then the other.
-      expect(switches, e.id).toBe(e.unilateral);
+      const steps = getHowTo(e.id)!.steps.join(" ");
+      // Most do one side then the other; the renegade row alternates arms within the set.
+      expect(/switch sides|alternate arms/i.test(steps), e.id).toBe(e.unilateral);
+    }
+  });
+
+  it("only treats a bench as optional when the exercise doesn't require one", () => {
+    for (const e of EXERCISES) {
+      const needsBench = e.requires.every((set) => set.includes("bench") || set.includes("flat_bench"));
+      if (needsBench) continue;
+      const h = getHowTo(e.id)!;
+      for (const line of [h.setup, ...h.steps]) {
+        if (/\bbench\b/i.test(line)) expect(/\bor\b/.test(line), `${e.id}: ${line}`).toBe(true);
+      }
+    }
+  });
+
+  it("never requires a mat for exercises that don't need one", () => {
+    for (const e of EXERCISES) {
+      if (e.requires.some((set) => set.includes("mat"))) continue;
+      const h = getHowTo(e.id)!;
+      for (const line of [h.setup, ...h.steps]) {
+        if (/\bon a mat\b/i.test(line)) expect(/mat, rug|mat or/i.test(line), `${e.id}: ${line}`).toBe(true);
+      }
+    }
+  });
+
+  it("tells you to hold something only when a hand is free", () => {
+    for (const e of EXERCISES.filter((x) => x.loadType === "dumbbell_pair")) {
+      const h = getHowTo(e.id)!;
+      for (const line of [...h.cues, ...h.mistakes]) expect(/hold (something|a wall|onto)/i.test(line), `${e.id}: ${line}`).toBe(false);
     }
   });
 });

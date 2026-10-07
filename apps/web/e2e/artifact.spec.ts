@@ -61,6 +61,12 @@ test("the claude.ai page loads no third-party scripts", () => {
   expect(page).not.toMatch(/<script[^>]+src=/i);
 });
 
+test("the claude.ai page never suggests installing", async ({ page: p }) => {
+  await p.goto("http://artifact.test/");
+  await expect(p.getByRole("button", { name: "Set up my plan" })).toBeVisible();
+  await expect(p.getByRole("region", { name: "Install RepCurve" })).toHaveCount(0);
+});
+
 test("the claude.ai page saves to the account database and survives a reload", async ({ page: p }) => {
   await p.goto("http://artifact.test/");
   await p.getByRole("button", { name: "Set up my plan" }).click();
