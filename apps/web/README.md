@@ -30,6 +30,25 @@ Saving is built to survive bad connections and multiple devices:
 
 Updates arrive on their own: when a new version is published, the app shows "Update now" (never during a workout).
 
+## RepCurve Test: try features before they ship
+
+A second copy of the app, **RepCurve Test**, lives beside the real one so new features can be tried on the phone first.
+
+| | RepCurve | RepCurve Test |
+|---|---|---|
+| Address | `https://lukeoch20.github.io/RepCurve/` | `https://lukeoch20.github.io/RepCurve/test/` |
+| Built from | `main` | the `test` branch |
+| Icon | white curve on green | green curve on white |
+| Data | its own | its own (database `repcurve-test`), never touches the real app's |
+
+How a feature ships:
+
+1. It's merged into `test` first. The deploy publishes both apps on every push to `main` or `test`.
+2. You try it in RepCurve Test. To try it with your real history, export a backup from RepCurve and restore it into RepCurve Test.
+3. When it's good, `test` is merged into `main` and the real app offers "Update now".
+
+Locally, `pnpm build:web` builds both (`dist/` and `dist/test/`); `pnpm --filter @repcurve/web build:test` builds only the test app. The real app's offline worker is told never to answer for `/test/`; the e2e test `test-channel.spec.ts` fails if that ever breaks.
+
 ## Hosting the installable version
 
 The repository is private, and GitHub Pages only serves private repositories on paid GitHub plans. Pick one:

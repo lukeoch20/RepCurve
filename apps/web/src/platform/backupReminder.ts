@@ -1,5 +1,7 @@
+import { storageKey } from "./channel";
+
 /** Monthly backup nudge for data kept only on this device. Per-device, best effort. */
-const KEY = "repcurve.lastBackup";
+const KEY = storageKey("lastBackup");
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function markBackedUp(now: number): void {

@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { IS_TEST } from "../platform/channel";
 
 export function Seg<T extends string | number>(props: {
   value: T | undefined;
@@ -106,13 +107,14 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
   );
 }
 
-/** The RepCurve mark: a rising curve. */
+/** The RepCurve mark: a rising curve. RepCurve Test shows it with the colours swapped. */
 export function CurveMark(props: { size?: number }): React.ReactElement {
   const s = props.size ?? 28;
+  const [tile, curve] = IS_TEST ? ["var(--card)", "var(--accent)"] : ["var(--accent)", "var(--accent-ink)"];
   return (
     <svg width={s} height={s} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="var(--accent)" />
-      <path d="M6 24 C 12 23, 15 19, 17 15 S 22 8, 26 7" fill="none" stroke="var(--accent-ink)" strokeWidth="2.6" strokeLinecap="round" />
+      <rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill={tile} stroke={IS_TEST ? "var(--accent)" : tile} strokeWidth="1" />
+      <path d="M6 24 C 12 23, 15 19, 17 15 S 22 8, 26 7" fill="none" stroke={curve} strokeWidth="2.6" strokeLinecap="round" />
     </svg>
   );
 }

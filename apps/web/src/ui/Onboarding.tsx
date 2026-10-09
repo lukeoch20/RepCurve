@@ -6,6 +6,7 @@ import { Lineup } from "./Lineup";
 import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
 import { InstallCard } from "./Install";
+import { APP_NAME } from "../platform/channel";
 import { parseBackup } from "../model/backup";
 import type { AppData } from "../model/types";
 import { useStore } from "../store/useAppStore";
@@ -426,7 +427,7 @@ function Welcome(): React.ReactElement {
       <InstallCard beforeSetup />
       <div className="brand">
         <CurveMark size={34} />
-        <span>RepCurve</span>
+        <span>{APP_NAME}</span>
       </div>
       <header className="stack">
         <h1 className="title" style={{ fontSize: "2.7rem" }}>Real training in the minutes you have</h1>

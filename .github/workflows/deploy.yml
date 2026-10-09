@@ -1,10 +1,13 @@
 name: Deploy web app
 
-# Publishes apps/web to GitHub Pages on every push to main, once Pages is turned on
-# (Settings > Pages > Source: GitHub Actions). Until then the deploy is skipped, not failed.
+# Publishes both apps to GitHub Pages, once Pages is turned on (Settings > Pages > Source:
+# GitHub Actions; until then the deploy is skipped, not failed):
+#   /RepCurve/       RepCurve, built from main
+#   /RepCurve/test/  RepCurve Test, built from the test branch (or from main until that exists)
+# A push to either branch republishes both, so neither ever disappears.
 on:
   push:
-    branches: [main]
+    branches: [main, test]
   workflow_dispatch:
 
 permissions:
@@ -39,14 +42,39 @@ jobs:
     if: needs.pages-enabled.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     steps:
+      # The real app always comes from main, whichever branch was pushed.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Builds RepCurve into apps/web/dist and, from the same code, RepCurve Test into dist/test.
       - run: pnpm build:web
+      # Then, when the test branch exists, RepCurve Test is rebuilt from it instead.
+      - id: test-branch
+        run: |
+          if git ls-remote --exit-code --heads origin test >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No test branch yet, so RepCurve Test is built from main."
+          fi
+      - if: steps.test-branch.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: test
+          path: test-branch
+      - if: steps.test-branch.outputs.exists == 'true'
+        working-directory: test-branch
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @repcurve/web build:test
+          rm -rf ../apps/web/dist/test
+          cp -r apps/web/dist/test ../apps/web/dist/test
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/dist

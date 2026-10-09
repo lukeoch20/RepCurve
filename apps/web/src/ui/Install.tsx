@@ -1,5 +1,6 @@
 import React, { useSyncExternalStore } from "react";
 import { canSuggestInstall, installPromptReady, iosBrowser, isIOS, onInstallPromptChange, promptInstall } from "../platform/install";
+import { APP_NAME } from "../platform/channel";
 import { Icon } from "./common";
 
 /** The Safari share icon, drawn so the instructions match what's on screen. */
@@ -27,19 +28,19 @@ export function InstallCard(props: { beforeSetup?: boolean }): React.ReactElemen
     <section className="card tint stack" aria-label="Install RepCurve">
       <div className="row" style={{ gap: 10 }}>
         <Icon name="today" size={20} />
-        <b style={{ fontWeight: 600 }}>Put RepCurve on your home screen</b>
+        <b style={{ fontWeight: 600 }}>Put {APP_NAME} on your home screen</b>
       </div>
       {ios && browser !== "safari" ? (
         <p className="meta small" style={{ color: "var(--ink)" }}>
           {browser === "in-app"
-            ? "This app's built-in browser can't add RepCurve to your home screen. Open this page in Safari (look for \"Open in Safari\" in the ••• menu), then follow the steps there."
+            ? `This app's built-in browser can't add ${APP_NAME} to your home screen. Open this page in Safari (look for "Open in Safari" in the ••• menu), then follow the steps there.`
             : "Open this page in Safari to add it to your home screen: other iPhone browsers can't do it reliably."}
         </p>
       ) : ios ? (
         <ol className="howto-steps" style={{ fontSize: "0.92rem" }}>
           <li>Tap the Share button <ShareGlyph /> in Safari's toolbar (on newer iPhones it may be under the ••• button).</li>
           <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-          <li>Open RepCurve from its new icon.</li>
+          <li>Open {APP_NAME} from its new icon.</li>
         </ol>
       ) : promptReady ? (
         <button type="button" className="btn primary" style={{ alignSelf: "flex-start" }} onClick={() => void promptInstall()}>

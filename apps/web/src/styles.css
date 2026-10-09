@@ -384,3 +384,6 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .howto-list li::marker { color: var(--accent); }
 .howto-list.avoid li::marker { color: var(--stop); }
 .sheet:focus { outline: none; }
+
+/* RepCurve Test: always visible, so it's never mistaken for the real app */
+.test-strip { display: flex; align-items: center; justify-content: center; gap: 8px; padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px; background: var(--ink); color: var(--bg); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; text-align: center; }

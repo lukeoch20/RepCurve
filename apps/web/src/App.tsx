@@ -12,6 +12,7 @@ import { CurveMark, Icon } from "./ui/common";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
 import { applyUpdate, onUpdateReady, updateReady } from "./platform/update";
+import { IS_TEST, storageKey } from "./platform/channel";
 import { StoreContext, useAppStore } from "./store/useAppStore";
 
 type Tab = "today" | "plan" | "progress" | "settings";
@@ -24,7 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 function rememberedTab(): Tab {
   try {
-    const t = localStorage.getItem("repcurve.tab") as Tab | null;
+    const t = localStorage.getItem(storageKey("tab")) as Tab | null;
     return t && TABS.some((x) => x.id === t) ? t : "today";
   } catch {
     return "today";
@@ -40,7 +41,7 @@ export function App(): React.ReactElement {
 
   useEffect(() => {
     try {
-      localStorage.setItem("repcurve.tab", tab);
+      localStorage.setItem(storageKey("tab"), tab);
     } catch {
       // per-device convenience only
     }
@@ -96,6 +97,12 @@ export function App(): React.ReactElement {
 
   return (
     <StoreContext.Provider value={store}>
+      {IS_TEST ? (
+        <div className="test-strip" role="note">
+          <CurveMark size={16} />
+          RepCurve Test · separate data
+        </div>
+      ) : null}
       {store.saveError ? (
         <div className="toast banner stop" role="alert">
           {store.saveError}
