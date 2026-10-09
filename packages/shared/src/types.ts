@@ -37,7 +37,7 @@ export interface Equipment {
   pullupBar: boolean;
   /** A bench, sturdy chair or step that can be used for elevation and support. */
   bench: boolean;
-  /** A flat weight bench you can lie on and press from. Missing means no. */
+  /** A flat, padded bench you can lie on and press dumbbells from (no barbell or rack). Missing means no. */
   flatBench?: boolean;
   bands: Band[];
 }

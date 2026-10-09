@@ -8,7 +8,7 @@ const MUSCLE: Record<Muscle, string> = {
   triceps: "triceps", biceps: "biceps", back: "back", core: "core", calves: "calves",
 };
 const EQUIPMENT: Record<EquipmentItem, string> = {
-  dumbbells: "dumbbells", bench: "a bench or sturdy chair", flat_bench: "a flat weight bench", pullup_bar: "a pull-up bar", ab_roller: "an ab roller",
+  dumbbells: "dumbbells", bench: "a bench or sturdy chair", flat_bench: "a flat bench you can lie on", pullup_bar: "a pull-up bar", ab_roller: "an ab roller",
   bands: "a resistance band", mat: "a mat", treadmill: "a treadmill",
 };
 
