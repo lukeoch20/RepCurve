@@ -4,7 +4,8 @@ name: Deploy web app
 # GitHub Actions; until then the deploy is skipped, not failed):
 #   /RepCurve/       RepCurve, built from main
 #   /RepCurve/test/  RepCurve Test, built from the test branch (or from main until that exists)
-# A push to either branch republishes both, so neither ever disappears.
+# A push to either branch republishes both, so neither ever disappears. Pages only accepts
+# deploys run from main, so a push to test asks for a run on main, which builds both.
 on:
   push:
     branches: [main, test]
@@ -21,7 +22,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A push to test: start this workflow on main, which builds RepCurve Test from the test branch.
+  # (A run started this way does run, unlike most events caused by the workflow's own token.)
+  from-test:
+    if: github.ref == 'refs/heads/test'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref main
+
   pages-enabled:
+    if: github.ref != 'refs/heads/test'
     runs-on: ubuntu-latest
     outputs:
       enabled: ${{ steps.check.outputs.enabled }}

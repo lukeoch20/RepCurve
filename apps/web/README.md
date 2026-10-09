@@ -43,7 +43,7 @@ A second copy of the app, **RepCurve Test**, lives beside the real one so new fe
 
 How a feature ships:
 
-1. It's merged into `test` first. The deploy publishes both apps on every push to `main` or `test`.
+1. It's merged into `test` first. Every push to `main` or `test` republishes both apps (Pages only deploys from `main`, so a push to `test` starts the deploy on `main`, which builds RepCurve Test from `test`).
 2. You try it in RepCurve Test. To try it with your real history, export a backup from RepCurve and restore it into RepCurve Test.
 3. When it's good, `test` is merged into `main` and the real app offers "Update now".
 
