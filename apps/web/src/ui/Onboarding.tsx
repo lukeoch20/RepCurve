@@ -125,7 +125,7 @@ function toEquipment(d: Draft): Equipment | null {
     if (!(min > 0 && max > min && step > 0 && (max - min) / step <= 200)) return null;
     dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
-  // A weight bench also works as a step or support, so it counts as a bench too.
+  // A flat bench also works as a step or support, so it counts as a bench too.
   return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands };
 }
 
@@ -363,11 +363,11 @@ export function Onboarding(props: {
           {d.dbKind !== "none" ? <Toggle id="pairs" label="I have pairs" hint="Two of each weight, for presses and rows with both hands" checked={d.pairs} onChange={(pairs) => up({ pairs })} /> : null}
           <div className="field">
             <span className="label">What else do you have access to?</span>
-            <span className="meta small">Select all that apply. A sturdy chair or step is enough for split squats and step-ups; a weight bench also adds bench presses.</span>
+            <span className="meta small">Select all that apply. A chair or step covers step-ups and split squats. A flat bench is a padded bench you lie on to press dumbbells: no barbell or rack needed.</span>
             <div className="tiles" style={{ marginTop: 4 }}>
               <Tile icon="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
-              <Tile icon="bench" label="Chair or step" checked={d.bench} onChange={(bench) => up({ bench })} />
-              <Tile icon="bench" label="Weight bench" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
+              <Tile icon="bench" label="Chair or step" hint="to step up on" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Flat bench" hint="to lie on" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
               <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
               <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
               <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
@@ -573,12 +573,15 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
   );
 }
 
-function Tile(props: { icon: IconName; label: string; checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
+function Tile(props: { icon: IconName; label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
   return (
     <button type="button" role="switch" aria-checked={props.checked} className="tile" onClick={() => props.onChange(!props.checked)}>
       <span className="badge" aria-hidden="true"><Icon name="check" size={13} strokeWidth={2.6} /></span>
       <Icon name={props.icon} size={26} />
-      {props.label}
+      <span>
+        {props.label}
+        {props.hint ? <span className="tile-hint">{props.hint}</span> : null}
+      </span>
     </button>
   );
 }
