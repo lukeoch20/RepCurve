@@ -28,7 +28,8 @@ test("the two apps keep separate data", async ({ page }) => {
   await page.goto("/test/");
   // Set up in the real app, but the test app starts fresh.
   await expect(page.getByRole("button", { name: "Set up my plan" })).toBeVisible();
-  const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name).sort());
+  // Only the apps' own databases: the offline worker may add its own (e.g. for the font cache).
+  const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name ?? "").filter((n) => n.startsWith("repcurve")).sort());
   expect(dbs).toEqual(["repcurve", "repcurve-test"]);
   await page.goto("/");
   await expect(page.getByText("Week 1 · session 1")).toBeVisible();
