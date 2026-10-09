@@ -1,4 +1,5 @@
 import { createStore, entries, get, promisifyRequest, set, del, type UseStore } from "idb-keyval";
+import { STORAGE_PREFIX, storageKey } from "../platform/channel";
 import { insideClaude, useCapability } from "../platform/runtime";
 import { EMPTY_DATA, type ActiveSession, type AppData, type Core, type SessionRecord } from "../model/types";
 
@@ -212,7 +213,7 @@ export function claudePersistence(db: DB, uid: string, retryDelay?: () => Promis
   const coreDoc = db.doc(`${base}/core`);
   const activeDoc = db.doc(`${base}/active`);
   const sessions = () => coreDoc.collection("sessions");
-  const unsaved = unsavedStore(`repcurve.unsaved.${uid}`);
+  const unsaved = unsavedStore(storageKey(`unsaved.${uid}`));
   /** Revision of core this page last loaded or wrote. */
   let rev = 0;
   let activeId: string | null = null;
@@ -448,7 +449,7 @@ export async function openPersistence(): Promise<Persistence> {
     }
   }
   try {
-    const store = createStore("repcurve", "data");
+    const store = createStore(STORAGE_PREFIX, "data");
     await get("core", store);
     try {
       await navigator.storage?.persist?.();
