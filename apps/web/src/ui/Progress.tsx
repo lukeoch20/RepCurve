@@ -9,6 +9,7 @@ import type { Core, SessionRecord } from "../model/types";
 import { Seg } from "./common";
 import { ProjectionCard } from "./ProjectionCard";
 import { ShareBars, TrendChart } from "./charts";
+import { useTip } from "./tips";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -20,6 +21,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   const units = loadUnitsFor(core.profile, core.equipment);
   const lifts = useMemo(() => liftSeries(history), [history]);
   const [range, setRange] = useState<Range>("12w");
+  const statsTip = useTip("progress.charts");
   const [liftId, setLiftId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const lift = lifts.find((l) => l.id === liftId) ?? lifts[0] ?? null;
@@ -48,7 +50,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         ]}
       />
 
-      <div className="stats">
+      <div className="stats" ref={statsTip}>
         <div className="stat"><b className="num">{done.length}</b><span>sessions</span></div>
         <div className="stat"><b className="num">{minutes}</b><span>minutes</span></div>
         <div className="stat"><b className="num">{streak}</b><span>week streak</span></div>

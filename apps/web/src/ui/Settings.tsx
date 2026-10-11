@@ -6,6 +6,7 @@ import { markBackedUp } from "../platform/backupReminder";
 import { backupFilename, saveTextFile } from "../platform/download";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
+import { useTips } from "./tips";
 import { InstallCard } from "./Install";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
@@ -110,6 +111,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         </div>
       </section>
 
+      <TipsSettings />
+
       <section className="card stack">
         <h2 className="h3">You and your equipment</h2>
         <div className="field">
@@ -186,5 +189,39 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       <p className="meta small">RepCurve gives general fitness guidance, not medical advice. Stop any exercise that causes sharp or lasting pain.</p>
     </div>
+  );
+}
+
+/** Tutorial tips: on or off, and a way to see them all again. */
+function TipsSettings(): React.ReactElement | null {
+  const tips = useTips();
+  const [replayed, setReplayed] = React.useState(false);
+  if (!tips) return null;
+  return (
+    <section className="card stack">
+      <h2 className="h3">Tips</h2>
+      <Toggle
+        id="tips"
+        label="Show tips"
+        hint="Short notes on lifting basics and the app, the first time you meet each thing"
+        checked={!tips.state.off}
+        onChange={(on) => {
+          tips.setOff(!on);
+          setReplayed(false);
+        }}
+      />
+      <button
+        type="button"
+        className="btn"
+        style={{ alignSelf: "flex-start" }}
+        onClick={() => {
+          tips.replay();
+          setReplayed(true);
+        }}
+      >
+        Show all tips again
+      </button>
+      {replayed ? <p className="meta small" role="status">Tips start again from the beginning, on each screen as you visit it.</p> : null}
+    </section>
   );
 }

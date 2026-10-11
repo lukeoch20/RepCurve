@@ -19,6 +19,7 @@ import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 import { ExerciseInfo } from "./ExerciseInfo";
+import { useTip } from "./tips";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -28,6 +29,8 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
   const { done, total } = progressSummary(active);
   const [endOpen, setEndOpen] = useState(false);
   const paused = active.pausedAt !== null;
+  // Tutorial tips arrive a few at a time: the basics before the first set, the rest as the session goes on.
+  const headTip = useTip("run.head", active.sets.length >= 5);
 
   useEffect(() => {
     if (!core.settings.keepAwake) return;
@@ -48,7 +51,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
     <>
       {/* Any tap in the runner (re)enables sound, e.g. after the app was reloaded mid-session. */}
       <main className="app stack" onPointerDown={unlockAudio} style={{ paddingBottom: `calc(${active.timer ? 210 : 40}px + env(safe-area-inset-bottom, 0px))` }}>
-        <div className="runner-head">
+        <div className="runner-head" ref={headTip}>
           <div className="spread" style={{ alignItems: "flex-start" }}>
             <div className="grow">
               <p className="eyebrow">
@@ -166,10 +169,11 @@ function Warmup(props: { active: ActiveSession }): React.ReactElement | null {
   const { dispatch } = useStore();
   const items = props.active.plan.warmup;
   const [open, setOpen] = useState(props.active.sets.length === 0);
+  const tip = useTip("run.warmup", props.active.sets.length === 0);
   if (items.length === 0) return null;
   const doneCount = items.filter((w) => props.active.warmupDone.includes(w.name)).length;
   return (
-    <section className="block">
+    <section className="block" ref={tip}>
       <button type="button" className="block-head" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", paddingBottom: 14 }} onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="block-tag" aria-hidden="true"><Icon name="run" size={16} /></span>
         <span className="grow">
@@ -220,6 +224,7 @@ function ExerciseBlock(props: {
   const advice = active.advice[p.slot];
   const units = loadUnitsFor(core.profile, core.equipment);
   const unit = repsUnit(p.loadType);
+  const menuTip = useTip("run.menu", group === 0 && position === 0 && active.sets.length >= 4);
 
   const target = `${p.sets} sets · ${p.targetReps}${p.loadType === "time" ? " s" : " reps"}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
   const loaded = p.loadKg !== null;
@@ -236,7 +241,7 @@ function ExerciseBlock(props: {
           <div className="block-target">{target}</div>
         </div>
       </div>
-      <div className="menu">
+      <div className="menu" ref={menuTip}>
         <button type="button" className="btn" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>
           How to
         </button>
@@ -371,11 +376,16 @@ function SetEditor(props: {
   };
 
   const effortHint = EFFORT_OPTIONS.find((o) => o.rir === rir)?.hint ?? "";
+  const fresh = !props.existing;
+  const setTip = useTip("run.set", fresh);
+  const effortTip = useTip("run.effort", fresh);
+  const doneTip = useTip("run.done", fresh);
+  const hurtTip = useTip("run.hurt", fresh && active.sets.length >= 3);
   const isBenchmark = p.benchmarkSet && setIndex === 0;
 
   return (
     <div className="editor" ref={ref}>
-      <div className="editor-steppers">
+      <div className="editor-steppers" ref={setTip}>
         {p.loadKg !== null && loadKg !== null ? (
           <div className="stepper" role="group" aria-label="Weight">
             <button type="button" aria-label="Lighter" onClick={() => stepLoad(-1)} disabled={loadIdx === 0}>−</button>
@@ -401,7 +411,7 @@ function SetEditor(props: {
           <button type="button" aria-label={isTime ? "More seconds" : "More reps"} onClick={() => setReps((r) => Math.min(isTime ? 300 : 60, r + step))}>+</button>
         </div>
       </div>
-      <div className="effort stack" style={{ gap: 6 }}>
+      <div className="effort stack" style={{ gap: 6 }} ref={effortTip}>
         <span className="label">How many more could you have done?</span>
         <Seg label="Effort" value={rir} onChange={setRir} options={EFFORT_OPTIONS.map((o) => ({ value: o.rir, label: o.label }))} />
         <span className="effort-hint">{isBenchmark ? "For the benchmark, stop when you have about 2 left." : effortHint}</span>
@@ -411,6 +421,7 @@ function SetEditor(props: {
       ) : null}
       <div className="row">
         <button
+          ref={doneTip}
           type="button"
           className="btn go grow"
           style={{ minHeight: 52 }}
@@ -423,7 +434,7 @@ function SetEditor(props: {
             Delete
           </button>
         ) : (
-          <button type="button" className="btn danger" onClick={() => props.onSave({ loadKg, reps, rir, painFlag: true })} title="Log the set and flag pain">
+          <button ref={hurtTip} type="button" className="btn danger" onClick={() => props.onSave({ loadKg, reps, rir, painFlag: true })} title="Log the set and flag pain">
             It hurt
           </button>
         )}
@@ -478,6 +489,8 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
   const over = remaining <= 0;
   const [chooser, setChooser] = useState(false);
   const alerted = useRef<number | null>(null);
+  const switchTip = useTip("run.switch", t.kind === "transition");
+  const restTip = useTip("run.rest", t.kind !== "transition");
 
   useEffect(() => {
     if (over && alerted.current !== t.endsAt) {
@@ -489,7 +502,7 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
   return (
     <>
       <div className={`dock${over ? " go" : ""}`} role="timer" aria-live="off" onPointerDown={unlockAudio}>
-        <div className="dock-inner">
+        <div className="dock-inner" ref={t.kind === "transition" ? switchTip : restTip}>
           <button type="button" className="ring" onClick={() => setChooser(true)} aria-label={`Rest timer ${clock(remaining)}. Tap to change the rest length.`}>
             <TimerRing fraction={over ? 1 : remaining / Math.max(1, t.durationSec * 1000)} size={104} />
             <span className="face">

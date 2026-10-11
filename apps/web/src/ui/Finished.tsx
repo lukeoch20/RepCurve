@@ -5,6 +5,7 @@ import { formatLoad } from "@repcurve/shared";
 import type { Units } from "@repcurve/shared";
 import type { SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
+import { useTip } from "./tips";
 
 const UP = new Set(["load_up", "ladder_up", "widen_range"]);
 const DOWN = new Set(["load_down", "ladder_down", "pain"]);
@@ -30,6 +31,7 @@ export function Finished(props: { record: SessionRecord; units: Units }): React.
   const { dispatch } = useStore();
   const r = props.record;
   const changes = r.changes.filter((c) => c.action !== "skipped");
+  const nextTip = useTip("finished.next", changes.length > 0);
   return (
     <main className="app stack-lg" style={{ paddingBottom: 40 }}>
       <header className="stack">
@@ -45,7 +47,7 @@ export function Finished(props: { record: SessionRecord; units: Units }): React.
       </header>
 
       {changes.length > 0 ? (
-        <section className="card">
+        <section className="card" ref={nextTip}>
           <h2 className="h3" style={{ marginBottom: 6 }}>Next time</h2>
           {changes.map((c) => {
             const { arrow, cls } = marker(c.action);
