@@ -70,7 +70,7 @@ export function App(): React.ReactElement {
       />
     );
   } else if (store.finished) {
-    body = <Finished record={store.finished} units={loadUnitsFor(core.profile, core.equipment)} />;
+    body = <Finished record={store.finished} core={core} history={history} units={loadUnitsFor(core.profile, core.equipment)} />;
   } else if (active) {
     body = active.plan.kind === "cardio" ? <CardioRunner core={core} active={active} /> : <SessionRunner core={core} active={active} />;
   } else {
