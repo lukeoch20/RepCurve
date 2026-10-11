@@ -53,7 +53,7 @@ export interface CardioSegment {
 }
 
 export interface CardioPlan {
-  mode: "treadmill" | "outdoor";
+  mode: "treadmill" | "outdoor" | "jump_rope";
   style: "steady" | "incline_walk" | "intervals";
   segments: CardioSegment[];
   totalMinutes: number;

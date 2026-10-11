@@ -138,6 +138,8 @@ const ICONS = {
   wheel: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM3 12h3M18 12h3",
   bar: "M3 6h18M6 6v2M18 6v2M9 10h6v4H9z",
   band: "M5 8c4 0 4 8 8 8s4-8 6-8M5 6v4M19 6v4",
+  rope: "M4.5 3h3v6h-3zM16.5 3h3v6h-3zM6 9c0 12 12 12 12 0",
+  gym: "M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12",
   pairs: "M5 8v8M9 8v8M15 8v8M19 8v8M5 12h4M15 12h4",
   core: "M12 4v16M7 8h10M7 16h10M9 12h6",
   pause: "M8 5v14M16 5v14",

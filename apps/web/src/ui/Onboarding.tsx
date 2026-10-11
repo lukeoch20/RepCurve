@@ -41,6 +41,7 @@ interface Draft {
   bench: boolean;
   flatBench: boolean;
   bands: Band[];
+  jumpRope: boolean;
   injuries: Injury[];
 }
 
@@ -80,6 +81,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     bench: equipment?.bench ?? true,
     flatBench: equipment?.flatBench ?? false,
     bands: equipment?.bands ?? [],
+    jumpRope: equipment?.jumpRope ?? false,
     injuries: profile?.injuries ?? [],
   };
 }
@@ -126,7 +128,7 @@ function toEquipment(d: Draft): Equipment | null {
     dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
   // A flat bench also works as a step or support, so it counts as a bench too.
-  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands };
+  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands, jumpRope: d.jumpRope };
 }
 
 type Step = "welcome" | "you" | "experience" | "schedule" | "equipment" | "body" | "review";
@@ -312,9 +314,29 @@ export function Onboarding(props: {
         <section className="stack-lg">
           <header className="stack">
             <p className="eyebrow">Equipment</p>
-            <h1 className="title">What do you have at home?</h1>
+            <h1 className="title">What do you have to train with?</h1>
             <p className="meta">Every exercise and weight comes from this list, so be exact about your dumbbells.</p>
           </header>
+          <GymPreset
+            units={d.dbUnits}
+            onUse={() =>
+              up({
+                dbKind: "adjustable",
+                adjMin: d.dbUnits === "lb" ? "5" : "2",
+                adjMax: d.dbUnits === "lb" ? "100" : "50",
+                adjStep: d.dbUnits === "lb" ? "5" : "2",
+                pairs: true,
+                treadmill: true,
+                bench: true,
+                flatBench: true,
+                mat: true,
+                abRoller: true,
+                pullupBar: true,
+                bands: ["light", "medium", "heavy"],
+                jumpRope: true,
+              })
+            }
+          />
           <div className="field">
             <span className="label">Dumbbells</span>
             <Seg
@@ -370,6 +392,7 @@ export function Onboarding(props: {
               <Tile icon="bench" label="Flat bench" hint="to lie on" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
               <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
               <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
+              <Tile icon="rope" label="Jump rope" checked={d.jumpRope} onChange={(jumpRope) => up({ jumpRope })} />
               <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
               <Tile icon="band" label="Bands" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
             </div>
@@ -570,6 +593,38 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** One tap for gym-goers: a full dumbbell rack, benches, pull-up bar, cardio machines and more. */
+function GymPreset(props: { units: Units; onUse: () => void }): React.ReactElement {
+  const [used, setUsed] = useState(false);
+  const range = props.units === "lb" ? "5–100 lb in 5s" : "2–50 kg in 2s";
+  return (
+    <div className="card stack" style={{ gap: 8 }}>
+      <div className="spread" style={{ alignItems: "center", gap: 12 }}>
+        <span className="stack" style={{ gap: 2 }}>
+          <b>Training at a gym?</b>
+          <span className="meta small">Sets dumbbells {range}, benches, a pull-up bar, treadmill, bands, ab roller and jump rope.</span>
+        </span>
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => {
+            props.onUse();
+            setUsed(true);
+          }}
+        >
+          <Icon name="gym" size={18} />
+          Gym
+        </button>
+      </div>
+      {used ? (
+        <p className="meta small" role="status">
+          Gym setup filled in below; change anything that's different at your gym. RepCurve's exercises use dumbbells, bodyweight and bands, so barbells and machines aren't in your plan yet.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -23,7 +23,7 @@ export function WeekStrip(props: { slots: WeekSlot[] }): React.ReactElement {
 }
 
 export function sessionSummary(plan: SessionPlan): string {
-  if (plan.kind === "cardio") return `${plan.cardio?.mode === "treadmill" ? "Treadmill" : "Walk or jog"} · ${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min`;
+  if (plan.kind === "cardio") return `${plan.cardio?.mode === "treadmill" ? "Treadmill" : plan.cardio?.mode === "jump_rope" ? "Jump rope" : "Walk or jog"} · ${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min`;
   return `${plural(exerciseCount(plan), "exercise")} · ~${Math.round(plan.estimatedMinutes)} min`;
 }
 

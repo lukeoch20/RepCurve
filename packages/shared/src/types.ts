@@ -40,6 +40,8 @@ export interface Equipment {
   /** A flat, padded bench you can lie on and press dumbbells from (no barbell or rack). Missing means no. */
   flatBench?: boolean;
   bands: Band[];
+  /** A skipping rope, for cardio intervals and warm-ups. Missing means no. */
+  jumpRope?: boolean;
 }
 
 /** Equipment items an exercise can require. */
@@ -51,7 +53,8 @@ export type EquipmentItem =
   | "pullup_bar"
   | "bench"
   | "flat_bench"
-  | "bands";
+  | "bands"
+  | "jump_rope";
 
 export type Pattern =
   | "squat"

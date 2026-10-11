@@ -48,7 +48,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
     <main className="app stack-lg" style={{ paddingBottom: 40 }} onPointerDown={unlockAudio}>
       <header className="stack">
         <p className="eyebrow">
-          Session {active.index + 1} · week {active.plan.week} · {plan.mode === "treadmill" ? "treadmill" : "outdoors"}
+          Session {active.index + 1} · week {active.plan.week} · {plan.mode === "treadmill" ? "treadmill" : plan.mode === "jump_rope" ? "jump rope" : "outdoors"}
         </p>
         <h1 className="title">{active.plan.name}</h1>
         <p className="meta num">
