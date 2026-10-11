@@ -1,0 +1,203 @@
+/* Fired Forge (RepCurve Style 002): strength, shaped by repetition. A foundry-inspired theme
+   with a quiet, industrial finish: warm ash panels, charcoal heading plates with an ember
+   stripe and a fine copper score, flat ember actions with a stamped lower edge, and condensed
+   headings and numbers. Paint only: layout, spacing, tap sizes, wording and icons are unchanged. */
+:root[data-style="forge"] {
+  --bg: #f0ece5;
+  --card: #fffcf6;
+  --sunk: #e5ddd2;
+  --ink: #26211e;
+  --muted: #665c54;
+  --line: #cdc0b2;
+  --accent: #a43f15;
+  --accent-strong: #7e2c0b;
+  --accent-ink: #ffffff;
+  --accent-wash: #fbe8dc;
+  --accent-line: #a25731;
+  --chart: #a74318;
+  --warn: #84520f;
+  --warn-wash: #fff0cf;
+  --stop: #ac2929;
+  --stop-wash: #fce4df;
+  --shadow: 0 2px 0 rgb(63 39 22 / 0.12), 0 5px 12px rgb(63 39 22 / 0.06);
+  /* Arial Narrow where the phone has it; otherwise Archivo Narrow, a free condensed sans. */
+  --font-display: "Liberation Sans Narrow", "Arial Narrow", "Archivo Narrow", sans-serif;
+  --font-body: "Liberation Sans", Arial, Helvetica, sans-serif;
+  --radius: 3px;
+  --radius-sm: 2px;
+  --tap: 48px;
+  /* Fired Forge's own: heading plates, control edges, focus, stamped edges and copper scores */
+  --chrome: #302721;
+  --chrome-top: #3a3029;
+  --chrome-ink: #fff4e6;
+  --control-line: #877262;
+  --focus: #86401d;
+  --button-top: #a43f15;
+  --bevel-hi: #c28765;
+  --bevel-lo: #713314;
+  color-scheme: light;
+}
+:root[data-style="forge"][data-theme="dark"] {
+  --bg: #12100f;
+  --card: #211c19;
+  --sunk: #171310;
+  --ink: #fff1e5;
+  --muted: #c8b7a7;
+  --line: #493a30;
+  --accent: #ff9b54;
+  --accent-strong: #ffc08a;
+  --accent-ink: #2d1408;
+  --accent-wash: #41291c;
+  --accent-line: #c58354;
+  --chart: #ffad6b;
+  --warn: #ffd07e;
+  --warn-wash: #3a2a16;
+  --stop: #ff9f94;
+  --stop-wash: #3e211e;
+  --shadow: 0 2px 0 rgb(0 0 0 / 0.5), 0 5px 12px rgb(0 0 0 / 0.2);
+  --control-line: #9e8572;
+  --focus: #ffc18a;
+  --button-top: #ff9b54;
+  --bevel-hi: #ffc08a;
+  --bevel-lo: #854c29;
+  color-scheme: dark;
+}
+
+/* type: condensed bold headings and big numbers over an open body sans */
+[data-style="forge"] :is(.title, .h2, .h3, .block-name, .session-row .name, .brand) { font-weight: 700; letter-spacing: 0; }
+[data-style="forge"] :is(.stat b, .hero-num, .runner-clock, .ring .t, .stepper .value b, .week-day .k) { font-family: var(--font-display); font-weight: 700; letter-spacing: 0; }
+[data-style="forge"] .eyebrow { font-weight: 700; letter-spacing: 0.04em; }
+[data-style="forge"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* heading plates: a card's heading becomes a charcoal plate with an ember stripe and a copper score */
+[data-style="forge"] .card:not(.tint, .flat) > :is(.h3, .eyebrow, .card-head, .spread:has(> .h3, > .eyebrow)):first-child {
+  margin: -16px -16px 4px;
+  padding: 11px 16px 11px 20px;
+  background: var(--chrome);
+  color: var(--chrome-ink);
+  box-shadow: inset 4px 0 0 var(--accent), inset 0 -1px 0 var(--bevel-hi);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+[data-style="forge"] .card:not(.tint, .flat, .stack) > :is(.h3, .eyebrow, .card-head, .spread):first-child { margin-bottom: 12px; }
+[data-style="forge"] .card:not(.tint, .flat) > .eyebrow:first-child,
+[data-style="forge"] .card:not(.tint, .flat) > :first-child > .eyebrow { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.02em; color: var(--chrome-ink); }
+[data-style="forge"] .card:not(.tint, .flat) > :first-child :is(.h3, .meta, .eyebrow) { color: var(--chrome-ink); }
+[data-style="forge"] .card:not(.tint, .flat) > :first-child .example-tag { color: var(--chrome-ink); border-color: color-mix(in srgb, var(--chrome-ink) 60%, transparent); }
+[data-style="forge"] .card:not(.tint, .flat) > .card-head:first-child .btn.ghost { color: var(--chrome-ink); }
+/* body-only tiles get a copper metal rule instead */
+[data-style="forge"] .stat { border-top: 2px solid var(--bevel-hi); }
+
+/* buttons: flat plates with a stamped lower edge that moves to the top when pressed */
+[data-style="forge"] .btn,
+[data-style="forge"] .icon-btn,
+[data-style="forge"] .chip,
+[data-style="forge"] .dock-actions button {
+  border-radius: var(--radius-sm);
+  border-color: var(--control-line);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--control-line);
+}
+[data-style="forge"] :is(.btn, .chip) { font-weight: 700; }
+[data-style="forge"] :is(.btn, .icon-btn, .chip, .dock-actions button):active { transform: none; background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
+[data-style="forge"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
+  background: var(--accent);
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  border-radius: var(--radius);
+  box-shadow: inset 0 -2px 0 var(--bevel-lo);
+}
+[data-style="forge"] :is(.btn.primary, .btn.go, .dock-actions button.go):active { background: var(--accent-strong); box-shadow: inset 0 2px 0 var(--bevel-lo); }
+/* a chosen chip or segment: ember fill, bold, and an underline so the choice never rests on colour */
+[data-style="forge"] .chip[aria-pressed="true"],
+[data-style="forge"] .seg button[aria-pressed="true"] {
+  background: var(--accent) linear-gradient(var(--accent-ink), var(--accent-ink)) no-repeat center bottom 6px / calc(100% - 20px) 2px;
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--bevel-lo);
+}
+[data-style="forge"] .seg button[aria-pressed="true"] { background-position: center bottom 4px; }
+[data-style="forge"] .btn.outline { background: transparent; border-color: var(--accent); color: var(--accent); box-shadow: none; }
+[data-style="forge"] .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); box-shadow: none; }
+[data-style="forge"] .btn.danger { color: var(--stop); }
+[data-style="forge"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: #fff; box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.25); }
+[data-style="forge"] :is(.btn, .chip, .icon-btn):disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--line); box-shadow: none; }
+[data-style="forge"] .btn.ghost:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
+[data-style="forge"] .weights .chip { border-radius: var(--radius-sm); }
+
+/* segmented control: a recessed track */
+[data-style="forge"] .seg { background: var(--sunk); border: 1px solid var(--control-line); border-radius: var(--radius-sm); padding: 2px; }
+[data-style="forge"] .seg button { border-radius: var(--radius-sm); }
+[data-style="forge"] .seg.quiet button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: inset 0 -2px 0 var(--control-line), 0 0 0 1px var(--control-line); }
+
+/* choices and tiles: a clear edge; chosen ones get the ember wash, edge and stripe */
+[data-style="forge"] .choice button { border-color: var(--control-line); border-radius: var(--radius); }
+[data-style="forge"] .choice button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: inset 4px 0 0 var(--accent); }
+[data-style="forge"] .tile { border-color: var(--control-line); border-radius: var(--radius); }
+[data-style="forge"] .tile[aria-checked="true"] { border-color: var(--accent-line); box-shadow: inset 0 0 0 1px var(--accent-line); }
+
+/* fields, steppers, switches */
+[data-style="forge"] .input { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="forge"] .stepper { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="forge"] .stepper button { border: 1px solid var(--control-line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--control-line); }
+[data-style="forge"] .stepper button:active { background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
+[data-style="forge"] .stepper button:disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--line); box-shadow: none; }
+[data-style="forge"] .switch { border-radius: var(--radius-sm); background: var(--sunk); border: 1px solid var(--control-line); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2); }
+[data-style="forge"] .switch::after { top: 2px; left: 2px; border-radius: var(--radius-sm); background: var(--card); box-shadow: 0 0 0 1px var(--control-line); }
+/* a check on the "on" side, a dash on the "off" side */
+[data-style="forge"] .switch::before { content: ""; position: absolute; left: 31px; top: 13px; width: 9px; height: 0; border-top: 2px solid var(--muted); }
+[data-style="forge"] .switch:checked { background: var(--accent); border-color: var(--accent-line); }
+[data-style="forge"] .switch:checked::before { left: 8px; top: 8px; width: 10px; height: 5px; border: 0; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
+
+/* tab bar: the card surface; the current tab sits in an ember wash under an ember rule */
+[data-style="forge"] .tabbar { background: var(--card); border-top: 1px solid var(--line); backdrop-filter: none; }
+[data-style="forge"] .tabbar button { color: var(--muted); margin: 4px; min-height: 54px; border-radius: var(--radius); border: 1px solid transparent; }
+[data-style="forge"] .tabbar button[aria-current="page"] { background: var(--accent-wash); color: var(--accent); border-color: var(--accent-line); box-shadow: inset 0 3px 0 var(--accent); font-weight: 700; }
+
+/* the workout header is a charcoal plate under an ember rule */
+[data-style="forge"] .runner-head { background: var(--chrome); color: var(--chrome-ink); border-bottom-color: var(--chrome); box-shadow: inset 0 4px 0 var(--accent); backdrop-filter: none; }
+[data-style="forge"] .runner-head :is(.eyebrow, .meta) { color: color-mix(in srgb, var(--chrome-ink) 88%, transparent); }
+[data-style="forge"] .runner-head .progress-track { background: color-mix(in srgb, var(--chrome-ink) 20%, transparent); }
+
+/* the rest timer card */
+[data-style="forge"] .dock-inner { border-radius: var(--radius); border-top: 2px solid var(--accent); box-shadow: 0 8px 30px rgb(38 33 30 / 0.22); }
+[data-style="forge"] .dock.go .dock-inner { background: var(--accent); border-color: var(--accent-line); color: var(--accent-ink); }
+[data-style="forge"] .dock.go :is(.dock-label, .dock-next, .ring, .ring .l) { color: var(--accent-ink); }
+[data-style="forge"] .dock.go .ring circle { stroke: color-mix(in srgb, var(--accent-ink) 30%, transparent); }
+[data-style="forge"] .dock.go .ring circle + circle { stroke: var(--accent-ink); }
+
+/* banners: a visible edge in their own colour */
+[data-style="forge"] .banner { border-radius: var(--radius); }
+[data-style="forge"] :is(.banner.info, .banner.good) { border-color: var(--accent-line); }
+[data-style="forge"] .banner.adjust { border-color: var(--warn); }
+[data-style="forge"] .banner.adjust b { color: var(--warn); }
+[data-style="forge"] .banner.stop { border-color: var(--stop); }
+[data-style="forge"] .banner.stop b { color: var(--stop); }
+[data-style="forge"] .suggestion { border-radius: var(--radius); }
+
+/* small shapes: crisp, nearly square */
+[data-style="forge"] :is(.progress-track, .progress-fill, .challenge-bar, .challenge-bar i, .trophy-bar, .trophy-bar i, .range-track, .range-band, .muscle .bar, .muscle .bar i, .week-dots span, .steps i) { border-radius: 1px; }
+[data-style="forge"] :is(.challenge-bar, .trophy-bar) { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
+[data-style="forge"] :is(.streak, .level-chip, .example-tag) { border-radius: var(--radius-sm); border: 1px solid var(--accent-line); }
+[data-style="forge"] .example-tag { border-color: var(--control-line); }
+[data-style="forge"] .set-row .cell { border-radius: var(--radius-sm); }
+[data-style="forge"] .cal-day { border-radius: var(--radius-sm); }
+[data-style="forge"] .glyph { border-radius: var(--radius); border: 1px solid var(--control-line); background: var(--sunk); color: var(--accent); }
+[data-style="forge"] :is(.lineup-tag, .block-tag) { border-color: var(--control-line); }
+[data-style="forge"] .week-day.upcoming .k { border-color: var(--control-line); }
+[data-style="forge"] .sheet { border-radius: var(--radius) var(--radius) 0 0; border-top: 3px solid var(--accent); }
+[data-style="forge"] .tip-spot { border-radius: var(--radius); outline-color: var(--focus); }
+[data-style="forge"] .chart-tip { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-weight: 700; }
+
+/* medals: copper ribbons, foundry tier colours, and radial scores like stamped metal once earned */
+[data-style="forge"] .medal .ribbon { fill: #b46f43; }
+[data-style="forge"] .medal.bronze { --tier: #b97a4c; }
+[data-style="forge"] .medal.silver { --tier: #c5bfb5; }
+[data-style="forge"] .medal.gold { --tier: #d4ae59; }
+[data-style="forge"] .medal.platinum { --tier: #d2d9d6; }
+[data-style="forge"] .medal text { fill: #26211e; }
+[data-style="forge"] .medal:not(.locked) .disc { stroke: color-mix(in srgb, #26211e 40%, var(--tier)); stroke-width: 2; stroke-dasharray: 1.5 11.07; }
+[data-style="forge"] .medal.locked .ribbon { fill: var(--control-line); }
+[data-style="forge"] .medal.locked text { fill: var(--muted); }
+[data-style="forge"] .confetti i.c2 { background: #d4ae59; }

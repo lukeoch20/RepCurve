@@ -4,7 +4,7 @@ import { onboard } from "./helpers";
 const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 const styleGroup = (page: Page) => page.getByRole("group", { name: "Style" });
 
-test("Bluebird light is the default look, with Bluebird dark and Classic in Settings", async ({ page }) => {
+test("Bluebird light is the default look, with Bluebird dark, Fired Forge and Classic in Settings",async ({ page }) => {
   await onboard(page);
   await expect(page.locator("html")).toHaveAttribute("data-style", "bluebird");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -21,6 +21,19 @@ test("Bluebird light is the default look, with Bluebird dark and Classic in Sett
   await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(styleGroup(page).getByRole("button", { name: /Bluebird dark/ })).toHaveAttribute("aria-pressed", "true");
+
+  // Fired Forge, light and dark.
+  await styleGroup(page).getByRole("button", { name: /Fired Forge light/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "forge");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  expect(await background(page)).toBe("rgb(240, 236, 229)");
+  await styleGroup(page).getByRole("button", { name: /Fired Forge dark/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(await background(page)).toBe("rgb(18, 16, 15)");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "forge");
+  await expect(styleGroup(page).getByRole("button", { name: /Fired Forge dark/ })).toHaveAttribute("aria-pressed", "true");
 
   // Classic: the original look, following the phone's light or dark mode.
   await styleGroup(page).getByRole("button", { name: /Classic/ }).click();
