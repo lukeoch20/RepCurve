@@ -16,6 +16,7 @@ import {
 } from "../model/session";
 import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
+import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 import { ExerciseInfo } from "./ExerciseInfo";
@@ -44,6 +45,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
       setEndOpen(true);
       return;
     }
+    if (core.settings.haptics) haptic("session");
     dispatch({ type: "finish", now: Date.now() });
   };
 
@@ -146,7 +148,14 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
                 Your {active.sets.length} logged sets count, and next time's weights update from them.
                 {up ? " Sets you haven't logged are counted as skipped." : ""}
               </p>
-              <button type="button" className="btn go big" onClick={() => dispatch({ type: "finish", now: Date.now() })}>
+              <button
+                type="button"
+                className="btn go big"
+                onClick={() => {
+                  if (core.settings.haptics) haptic("session");
+                  dispatch({ type: "finish", now: Date.now() });
+                }}
+              >
                 Finish and save
               </button>
             </>
@@ -320,7 +329,10 @@ function ExerciseBlock(props: {
                 existing={!!done}
                 onSave={(values) => {
                   if (done) dispatch({ type: "edit", slot: p.slot, setIndex, values });
-                  else dispatch({ type: "log", ref, values, now: Date.now() });
+                  else {
+                    if (core.settings.haptics) haptic("set");
+                    dispatch({ type: "log", ref, values, now: Date.now() });
+                  }
                   setEditing(null);
                 }}
                 onDelete={() => {

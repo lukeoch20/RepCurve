@@ -108,6 +108,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         <div>
           <Toggle id="sound" label="Beep when rest is over" checked={s.sound} onChange={(sound) => dispatch({ type: "settings", settings: { sound } })} />
           <Toggle id="awake" label="Keep the screen on during workouts" hint="Where your phone allows it" checked={s.keepAwake} onChange={(keepAwake) => dispatch({ type: "settings", settings: { keepAwake } })} />
+          <Toggle id="haptics" label="Vibrate when you finish a set" hint="On iPhone, a light tap (iOS 18 or newer)" checked={s.haptics} onChange={(haptics) => dispatch({ type: "settings", settings: { haptics } })} />
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import { clock } from "../model/format";
 import { cardioMinutesDone, cardioRemainingMs, elapsedMs } from "../model/session";
 import type { ActiveSession, Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
+import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Sheet, TimerRing } from "./common";
 import { useTip } from "./tips";
@@ -122,7 +123,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         </div>
       ) : null}
 
-      {finishOpen ? <CardioFinish active={active} now={now} onClose={() => setFinishOpen(false)} /> : null}
+      {finishOpen ? <CardioFinish haptics={core.settings.haptics} active={active} now={now} onClose={() => setFinishOpen(false)} /> : null}
     </main>
   );
 }
@@ -133,7 +134,7 @@ function effortWords(effort: number): string {
   return "Hard: a few words at a time.";
 }
 
-function CardioFinish(props: { active: ActiveSession; now: number; onClose: () => void }): React.ReactElement {
+function CardioFinish(props: { active: ActiveSession; now: number; haptics: boolean; onClose: () => void }): React.ReactElement {
   const { dispatch } = useStore();
   const [effort, setEffort] = useState(6);
   const [notes, setNotes] = useState("");
@@ -155,7 +156,14 @@ function CardioFinish(props: { active: ActiveSession; now: number; onClose: () =
         <label htmlFor="cardio-notes">Speed, incline, anything to remember</label>
         <input id="cardio-notes" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="3.4 mph, 8% incline" />
       </div>
-      <button type="button" className="btn go big" onClick={() => dispatch({ type: "finish", now: Date.now(), cardio: { minutes, effort, notes } })}>
+      <button
+        type="button"
+        className="btn go big"
+        onClick={() => {
+          if (props.haptics) haptic("session");
+          dispatch({ type: "finish", now: Date.now(), cardio: { minutes, effort, notes } });
+        }}
+      >
         Save
       </button>
     </Sheet>

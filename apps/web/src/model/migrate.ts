@@ -49,6 +49,7 @@ function migrateSettings(s: unknown): Settings {
     transitionSec: isNum(o["transitionSec"]) && o["transitionSec"] >= 0 ? o["transitionSec"] : DEFAULT_SETTINGS.transitionSec,
     sound: typeof o["sound"] === "boolean" ? o["sound"] : DEFAULT_SETTINGS.sound,
     keepAwake: typeof o["keepAwake"] === "boolean" ? o["keepAwake"] : DEFAULT_SETTINGS.keepAwake,
+    haptics: typeof o["haptics"] === "boolean" ? o["haptics"] : DEFAULT_SETTINGS.haptics,
   };
 }
 
