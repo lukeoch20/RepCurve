@@ -35,6 +35,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const setTime = (m: number) => setMinutes(m === usual ? null : m);
   const welcomeTip = useTip("today.welcome");
   const weekTip = useTip("today.week");
+  const splitTip = useTip("today.split", plan.kind === "strength" && (core.profile.split ?? "full_body") !== "full_body");
   const benchmarkTip = useTip("today.benchmark");
   const timeTip = useTip("today.time");
   const remindBackup = backupDue(storage, history[0]?.finishedAt ?? null, now);
@@ -50,7 +51,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           <p className="eyebrow">
             Week {week} · session {core.nextIndex + 1}
           </p>
-          <h1 className="title">{plan.name}</h1>
+          <h1 className="title" ref={splitTip}>{plan.name}</h1>
           <p className="meta num">
             {plan.kind === "strength"
               ? `~${Math.round(plan.estimatedMinutes)} min · ${plural(exerciseCount(plan), "exercise")}${plan.finisher ? " incl. core finisher" : ""}`

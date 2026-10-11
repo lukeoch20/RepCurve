@@ -5,7 +5,7 @@ import { onboard } from "./helpers";
 test("a new user sets up, logs sets with the rest timer, finishes, and keeps progress after reload", async ({ page }) => {
   await onboard(page);
 
-  await expect(page.getByRole("heading", { name: "Full body A" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Push day" })).toBeVisible();
   await expect(page.getByText("Benchmark session")).toBeVisible();
   await page.getByRole("button", { name: "Start session" }).click();
 

@@ -19,6 +19,7 @@ test("the first workout walks a newcomer through lifting basics and the app, one
   // Today, in tutorial order.
   await gotIt(page, "Welcome to RepCurve");
   await gotIt(page, "Your week");
+  await gotIt(page, "Your split");
   await gotIt(page, "You don't need to know your strength");
   await gotIt(page, "Supersets: exercises in pairs");
   await gotIt(page, "Sets and reps");

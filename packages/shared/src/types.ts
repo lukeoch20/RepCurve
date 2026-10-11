@@ -20,7 +20,17 @@ export interface Profile {
   minutesPerSession: number;
   injuries: Injury[];
   units: Units;
+  /** How strength sessions divide the body. Missing means full body (older setups). */
+  split?: Split;
 }
+
+/**
+ * - full_body: every session trains everything
+ * - push_pull: push (chest, shoulders, triceps, quads) and pull (back, biceps, hamstrings, glutes)
+ * - upper_lower: upper body and lower body
+ * - ppl: push, pull and legs
+ */
+export type Split = "full_body" | "push_pull" | "upper_lower" | "ppl";
 
 export type Dumbbells =
   | { kind: "none" }

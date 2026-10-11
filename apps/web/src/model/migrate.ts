@@ -1,3 +1,4 @@
+import type { Split } from "@repcurve/shared";
 import { initialTrainingState, type TrainingState } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import type { Equipment, Profile } from "@repcurve/shared";
@@ -77,12 +78,19 @@ function migrateState(s: unknown): TrainingState {
   };
 }
 
+const SPLITS: Split[] = ["full_body", "push_pull", "upper_lower", "ppl"];
+const splitOf = (p: unknown): Split => {
+  const v = isObj(p) ? p["split"] : undefined;
+  return SPLITS.includes(v as Split) ? (v as Split) : "push_pull";
+};
+
 export function migrateCore(c: unknown): Core | null {
   if (!isObj(c) || !validProfile(c["profile"]) || !validEquipment(c["equipment"])) return null;
   const startedAt = typeof c["startedAt"] === "string" && !Number.isNaN(Date.parse(c["startedAt"])) ? c["startedAt"] : new Date().toISOString();
   const core: Core = {
     version: 1,
-    profile: c["profile"],
+    // Setups from before splits existed move to push/pull, the default.
+    profile: { ...c["profile"], split: splitOf(c["profile"]) },
     equipment: c["equipment"],
     settings: migrateSettings(c["settings"]),
     state: migrateState(c["state"]),
