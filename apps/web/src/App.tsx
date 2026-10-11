@@ -8,6 +8,7 @@ import { Progress } from "./ui/Progress";
 import { SessionRunner } from "./ui/SessionRunner";
 import { Settings } from "./ui/Settings";
 import { Today } from "./ui/Today";
+import { TipsProvider } from "./ui/tips";
 import { CurveMark, Icon } from "./ui/common";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
@@ -69,7 +70,7 @@ export function App(): React.ReactElement {
       />
     );
   } else if (store.finished) {
-    body = <Finished record={store.finished} units={loadUnitsFor(core.profile, core.equipment)} />;
+    body = <Finished record={store.finished} core={core} history={history} units={loadUnitsFor(core.profile, core.equipment)} />;
   } else if (active) {
     body = active.plan.kind === "cardio" ? <CardioRunner core={core} active={active} /> : <SessionRunner core={core} active={active} />;
   } else {
@@ -123,9 +124,11 @@ export function App(): React.ReactElement {
           <button type="button" className="btn" onClick={applyUpdate}>Update now</button>
         </div>
       ) : null}
-      <ErrorBoundary data={store.data} onReset={() => store.replaceAll(EMPTY_DATA)}>
-        {body}
-      </ErrorBoundary>
+      <TipsProvider>
+        <ErrorBoundary data={store.data} onReset={() => store.replaceAll(EMPTY_DATA)}>
+          {body}
+        </ErrorBoundary>
+      </TipsProvider>
     </StoreContext.Provider>
   );
 }

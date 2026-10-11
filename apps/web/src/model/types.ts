@@ -8,9 +8,11 @@ export interface Settings {
   transitionSec: number;
   sound: boolean;
   keepAwake: boolean;
+  /** A buzz on each logged set and a bigger one at the end, where the phone allows it. */
+  haptics: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true };
+export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
 export const REST_CHOICES = [30, 45, 60, 75, 90, 120, 150, 180];
 export const TRANSITION_CHOICES = [10, 15, 20, 30, 45];

@@ -256,7 +256,7 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Elbows flaring straight out", "Slamming the elbows down", "Dumbbells drifting toward your face"],
   },
   db_bench_press: {
-    setup: "Lie on your back on a flat weight bench with feet flat on the floor (a chair or step isn't safe for this; use the floor press instead). Hold a dumbbell in each hand above your chest, arms straight.",
+    setup: "Lie on your back on a flat bench with feet flat on the floor (a chair or step isn't safe for this; use the floor press instead). Hold a dumbbell in each hand above your chest, arms straight.",
     steps: [
       "Squeeze your shoulder blades together and down.",
       "Lower the dumbbells to the sides of your chest, elbows about 45° from your body.",

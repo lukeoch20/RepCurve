@@ -137,7 +137,8 @@ export function TrendChart(props: {
           {shown.label}
         </span>
       ) : null}
-      <table className="chart-table">
+      <div className="chart-table">
+        <table>
         <caption>{props.title}</caption>
         <tbody>
           {targets.map((t, i) => (
@@ -147,6 +148,7 @@ export function TrendChart(props: {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -209,7 +211,8 @@ export function ShareBars(props: { title: string; bars: { label: string; value: 
           {props.bars[hover]!.tip}
         </span>
       ) : null}
-      <table className="chart-table">
+      <div className="chart-table">
+        <table>
         <caption>{props.title}</caption>
         <tbody>
           {props.bars.map((b, i) => (
@@ -219,6 +222,7 @@ export function ShareBars(props: { title: string; bars: { label: string; value: 
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

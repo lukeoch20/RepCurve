@@ -9,6 +9,9 @@ import type { Core, SessionRecord } from "../model/types";
 import { Seg } from "./common";
 import { ProjectionCard } from "./ProjectionCard";
 import { ShareBars, TrendChart } from "./charts";
+import { useTip } from "./tips";
+import { CalendarCard, ChallengeCard, LifetimeCard, RecordsWall, TrophyShelf } from "./Trophies";
+import { monthChallenge } from "../model/gamify";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -20,6 +23,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   const units = loadUnitsFor(core.profile, core.equipment);
   const lifts = useMemo(() => liftSeries(history), [history]);
   const [range, setRange] = useState<Range>("12w");
+  const statsTip = useTip("progress.charts");
   const [liftId, setLiftId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const lift = lifts.find((l) => l.id === liftId) ?? lifts[0] ?? null;
@@ -48,7 +52,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         ]}
       />
 
-      <div className="stats">
+      <div className="stats" ref={statsTip}>
         <div className="stat"><b className="num">{done.length}</b><span>sessions</span></div>
         <div className="stat"><b className="num">{minutes}</b><span>minutes</span></div>
         <div className="stat"><b className="num">{streak}</b><span>week streak</span></div>
@@ -63,7 +67,15 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         </section>
       )}
 
-      {lifts.length > 0 ? <Records lifts={lifts} units={units} /> : null}
+      <ChallengeCard challenge={monthChallenge(history, core, now)} />
+
+      <TrophyShelf core={core} history={history} />
+
+      <LifetimeCard history={history} units={units} />
+
+      {lifts.length > 0 ? <RecordsWall lifts={lifts} units={units} /> : null}
+
+      <CalendarCard history={history} now={now} />
 
       <Adherence history={history} core={core} range={range} now={now} />
 
@@ -128,34 +140,6 @@ function StrengthTrend(props: { lifts: LiftSeries[]; lift: LiftSeries; onLift: (
         {lift.metric === "e1rm" ? "Estimated one-rep max" : "Best set, reps"} · {share === null ? "one session so far" : `since ${shortDate(first)}`}
       </p>
       <TrendChart title={`${lift.name}: ${lift.metric === "e1rm" ? "estimated one-rep max" : "best set"} by session`} points={points} xTicks={xTicks} unit={unit} />
-    </section>
-  );
-}
-
-function Records(props: { lifts: LiftSeries[]; units: Units }): React.ReactElement {
-  const top = props.lifts.slice(0, 3);
-  return (
-    <section className="card">
-      <div className="card-head">
-        <h2 className="h3">Personal records</h2>
-        <span className="meta small">best so far</span>
-      </div>
-      <div className="records">
-        {top.map((l) => {
-          const best = Math.max(...l.points.map((p) => p.y));
-          const gain = valueOf(l, best, props.units) - valueOf(l, l.points[0]!.y, props.units);
-          const unit = l.metric === "e1rm" ? props.units : "reps";
-          return (
-            <div className="record" key={l.id}>
-              <div className="what" title={l.name}>{l.name}</div>
-              <b>
-                {valueOf(l, best, props.units)} <span style={{ fontSize: "0.8rem", fontWeight: 500 }}>{unit}</span>
-              </b>
-              <div className="delta">{gain > 0 ? `+${Math.round(gain * 10) / 10} since first` : "first best"}</div>
-            </div>
-          );
-        })}
-      </div>
     </section>
   );
 }

@@ -3,8 +3,10 @@ import { clock } from "../model/format";
 import { cardioMinutesDone, cardioRemainingMs, elapsedMs } from "../model/session";
 import type { ActiveSession, Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
+import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Sheet, TimerRing } from "./common";
+import { useTip } from "./tips";
 
 const INTENT: Record<string, string> = { warmup: "Warm-up", easy: "Easy", steady: "Steady", hard: "Hard", cooldown: "Cool-down" };
 
@@ -39,13 +41,14 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
   }, [c.segmentIndex, c.finished, core.settings.sound]);
 
   const seg = plan.segments[c.segmentIndex]!;
+  const effortTip = useTip("cardio.effort");
   const remaining = cardioRemainingMs(active, now);
 
   return (
     <main className="app stack-lg" style={{ paddingBottom: 40 }} onPointerDown={unlockAudio}>
       <header className="stack">
         <p className="eyebrow">
-          Session {active.index + 1} · week {active.plan.week} · {plan.mode === "treadmill" ? "treadmill" : "outdoors"}
+          Session {active.index + 1} · week {active.plan.week} · {plan.mode === "treadmill" ? "treadmill" : plan.mode === "jump_rope" ? "jump rope" : "outdoors"}
         </p>
         <h1 className="title">{active.plan.name}</h1>
         <p className="meta num">
@@ -53,7 +56,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         </p>
       </header>
 
-      <section className="cardio-clock" aria-label="Segment timer">
+      <section className="cardio-clock" aria-label="Segment timer" ref={effortTip}>
         <div className="ring" role="timer">
           <TimerRing fraction={c.finished ? 1 : remaining / Math.max(1, seg.minutes * 60_000)} size={132} />
           <span className="face">
@@ -120,7 +123,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         </div>
       ) : null}
 
-      {finishOpen ? <CardioFinish active={active} now={now} onClose={() => setFinishOpen(false)} /> : null}
+      {finishOpen ? <CardioFinish haptics={core.settings.haptics} active={active} now={now} onClose={() => setFinishOpen(false)} /> : null}
     </main>
   );
 }
@@ -131,7 +134,7 @@ function effortWords(effort: number): string {
   return "Hard: a few words at a time.";
 }
 
-function CardioFinish(props: { active: ActiveSession; now: number; onClose: () => void }): React.ReactElement {
+function CardioFinish(props: { active: ActiveSession; now: number; haptics: boolean; onClose: () => void }): React.ReactElement {
   const { dispatch } = useStore();
   const [effort, setEffort] = useState(6);
   const [notes, setNotes] = useState("");
@@ -153,7 +156,14 @@ function CardioFinish(props: { active: ActiveSession; now: number; onClose: () =
         <label htmlFor="cardio-notes">Speed, incline, anything to remember</label>
         <input id="cardio-notes" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="3.4 mph, 8% incline" />
       </div>
-      <button type="button" className="btn go big" onClick={() => dispatch({ type: "finish", now: Date.now(), cardio: { minutes, effort, notes } })}>
+      <button
+        type="button"
+        className="btn go big"
+        onClick={() => {
+          if (props.haptics) haptic("session");
+          dispatch({ type: "finish", now: Date.now(), cardio: { minutes, effort, notes } });
+        }}
+      >
         Save
       </button>
     </Sheet>

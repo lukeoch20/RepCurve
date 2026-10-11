@@ -55,6 +55,7 @@ test.beforeEach(async ({ page: p }) => {
   await p.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ contentType: "text/css", body: "" }));
   await p.route("http://artifact.test/**", (route) => route.fulfill({ contentType: "text/html", body: doc }));
   await p.addInitScript(fakeClaude);
+  await p.addInitScript(() => localStorage.setItem("repcurve.tips", JSON.stringify({ off: true, seen: [] })));
 });
 
 test("the claude.ai page loads no third-party scripts", () => {

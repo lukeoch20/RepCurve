@@ -4,8 +4,10 @@ import { clock } from "../model/format";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
 import { backupFilename, saveTextFile } from "../platform/download";
+import { applyStyle, loadStyle, saveStyle, STYLES, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
+import { useTips } from "./tips";
 import { InstallCard } from "./Install";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
@@ -107,8 +109,13 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         <div>
           <Toggle id="sound" label="Beep when rest is over" checked={s.sound} onChange={(sound) => dispatch({ type: "settings", settings: { sound } })} />
           <Toggle id="awake" label="Keep the screen on during workouts" hint="Where your phone allows it" checked={s.keepAwake} onChange={(keepAwake) => dispatch({ type: "settings", settings: { keepAwake } })} />
+          <Toggle id="haptics" label="Vibrate when you finish a set" hint="On iPhone, a light tap (iOS 18 or newer)" checked={s.haptics} onChange={(haptics) => dispatch({ type: "settings", settings: { haptics } })} />
         </div>
       </section>
+
+      <StyleSettings />
+
+      <TipsSettings />
 
       <section className="card stack">
         <h2 className="h3">You and your equipment</h2>
@@ -186,5 +193,62 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       <p className="meta small">RepCurve gives general fitness guidance, not medical advice. Stop any exercise that causes sharp or lasting pain.</p>
     </div>
+  );
+}
+
+/** The app's look, per device: Bluebird light (the default), Bluebird dark or Classic. */
+function StyleSettings(): React.ReactElement {
+  const [style, setStyle] = useState<StyleId>(loadStyle);
+  const choose = (id: StyleId) => {
+    setStyle(id);
+    saveStyle(id);
+    applyStyle(id);
+  };
+  return (
+    <section className="card stack">
+      <h2 className="h3">Style</h2>
+      <div className="choice" role="group" aria-label="Style">
+        {STYLES.map((o) => (
+          <button key={o.id} type="button" aria-pressed={style === o.id} onClick={() => choose(o.id)}>
+            <b>{o.name}</b>
+            <span>{o.hint}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Tutorial tips: on or off, and a way to see them all again. */
+function TipsSettings(): React.ReactElement | null {
+  const tips = useTips();
+  const [replayed, setReplayed] = React.useState(false);
+  if (!tips) return null;
+  return (
+    <section className="card stack">
+      <h2 className="h3">Tips</h2>
+      <Toggle
+        id="tips"
+        label="Show tips"
+        hint="Short notes on lifting basics and the app, the first time you meet each thing"
+        checked={!tips.state.off}
+        onChange={(on) => {
+          tips.setOff(!on);
+          setReplayed(false);
+        }}
+      />
+      <button
+        type="button"
+        className="btn"
+        style={{ alignSelf: "flex-start" }}
+        onClick={() => {
+          tips.replay();
+          setReplayed(true);
+        }}
+      >
+        Show all tips again
+      </button>
+      {replayed ? <p className="meta small" role="status">Tips start again from the beginning, on each screen as you visit it.</p> : null}
+    </section>
   );
 }

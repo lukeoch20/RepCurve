@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
 import { dayLabel, plural } from "../model/format";
-import { exerciseCount, todayPlan, weekSlots, weekStreak } from "../model/plan";
+import { exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
-import { Icon } from "./common";
+import { Icon, Stepper } from "./common";
 import { CardioLineup, Lineup } from "./Lineup";
+import { useTip } from "./tips";
+import { ChallengeCard } from "./Trophies";
+import { monthChallenge } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
 
 export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
@@ -19,36 +22,52 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   // Re-plan at least hourly so "days since your last session" (and a comeback) stays current.
   const hour = Math.floor(now / 3_600_000);
   const plan = useMemo(() => todayPlan(core, history, hour * 3_600_000, minutes), [core, history, minutes, hour]);
+  // Today's time, from 10 to 40 minutes, stepping only through lengths that change the session.
+  const usual = core.profile.minutesPerSession;
+  const choices = useMemo(() => timeChoices(core, history, hour * 3_600_000), [core, history, hour]);
+  const chosen = minutes ?? usual;
+  let at = 0;
+  choices.forEach((m, i) => {
+    if (m <= chosen) at = i;
+  });
+  const less = choices[at - 1];
+  const more = choices[at + 1];
+  const setTime = (m: number) => setMinutes(m === usual ? null : m);
+  const welcomeTip = useTip("today.welcome");
+  const weekTip = useTip("today.week");
+  const splitTip = useTip("today.split", plan.kind === "strength" && (core.profile.split ?? "full_body") !== "full_body");
+  const benchmarkTip = useTip("today.benchmark");
+  const timeTip = useTip("today.time");
   const remindBackup = backupDue(storage, history[0]?.finishedAt ?? null, now);
   const { week, slots } = useMemo(() => weekSlots(core, history), [core, history]);
   const last = [...history].reverse().find((r) => !r.skipped);
   const streak = weekStreak(history, now);
-  const shorter = [10, 15].filter((m) => m < core.profile.minutesPerSession);
   const benchmarks = plan.kind === "strength" && [...plan.supersets.flatMap((s) => s.items)].some((p) => p.benchmarkSet);
 
   return (
     <div className="stack-lg">
-      <header className="page-head">
+      <header className="page-head" ref={welcomeTip}>
         <div className="stack" style={{ gap: 6 }}>
           <p className="eyebrow">
             Week {week} · session {core.nextIndex + 1}
           </p>
-          <h1 className="title">{plan.name}</h1>
+          <h1 className="title" ref={splitTip}>{plan.name}</h1>
           <p className="meta num">
             {plan.kind === "strength"
               ? `~${Math.round(plan.estimatedMinutes)} min · ${plural(exerciseCount(plan), "exercise")}${plan.finisher ? " incl. core finisher" : ""}`
-              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${plan.cardio?.mode === "treadmill" ? "treadmill" : "walk or jog"}`}
+              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${plan.cardio?.mode === "treadmill" ? "treadmill" : plan.cardio?.mode === "jump_rope" ? "jump rope" : "walk or jog"}`}
           </p>
         </div>
         <SessionGlyph plan={plan} />
       </header>
 
-      <section className="card stack" style={{ gap: 14 }}>
+      <section className="card stack" style={{ gap: 14 }} ref={weekTip}>
         <div className="spread">
           <span className="eyebrow">This week</span>
           {streak > 1 ? <span className="meta small num">{streak}-week streak</span> : null}
         </div>
         <WeekStrip slots={slots} />
+        {history.some((r) => !r.skipped) ? <ChallengeCard challenge={monthChallenge(history, core, now)} compact /> : null}
       </section>
 
       {plan.deload ? (
@@ -64,12 +83,12 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         <div key={n} className="banner info"><b>Short on room</b>{n}</div>
       ))}
       {benchmarks ? (
-        <div className="banner info"><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
+        <div className="banner info" ref={benchmarkTip}><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
       ) : null}
 
       <section className="card stack" style={{ gap: 14 }}>
         <span className="eyebrow accent">Today</span>
-        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} /> : <CardioLineup plan={plan} />}
+        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} tips /> : <CardioLineup plan={plan} />}
       </section>
 
       <div className="stack">
@@ -84,16 +103,26 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           Start session
           <Icon name="arrowRight" size={20} />
         </button>
-        {plan.kind === "strength" && shorter.length > 0 ? (
-          <div className="row-wrap" style={{ alignItems: "center", justifyContent: "center" }}>
-            <span className="meta small">Short on time?</span>
-            {shorter.map((m) => (
-              <button key={m} type="button" className="chip" aria-pressed={minutes === m} onClick={() => setMinutes(minutes === m ? null : m)}>
-                {m} min
-              </button>
-            ))}
+        <div className="time-adjust" ref={timeTip}>
+          <div className="stack" style={{ gap: 2 }}>
+            <span className="label">Adjust time</span>
+            {minutes !== null ? (
+              <button type="button" className="link-btn" onClick={() => setMinutes(null)}>Back to usual ({usual} min)</button>
+            ) : (
+              <span className="meta small">Your usual length</span>
+            )}
           </div>
-        ) : null}
+          <Stepper
+            label="Time"
+            value={String(chosen)}
+            unit="min"
+            onDec={() => less !== undefined && setTime(less)}
+            onInc={() => more !== undefined && setTime(more)}
+            decDisabled={less === undefined}
+            incDisabled={more === undefined}
+          />
+        </div>
+        {more === undefined && chosen < 40 ? <p className="meta small" style={{ textAlign: "center" }}>That's everything today's session can add.</p> : null}
         {skipAsk ? (
           <div className="banner adjust">
             <b>Skip this session?</b>

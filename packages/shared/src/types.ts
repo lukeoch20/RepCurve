@@ -20,7 +20,17 @@ export interface Profile {
   minutesPerSession: number;
   injuries: Injury[];
   units: Units;
+  /** How strength sessions divide the body. Missing means full body (older setups). */
+  split?: Split;
 }
+
+/**
+ * - full_body: every session trains everything
+ * - push_pull: push (chest, shoulders, triceps, quads) and pull (back, biceps, hamstrings, glutes)
+ * - upper_lower: upper body and lower body
+ * - ppl: push, pull and legs
+ */
+export type Split = "full_body" | "push_pull" | "upper_lower" | "ppl";
 
 export type Dumbbells =
   | { kind: "none" }
@@ -37,9 +47,11 @@ export interface Equipment {
   pullupBar: boolean;
   /** A bench, sturdy chair or step that can be used for elevation and support. */
   bench: boolean;
-  /** A flat weight bench you can lie on and press from. Missing means no. */
+  /** A flat, padded bench you can lie on and press dumbbells from (no barbell or rack). Missing means no. */
   flatBench?: boolean;
   bands: Band[];
+  /** A skipping rope, for cardio intervals and warm-ups. Missing means no. */
+  jumpRope?: boolean;
 }
 
 /** Equipment items an exercise can require. */
@@ -51,7 +63,8 @@ export type EquipmentItem =
   | "pullup_bar"
   | "bench"
   | "flat_bench"
-  | "bands";
+  | "bands"
+  | "jump_rope";
 
 export type Pattern =
   | "squat"

@@ -2,7 +2,7 @@ import { buildCardioSession } from "./cardio.js";
 import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
 import { volumeTarget } from "./level.js";
-import { buildStrengthSession, type StrengthSessionInput } from "./session.js";
+import { buildStrengthSession, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
 import type { Pattern } from "@repcurve/shared";
 import type { GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
@@ -54,17 +54,24 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
       ...(opts.lastCardioEffort !== undefined ? { lastEffort: opts.lastCardioEffort } : {}),
     });
   }
+  // Splits rotate across weeks (push, pull, push | pull, push, pull) so every day type gets its turn;
+  // full body keeps its A/B/C order within each week.
+  const strengthIndex = before.filter((k) => k === "strength").length;
+  const split = profile.split ?? "full_body";
+  const rotation = split === "full_body" ? strengthIndex : (week - 1) * ctx.template.filter((k) => k === "strength").length + strengthIndex;
   const base: StrengthSessionInput = {
     profile,
     equipment: ctx.equipment,
     level: ctx.level,
     pool: ctx.pool,
     index,
-    strengthIndex: before.filter((k) => k === "strength").length,
+    strengthIndex,
+    rotation,
     week,
     dayIndex,
     rounds: BASE_ROUNDS,
-    benchmark: week === 1,
+    // The first time each day type comes round, its first sets are benchmarks.
+    benchmark: split === "full_body" ? week === 1 : rotation < variantsFor(split).length,
     e1rmByExercise: opts.e1rmByExercise ?? {},
     ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
     ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),

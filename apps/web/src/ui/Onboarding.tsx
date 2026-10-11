@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
-import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, TrainingHistory, Units } from "@repcurve/shared";
+import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Sex, Split, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Icon, Seg, Toggle, type IconName } from "./common";
 import { Lineup } from "./Lineup";
 import { previewProgram, previewProjection } from "../model/projection";
@@ -26,6 +26,7 @@ interface Draft {
   goal: Goal;
   days: number;
   minutes: number;
+  split: Split;
   dbKind: Dumbbells["kind"];
   /** The unit printed on the dumbbells, which can differ from the body units. */
   dbUnits: Units;
@@ -41,6 +42,7 @@ interface Draft {
   bench: boolean;
   flatBench: boolean;
   bands: Band[];
+  jumpRope: boolean;
   injuries: Injury[];
 }
 
@@ -66,6 +68,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     goal: profile?.goal ?? "both",
     days: profile?.daysPerWeek ?? 4,
     minutes: profile?.minutesPerSession ?? 20,
+    split: profile?.split ?? "push_pull",
     dbKind: d?.kind ?? "fixed",
     dbUnits,
     weights: d?.kind === "fixed" ? d.weights : [],
@@ -80,6 +83,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     bench: equipment?.bench ?? true,
     flatBench: equipment?.flatBench ?? false,
     bands: equipment?.bands ?? [],
+    jumpRope: equipment?.jumpRope ?? false,
     injuries: profile?.injuries ?? [],
   };
 }
@@ -108,6 +112,7 @@ function toProfile(d: Draft): Profile | null {
     goal: d.goal,
     daysPerWeek: d.days,
     minutesPerSession: d.minutes,
+    split: d.split,
     injuries: d.injuries,
     units: d.units,
   };
@@ -125,9 +130,17 @@ function toEquipment(d: Draft): Equipment | null {
     if (!(min > 0 && max > min && step > 0 && (max - min) / step <= 200)) return null;
     dumbbells = { kind: "adjustable", min, max, step, unit: d.dbUnits, pairs: d.pairs };
   }
-  // A weight bench also works as a step or support, so it counts as a bench too.
-  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands };
+  // A flat bench also works as a step or support, so it counts as a bench too.
+  return { dumbbells, treadmill: d.treadmill, mat: d.mat, abRoller: d.abRoller, pullupBar: d.pullupBar, bench: d.bench || d.flatBench, flatBench: d.flatBench, bands: d.bands, jumpRope: d.jumpRope };
 }
+
+const SPLIT_OPTIONS: { value: Split; label: string; hint: string }[] = [
+  { value: "push_pull", label: "Push / Pull", hint: "Push day: chest, shoulders and triceps, with one leg move. Pull day: back and biceps, with one hip move. Good with 2 to 5 lifting days." },
+  { value: "full_body", label: "Full body", hint: "Every session trains a bit of everything. Best with 2 or 3 lifting days; a missed day leaves nothing out." },
+  { value: "upper_lower", label: "Upper / Lower", hint: "Upper day: chest, back, shoulders and arms. Lower day: legs and glutes. Best with 2 or 4 lifting days." },
+  { value: "ppl", label: "Push / Pull / Legs", hint: "Three focused days in rotation. Best with 3 or more lifting days; with fewer, each muscle waits longer between turns." },
+];
+export const SPLIT_LABEL: Record<Split, string> = { push_pull: "Push / Pull", full_body: "Full body", upper_lower: "Upper / Lower", ppl: "Push / Pull / Legs" };
 
 type Step = "welcome" | "you" | "experience" | "schedule" | "equipment" | "body" | "review";
 
@@ -305,6 +318,16 @@ export function Onboarding(props: {
             That's <b className="num">{d.days * d.minutes} minutes</b> a week.{" "}
             {d.days * d.minutes >= 60 ? "Enough to make steady progress for a long time as a newer lifter." : "Short, but still enough to get measurably stronger."}
           </p>
+          <div className="field">
+            <span className="label">How should your lifting days be split?</span>
+            <span className="meta small">A split is how your lifting days divide up your body. Focused days let each muscle get more work at once; full body trains everything every time.</span>
+            <Choice
+              label="Split"
+              value={d.split}
+              onChange={(split) => up({ split })}
+              options={SPLIT_OPTIONS}
+            />
+          </div>
         </section>
       ) : null}
 
@@ -312,9 +335,29 @@ export function Onboarding(props: {
         <section className="stack-lg">
           <header className="stack">
             <p className="eyebrow">Equipment</p>
-            <h1 className="title">What do you have at home?</h1>
+            <h1 className="title">What do you have to train with?</h1>
             <p className="meta">Every exercise and weight comes from this list, so be exact about your dumbbells.</p>
           </header>
+          <GymPreset
+            units={d.dbUnits}
+            onUse={() =>
+              up({
+                dbKind: "adjustable",
+                adjMin: d.dbUnits === "lb" ? "5" : "2",
+                adjMax: d.dbUnits === "lb" ? "100" : "50",
+                adjStep: d.dbUnits === "lb" ? "5" : "2",
+                pairs: true,
+                treadmill: true,
+                bench: true,
+                flatBench: true,
+                mat: true,
+                abRoller: true,
+                pullupBar: true,
+                bands: ["light", "medium", "heavy"],
+                jumpRope: true,
+              })
+            }
+          />
           <div className="field">
             <span className="label">Dumbbells</span>
             <Seg
@@ -363,13 +406,14 @@ export function Onboarding(props: {
           {d.dbKind !== "none" ? <Toggle id="pairs" label="I have pairs" hint="Two of each weight, for presses and rows with both hands" checked={d.pairs} onChange={(pairs) => up({ pairs })} /> : null}
           <div className="field">
             <span className="label">What else do you have access to?</span>
-            <span className="meta small">Select all that apply. A sturdy chair or step is enough for split squats and step-ups; a weight bench also adds bench presses.</span>
+            <span className="meta small">Select all that apply. A chair or step covers step-ups and split squats. A flat bench is a padded bench you lie on to press dumbbells: no barbell or rack needed.</span>
             <div className="tiles" style={{ marginTop: 4 }}>
               <Tile icon="treadmill" label="Treadmill" checked={d.treadmill} onChange={(treadmill) => up({ treadmill })} />
-              <Tile icon="bench" label="Chair or step" checked={d.bench} onChange={(bench) => up({ bench })} />
-              <Tile icon="bench" label="Weight bench" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
+              <Tile icon="bench" label="Chair or step" hint="to step up on" checked={d.bench} onChange={(bench) => up({ bench })} />
+              <Tile icon="bench" label="Flat bench" hint="to lie on" checked={d.flatBench} onChange={(flatBench) => up({ flatBench })} />
               <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
               <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
+              <Tile icon="rope" label="Jump rope" checked={d.jumpRope} onChange={(jumpRope) => up({ jumpRope })} />
               <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
               <Tile icon="band" label="Bands" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
             </div>
@@ -445,22 +489,22 @@ function Welcome(): React.ReactElement {
       </svg>
       <div className="card stack">
         <div className="spread">
-          <span className="h3">Full body A · 20 min</span>
+          <span className="h3">Push day · 20 min</span>
           <span className="example-tag">Example</span>
         </div>
         <div className="lineup">
           <div className="lineup-group">
             <div className="lineup-tag">A</div>
             <div>
-              <div className="lineup-item"><span>Goblet squat</span><span className="dose">3 × 12 · 25 lb</span></div>
               <div className="lineup-item"><span>Push-up</span><span className="dose">3 × 10</span></div>
+              <div className="lineup-item"><span>Goblet squat</span><span className="dose">3 × 12 · 25 lb</span></div>
             </div>
           </div>
           <div className="lineup-group">
             <div className="lineup-tag">B</div>
             <div>
-              <div className="lineup-item"><span>Dumbbell Romanian deadlift</span><span className="dose">3 × 10 · 25 lb each</span></div>
-              <div className="lineup-item"><span>One-arm dumbbell row</span><span className="dose">3 × 10/side · 25 lb</span></div>
+              <div className="lineup-item"><span>Dumbbell overhead press</span><span className="dose">3 × 10 · 15 lb each</span></div>
+              <div className="lineup-item"><span>Overhead triceps extension</span><span className="dose">3 × 12 · 15 lb</span></div>
             </div>
           </div>
         </div>
@@ -551,7 +595,7 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
       <header className="stack">
         <p className="eyebrow">Your plan</p>
         <h1 className="title">
-          {props.profile.daysPerWeek} days · {props.profile.minutesPerSession} minutes
+          {props.profile.daysPerWeek} days · {props.profile.minutesPerSession} minutes · {SPLIT_LABEL[props.profile.split ?? "full_body"]}
         </h1>
       </header>
       <ProjectionCard projection={projection} units={props.profile.units} compact />
@@ -573,12 +617,47 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
   );
 }
 
-function Tile(props: { icon: IconName; label: string; checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
+/** One tap for gym-goers: a full dumbbell rack, benches, pull-up bar, cardio machines and more. */
+function GymPreset(props: { units: Units; onUse: () => void }): React.ReactElement {
+  const [used, setUsed] = useState(false);
+  const range = props.units === "lb" ? "5–100 lb in 5s" : "2–50 kg in 2s";
+  return (
+    <div className="card stack" style={{ gap: 8 }}>
+      <div className="spread" style={{ alignItems: "center", gap: 12 }}>
+        <span className="stack" style={{ gap: 2 }}>
+          <b>Training at a gym?</b>
+          <span className="meta small">Sets dumbbells {range}, benches, a pull-up bar, treadmill, bands, ab roller and jump rope.</span>
+        </span>
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => {
+            props.onUse();
+            setUsed(true);
+          }}
+        >
+          <Icon name="gym" size={18} />
+          Gym
+        </button>
+      </div>
+      {used ? (
+        <p className="meta small" role="status">
+          Gym setup filled in below; change anything that's different at your gym. RepCurve's exercises use dumbbells, bodyweight and bands, so barbells and machines aren't in your plan yet.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function Tile(props: { icon: IconName; label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
   return (
     <button type="button" role="switch" aria-checked={props.checked} className="tile" onClick={() => props.onChange(!props.checked)}>
       <span className="badge" aria-hidden="true"><Icon name="check" size={13} strokeWidth={2.6} /></span>
       <Icon name={props.icon} size={26} />
-      {props.label}
+      <span>
+        {props.label}
+        {props.hint ? <span className="tile-hint">{props.hint}</span> : null}
+      </span>
     </button>
   );
 }

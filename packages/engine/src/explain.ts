@@ -1,5 +1,13 @@
-import type { Equipment, Muscle, Pattern, Profile, TrainingLevel } from "@repcurve/shared";
+import type { Equipment, Muscle, Pattern, Profile, Split, TrainingLevel } from "@repcurve/shared";
 import type { SessionKind } from "./types.js";
+
+const SPLIT_WORD: Record<Split, string> = { full_body: "full-body", push_pull: "push/pull", upper_lower: "upper/lower", ppl: "push/pull/legs" };
+const SPLIT_WHY: Record<Split, string> = {
+  full_body: "Every strength session is full body, so each muscle is trained every session.",
+  push_pull: "Sessions alternate push days (chest, shoulders, triceps, quads) and pull days (back, biceps, hamstrings, glutes), so each day can focus.",
+  upper_lower: "Sessions alternate upper-body and lower-body days, so each day can focus.",
+  ppl: "Sessions rotate push, pull and leg days, so each day goes deep on a few muscles.",
+};
 
 export function explain(
   profile: Profile,
@@ -15,11 +23,11 @@ export function explain(
   const cardio = template.length - strength;
   const lines: string[] = [];
   lines.push(
-    `You train ${template.length} days a week for about ${profile.minutesPerSession} minutes: ${strength} full-body strength session${strength === 1 ? "" : "s"}` +
+    `You train ${template.length} days a week for about ${profile.minutesPerSession} minutes: ${strength} ${SPLIT_WORD[profile.split ?? "full_body"]} strength session${strength === 1 ? "" : "s"}` +
       (cardio > 0 ? ` and ${cardio} ${equipment.treadmill ? "treadmill" : "walk/jog"} session${cardio === 1 ? "" : "s"}.` : "."),
   );
   lines.push(
-    `Every strength session is full body because short sessions get more from hitting everything often than from splitting body parts across days. Exercises are paired so one muscle rests while the other works, which is how ${hardSetsPerStrengthSession} hard sets fit in ${profile.minutesPerSession} minutes.`,
+    `${SPLIT_WHY[profile.split ?? "full_body"]} Exercises are paired so one muscle rests while the other works, which is how ${hardSetsPerStrengthSession} hard sets fit in ${profile.minutesPerSession} minutes.`,
   );
   const majors: Muscle[] = ["quads", "glutes", "hamstrings", "chest", "back", "shoulders"];
   const under = majors.filter((m) => volume[m] < target[0]);

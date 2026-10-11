@@ -65,3 +65,32 @@ describe("RC-24: long interval sessions aren't mostly cool-down", () => {
     expect(s.cardio!.segments.some((x) => x.intent === "steady")).toBe(true);
   });
 });
+
+describe("jump rope", () => {
+  const rope = { ...referenceEquipment, jumpRope: true };
+  const noTreadmill = { ...rope, treadmill: false };
+
+  it("turns interval days into jump rope intervals, without changing their length", () => {
+    for (const m of [10, 15, 20, 30, 45]) {
+      for (let week = 2; week <= 20; week += 2) {
+        const s = buildCardioSession(input({ minutes: m, week, equipment: noTreadmill }));
+        expect(s.cardio!.style).toBe("intervals");
+        expect(s.cardio!.mode).toBe("jump_rope");
+        expect(s.name).toBe("Jump rope intervals");
+        expect(minutes(s)).toBe(m);
+        // A minute on the rope at a time, however far into the plan.
+        for (const seg of s.cardio!.segments.filter((x) => x.intent === "hard")) expect(seg.minutes).toBe(1);
+      }
+    }
+  });
+
+  it("alternates with the treadmill when there's both", () => {
+    const modes = [2, 4, 6, 8].map((week) => buildCardioSession(input({ week, equipment: rope })).cardio!.mode);
+    expect(new Set(modes)).toEqual(new Set(["jump_rope", "treadmill"]));
+  });
+
+  it("leaves steady days and people without a rope as they were", () => {
+    expect(buildCardioSession(input({ week: 3, equipment: noTreadmill })).cardio!.mode).toBe("outdoor");
+    expect(buildCardioSession(input({ week: 2 })).cardio!.mode).not.toBe("jump_rope");
+  });
+});
