@@ -9,6 +9,8 @@ import { useStore } from "../store/useAppStore";
 import { Icon, Stepper } from "./common";
 import { CardioLineup, Lineup } from "./Lineup";
 import { useTip } from "./tips";
+import { ChallengeCard } from "./Trophies";
+import { monthChallenge } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
 
 export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
@@ -64,6 +66,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           {streak > 1 ? <span className="meta small num">{streak}-week streak</span> : null}
         </div>
         <WeekStrip slots={slots} />
+        {history.some((r) => !r.skipped) ? <ChallengeCard challenge={monthChallenge(history, core, now)} compact /> : null}
       </section>
 
       {plan.deload ? (
