@@ -27,6 +27,12 @@ export const TIPS = [
     body: "These are this week's sessions, in order. They aren't tied to days of the week: if you miss a day, the next session simply waits for you.",
   },
   {
+    id: "today.split",
+    kind: "lifting",
+    title: "Your split",
+    body: "Your lifting days take turns: a push day, then a pull day, and so on, each focused on a few muscles. Change your split any time in Settings, under Edit profile, schedule and equipment.",
+  },
+  {
     id: "today.benchmark",
     kind: "lifting",
     title: "You don't need to know your strength",
