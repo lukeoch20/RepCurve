@@ -4,6 +4,8 @@ import { findExercise } from "@repcurve/exercises";
 import { displayLoad, formatLoad } from "@repcurve/shared";
 import type { Units } from "@repcurve/shared";
 import { celebrate } from "../model/celebrate";
+import { equivalent, levelUps, newBadges } from "../model/gamify";
+import { Medal } from "./Trophies";
 import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { useTip } from "./tips";
@@ -36,6 +38,9 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
   const nextTip = useTip("finished.next", changes.length > 0);
   const c = React.useMemo(() => celebrate(r, props.history, props.core), [r, props.history, props.core]);
   const moved = Math.round(displayLoad(c.movedKg, units));
+  const like = equivalent(c.movedKg);
+  const earned = React.useMemo(() => newBadges(r, props.history, props.core), [r, props.history, props.core]);
+  const levels = React.useMemo(() => (r.kind === "strength" ? levelUps(r, props.history) : []), [r, props.history]);
   // The session screen was scrolled; the celebration starts at the top.
   React.useEffect(() => window.scrollTo(0, 0), []);
   return (
@@ -63,6 +68,35 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
         {c.calories > 0 ? <div className="stat"><b className="num">~{c.calories}</b><span>calories</span></div> : null}
         {moved > 0 ? <div className="stat"><b className="num">{moved.toLocaleString()}</b><span>{units} moved</span></div> : null}
       </section>
+
+      {like && moved > 0 ? <p className="meta celebrate-like">You moved {like} today.</p> : null}
+
+      {earned.length > 0 ? (
+        <section className="card stack new-badges" style={{ gap: 10 }}>
+          <h2 className="h3">{earned.length === 1 ? "New badge!" : `${earned.length} new badges!`}</h2>
+          <div className="trophies">
+            {earned.map((b) => (
+              <div key={b.id} className="trophy">
+                <Medal badge={b} size={56} />
+                <span className="trophy-name">{b.name}</span>
+                <span className="meta small" style={{ textAlign: "center" }}>{b.how}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {levels.length > 0 ? (
+        <section className="card stack" style={{ gap: 8 }}>
+          <h2 className="h3">Level up!</h2>
+          {levels.map((l) => (
+            <div key={l.exerciseId} className="lift">
+              <div className="name">{l.name}</div>
+              <span className="level-chip num">Lv {l.level}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {c.records.length > 0 ? (
         <section className="card stack" style={{ gap: 8 }}>
