@@ -4,6 +4,7 @@ import { clock } from "../model/format";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
 import { backupFilename, saveTextFile } from "../platform/download";
+import { applyStyle, loadStyle, saveStyle, STYLES, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
 import { useTips } from "./tips";
@@ -112,6 +113,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         </div>
       </section>
 
+      <StyleSettings />
+
       <TipsSettings />
 
       <section className="card stack">
@@ -190,6 +193,29 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       <p className="meta small">RepCurve gives general fitness guidance, not medical advice. Stop any exercise that causes sharp or lasting pain.</p>
     </div>
+  );
+}
+
+/** The app's look, per device: Bluebird light (the default), Bluebird dark or Classic. */
+function StyleSettings(): React.ReactElement {
+  const [style, setStyle] = useState<StyleId>(loadStyle);
+  const choose = (id: StyleId) => {
+    setStyle(id);
+    saveStyle(id);
+    applyStyle(id);
+  };
+  return (
+    <section className="card stack">
+      <h2 className="h3">Style</h2>
+      <div className="choice" role="group" aria-label="Style">
+        {STYLES.map((o) => (
+          <button key={o.id} type="button" aria-pressed={style === o.id} onClick={() => choose(o.id)}>
+            <b>{o.name}</b>
+            <span>{o.hint}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

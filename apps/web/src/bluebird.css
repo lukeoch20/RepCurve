@@ -1,0 +1,231 @@
+/* Bluebird (RepCurve_Style_001): early-2000s desktop optimism as a calm training theme.
+   Cobalt header bands, ivory cards, bevelled green actions and a blue taskbar-like tab bar.
+   It's the default look; Classic (styles.css alone) stays as an option in Settings.
+   Everything here is paint: layout, spacing, tap sizes, wording and icons are unchanged. */
+:root[data-style="bluebird"] {
+  --bg: #eaf1fb;
+  --card: #fffef8;
+  --sunk: #e1e6ee;
+  --ink: #18263c;
+  --muted: #536174;
+  --line: #c0cbda;
+  --accent: #286b32;
+  --accent-strong: #1e5227;
+  --accent-ink: #ffffff;
+  --accent-wash: #e9f3e6;
+  --accent-line: #56834b;
+  --chart: #1f5ebd;
+  --warn: #8a4b08;
+  --warn-wash: #fff0d2;
+  --stop: #a72a25;
+  --stop-wash: #fce6e1;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.85), 0 3px 8px rgb(23 50 84 / 0.12);
+  /* Arial is metric-identical to Liberation Sans and built into iPhone, so nothing to download. */
+  --font-display: "Liberation Sans", Arial, Helvetica, sans-serif;
+  --font-body: "Liberation Sans", Arial, Helvetica, sans-serif;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --tap: 48px;
+  /* Bluebird's own: header bands and tab bar, control edges, focus, button gradient, bevels */
+  --chrome: #1754b8;
+  --chrome-top: #246bd1;
+  --chrome-ink: #ffffff;
+  --control-line: #6f8098;
+  --focus: #164dab;
+  --button-top: #34793d;
+  --bevel-hi: #ffffff;
+  --bevel-lo: #6f8098;
+  color-scheme: light;
+}
+:root[data-style="bluebird"][data-theme="dark"] {
+  --bg: #0e1726;
+  --card: #17253b;
+  --sunk: #101d30;
+  --ink: #edf3ff;
+  --muted: #b2c2db;
+  --line: #344965;
+  --accent: #87d797;
+  --accent-strong: #ade8b6;
+  --accent-ink: #082411;
+  --accent-wash: #203e30;
+  --accent-line: #74ac83;
+  --chart: #89b8ff;
+  --warn: #f9c477;
+  --warn-wash: #3b2c19;
+  --stop: #ffa59b;
+  --stop-wash: #422329;
+  --shadow: 0 1px 0 rgb(143 184 244 / 0.12), 0 3px 8px rgb(0 20 48 / 0.28);
+  --chrome: #244a89;
+  --chrome-top: #315c9c;
+  --chrome-ink: #ffffff;
+  --control-line: #7188aa;
+  --focus: #9ac3ff;
+  --button-top: #a3e5ad;
+  --bevel-hi: #7188aa;
+  --bevel-lo: #0b1423;
+  color-scheme: dark;
+}
+
+/* type: one sans, bold titles */
+[data-style="bluebird"] :is(.title, .h2, .h3, .block-name, .session-row .name, .brand) { font-weight: 700; letter-spacing: -0.01em; }
+[data-style="bluebird"] .eyebrow { font-weight: 700; letter-spacing: 0.04em; }
+[data-style="bluebird"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* header bands: a card's heading becomes a cobalt title bar across its top */
+[data-style="bluebird"] .card:not(.tint, .flat) > :is(.h3, .eyebrow, .card-head, .spread:has(> .h3, > .eyebrow)):first-child {
+  margin: -16px -16px 4px;
+  padding: 11px 16px;
+  background: linear-gradient(var(--chrome-top), var(--chrome));
+  color: var(--chrome-ink);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+[data-style="bluebird"] .card:not(.tint, .flat, .stack) > :is(.h3, .eyebrow, .card-head, .spread):first-child { margin-bottom: 12px; }
+[data-style="bluebird"] .card:not(.tint, .flat) > .eyebrow:first-child,
+[data-style="bluebird"] .card:not(.tint, .flat) > :first-child > .eyebrow { font-size: 0.95rem; letter-spacing: 0.02em; color: var(--chrome-ink); }
+[data-style="bluebird"] .card:not(.tint, .flat) > :first-child :is(.h3, .meta, .eyebrow) { color: var(--chrome-ink); }
+[data-style="bluebird"] .card:not(.tint, .flat) > :first-child .example-tag { color: var(--chrome-ink); border-color: color-mix(in srgb, var(--chrome-ink) 60%, transparent); }
+[data-style="bluebird"] .card:not(.tint, .flat) > .card-head:first-child .btn.ghost { color: var(--chrome-ink); }
+/* body-only tiles get a thin blue top rule instead */
+[data-style="bluebird"] .stat { border-top: 2px solid var(--chrome); }
+
+/* buttons: bevelled; primary is a green gradient */
+[data-style="bluebird"] .btn,
+[data-style="bluebird"] .icon-btn,
+[data-style="bluebird"] .chip,
+[data-style="bluebird"] .dock-actions button {
+  border-radius: var(--radius-sm);
+  border-color: var(--control-line);
+  background: linear-gradient(var(--card), var(--sunk));
+  color: var(--ink);
+  box-shadow: inset 1px 1px 0 var(--bevel-hi), inset -1px -1px 0 var(--bevel-lo);
+}
+[data-style="bluebird"] .btn { font-weight: 700; }
+[data-style="bluebird"] .chip { font-weight: 700; }
+[data-style="bluebird"] :is(.btn, .icon-btn, .chip, .dock-actions button):active {
+  transform: none;
+  background: var(--sunk);
+  box-shadow: inset 1px 1px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi);
+}
+[data-style="bluebird"] :is(.btn.primary, .btn.go, .dock-actions button.go),
+[data-style="bluebird"] .chip[aria-pressed="true"] {
+  background: linear-gradient(var(--button-top), var(--accent));
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  box-shadow: inset 0 1px 0 var(--bevel-hi), inset 0 -1px 0 var(--bevel-lo);
+}
+[data-style="bluebird"] :is(.btn.primary, .btn.go) { border-radius: var(--radius); }
+[data-style="bluebird"] :is(.btn.primary, .btn.go, .dock-actions button.go):active {
+  background: var(--accent-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-lo), inset 0 -1px 0 var(--bevel-hi);
+}
+/* a chosen chip sits pressed in: the bevel reversed */
+[data-style="bluebird"] .chip[aria-pressed="true"] { box-shadow: inset 0 2px 0 var(--bevel-lo), inset 0 -1px 0 var(--bevel-hi); }
+[data-style="bluebird"] .btn.outline { background: transparent; border-color: var(--accent); color: var(--accent); box-shadow: none; }
+[data-style="bluebird"] .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); box-shadow: none; }
+[data-style="bluebird"] .btn.danger { color: var(--stop); }
+[data-style="bluebird"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35); }
+[data-style="bluebird"] :is(.btn, .chip, .icon-btn):disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--line); box-shadow: none; }
+[data-style="bluebird"] .btn.ghost:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
+[data-style="bluebird"] .weights .chip { border-radius: var(--radius-sm); }
+
+/* segmented control: an inset track, the chosen segment raised in green */
+[data-style="bluebird"] .seg { background: var(--sunk); border: 1px solid var(--control-line); border-radius: var(--radius-sm); padding: 2px; }
+[data-style="bluebird"] .seg button { border-radius: 3px; }
+[data-style="bluebird"] .seg button[aria-pressed="true"] {
+  background: linear-gradient(var(--button-top), var(--accent));
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--accent-line), inset 0 2px 0 var(--bevel-hi);
+}
+[data-style="bluebird"] .seg.quiet button[aria-pressed="true"] {
+  background: linear-gradient(var(--card), var(--sunk));
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--control-line), inset 1px 1px 0 var(--bevel-hi);
+}
+
+/* choices and tiles: a clear edge; chosen ones get a green wash, a 2px edge and a stripe */
+[data-style="bluebird"] .choice button { border-color: var(--control-line); border-radius: var(--radius); }
+[data-style="bluebird"] .choice button[aria-pressed="true"] {
+  background: var(--accent-wash);
+  border-color: var(--accent-line);
+  box-shadow: inset 0 0 0 1px var(--accent-line), inset 5px 0 0 var(--accent);
+}
+[data-style="bluebird"] .tile { border-color: var(--control-line); border-radius: var(--radius); }
+[data-style="bluebird"] .tile[aria-checked="true"] { border-color: var(--accent-line); box-shadow: inset 0 0 0 1px var(--accent-line); }
+
+/* fields, steppers, switches */
+[data-style="bluebird"] .input { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="bluebird"] .stepper { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="bluebird"] .stepper button {
+  border: 1px solid var(--control-line);
+  border-radius: 3px;
+  background: linear-gradient(var(--card), var(--sunk));
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: inset 1px 1px 0 var(--bevel-hi), inset -1px -1px 0 var(--bevel-lo);
+}
+[data-style="bluebird"] .stepper button:active { background: var(--sunk); box-shadow: inset 1px 1px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi); }
+[data-style="bluebird"] .stepper button:disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--line); box-shadow: none; }
+[data-style="bluebird"] .switch { border-radius: var(--radius-sm); background: var(--sunk); border: 1px solid var(--control-line); box-shadow: inset 1px 1px 2px rgb(0 0 0 / 0.18); }
+[data-style="bluebird"] .switch::after { top: 2px; left: 2px; border-radius: 3px; background: var(--card); box-shadow: inset 1px 1px 0 var(--bevel-hi), inset -1px -1px 0 var(--bevel-lo), 0 0 0 1px var(--control-line); }
+/* a check on the "on" side, a dash on the "off" side, so the state never rests on colour */
+[data-style="bluebird"] .switch::before { content: ""; position: absolute; left: 31px; top: 13px; width: 9px; height: 0; border-top: 2px solid var(--muted); }
+[data-style="bluebird"] .switch:checked { background: var(--accent); border-color: var(--accent-line); }
+[data-style="bluebird"] .switch:checked::before { left: 8px; top: 8px; width: 10px; height: 5px; border: 0; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
+
+/* tab bar: a blue taskbar; the current tab is a raised green button */
+[data-style="bluebird"] .tabbar { background: linear-gradient(var(--chrome-top), var(--chrome)); border-top: 1px solid var(--chrome); backdrop-filter: none; }
+[data-style="bluebird"] .tabbar button { color: var(--chrome-ink); margin: 4px; min-height: 54px; border-radius: var(--radius); border: 1.5px solid transparent; }
+[data-style="bluebird"] .tabbar button[aria-current="page"] {
+  background: linear-gradient(var(--button-top), var(--accent));
+  color: var(--accent-ink);
+  border-color: var(--bevel-hi);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--bevel-lo);
+}
+
+/* the workout header is a blue band too */
+[data-style="bluebird"] .runner-head { background: linear-gradient(var(--chrome-top), var(--chrome)); color: var(--chrome-ink); border-bottom-color: var(--chrome); backdrop-filter: none; }
+[data-style="bluebird"] .runner-head :is(.eyebrow, .meta) { color: color-mix(in srgb, var(--chrome-ink) 88%, transparent); }
+[data-style="bluebird"] .runner-head .progress-track { background: color-mix(in srgb, var(--chrome-ink) 25%, transparent); }
+
+/* the rest timer card */
+[data-style="bluebird"] .dock-inner { border-radius: var(--radius); border-top: 2px solid var(--chrome); box-shadow: 0 8px 30px rgb(23 50 84 / 0.2); }
+[data-style="bluebird"] .dock.go .dock-inner { background: linear-gradient(var(--button-top), var(--accent)); border-color: var(--accent-line); color: var(--accent-ink); }
+[data-style="bluebird"] .dock.go :is(.dock-label, .dock-next, .ring, .ring .l) { color: var(--accent-ink); }
+[data-style="bluebird"] .dock.go .ring circle { stroke: color-mix(in srgb, var(--accent-ink) 30%, transparent); }
+[data-style="bluebird"] .dock.go .ring circle + circle { stroke: var(--accent-ink); }
+
+/* banners: a visible edge in their own colour */
+[data-style="bluebird"] .banner { border-radius: var(--radius); }
+[data-style="bluebird"] :is(.banner.info, .banner.good) { border-color: var(--accent-line); }
+[data-style="bluebird"] .banner.adjust { border-color: var(--warn); }
+[data-style="bluebird"] .banner.adjust b { color: var(--warn); }
+[data-style="bluebird"] .banner.stop { border-color: var(--stop); }
+[data-style="bluebird"] .banner.stop b { color: var(--stop); }
+[data-style="bluebird"] .suggestion { border-radius: var(--radius); }
+
+/* small shapes: squarer, with clear edges */
+[data-style="bluebird"] :is(.progress-track, .progress-fill, .challenge-bar, .challenge-bar i, .trophy-bar, .range-track, .range-band, .muscle .bar, .muscle .bar i, .week-dots span, .steps i) { border-radius: 2px; }
+[data-style="bluebird"] :is(.challenge-bar, .trophy-bar) { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
+[data-style="bluebird"] :is(.streak, .level-chip, .example-tag) { border-radius: var(--radius-sm); border: 1px solid var(--accent-line); }
+[data-style="bluebird"] .example-tag { border-color: var(--control-line); }
+[data-style="bluebird"] .set-row .cell { border-radius: var(--radius-sm); }
+[data-style="bluebird"] .cal-day { border-radius: var(--radius-sm); }
+[data-style="bluebird"] .glyph { border-radius: var(--radius); border: 1px solid var(--control-line); background: linear-gradient(var(--card), var(--sunk)); color: var(--chart); }
+[data-style="bluebird"] :is(.lineup-tag, .block-tag) { border-color: var(--control-line); }
+[data-style="bluebird"] .week-day.upcoming .k { border-color: var(--control-line); }
+[data-style="bluebird"] .sheet { border-radius: var(--radius) var(--radius) 0 0; border-top: 3px solid var(--chrome); }
+[data-style="bluebird"] .tip-spot { border-radius: var(--radius); outline-color: var(--focus); }
+[data-style="bluebird"] .chart-tip { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-weight: 700; }
+
+/* medals: blue ribbons and Bluebird's tier colours */
+[data-style="bluebird"] .medal .ribbon { fill: var(--chrome); }
+[data-style="bluebird"] .medal.bronze { --tier: #c88a48; }
+[data-style="bluebird"] .medal.silver { --tier: #bcc9de; }
+[data-style="bluebird"] .medal.gold { --tier: #d9aa25; }
+[data-style="bluebird"] .medal.platinum { --tier: #7fcac4; }
+[data-style="bluebird"] .medal text { fill: #18263c; }
+[data-style="bluebird"] .medal.locked .ribbon { fill: var(--control-line); }
+[data-style="bluebird"] .medal.locked text { fill: var(--muted); }
+[data-style="bluebird"] .confetti i.c2 { background: #d9aa25; }

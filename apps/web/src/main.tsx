@@ -1,10 +1,15 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { applyStyle, loadStyle } from "./platform/style";
 import { setUpdateReady } from "./platform/update";
 import "./styles.css";
+import "./bluebird.css";
 
 declare const __RUNTIME__: "pwa" | "artifact";
+
+// The chosen look goes on before the first render, so the app never flashes another.
+applyStyle(loadStyle());
 
 createRoot(document.getElementById("root")!).render(<App />);
 
