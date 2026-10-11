@@ -9,7 +9,7 @@ const MUSCLE: Record<Muscle, string> = {
 };
 const EQUIPMENT: Record<EquipmentItem, string> = {
   dumbbells: "dumbbells", bench: "a bench or sturdy chair", flat_bench: "a flat bench you can lie on", pullup_bar: "a pull-up bar", ab_roller: "an ab roller",
-  bands: "a resistance band", mat: "a mat", treadmill: "a treadmill",
+  bands: "a resistance band", mat: "a mat", treadmill: "a treadmill", jump_rope: "a jump rope",
 };
 
 const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);

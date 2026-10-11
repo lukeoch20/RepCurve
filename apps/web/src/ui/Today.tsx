@@ -52,7 +52,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           <p className="meta num">
             {plan.kind === "strength"
               ? `~${Math.round(plan.estimatedMinutes)} min · ${plural(exerciseCount(plan), "exercise")}${plan.finisher ? " incl. core finisher" : ""}`
-              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${plan.cardio?.mode === "treadmill" ? "treadmill" : "walk or jog"}`}
+              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${plan.cardio?.mode === "treadmill" ? "treadmill" : plan.cardio?.mode === "jump_rope" ? "jump rope" : "walk or jog"}`}
           </p>
         </div>
         <SessionGlyph plan={plan} />
