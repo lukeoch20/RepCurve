@@ -392,3 +392,13 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 
 /* RepCurve Test: always visible, so it's never mistaken for the real app */
 .test-strip { display: flex; align-items: center; justify-content: center; gap: 8px; padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px; background: var(--ink); color: var(--bg); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; text-align: center; }
+
+/* tutorial tips */
+.tip-layer { position: fixed; inset: 0; z-index: 70; }
+.tip-catch { position: absolute; inset: 0; }
+.tip-spot { position: fixed; border-radius: 16px; box-shadow: 0 0 0 200vmax rgb(8 12 10 / 0.62); outline: 2px solid var(--accent); outline-offset: 2px; pointer-events: none; transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
+.tip-card { position: fixed; left: 16px; right: 16px; max-width: 30rem; margin: 0 auto; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+.tip-card .prose { margin: 0; }
+.tip-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.tip-actions .btn.primary { min-width: 7rem; }
+@media (prefers-reduced-motion: reduce) { .tip-spot { transition: none; } }

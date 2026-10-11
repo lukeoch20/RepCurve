@@ -5,6 +5,7 @@ import { plural } from "../model/format";
 import { currentProgram, weekSessions } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { Icon } from "./common";
+import { useTip } from "./tips";
 import { SessionRow, WeekStrip } from "./Week";
 
 const MUSCLE_NAMES: Record<string, string> = {
@@ -34,6 +35,7 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
   const units = loadUnitsFor(core.profile, core.equipment);
   const adjusted = adjustmentSummary(history);
   const [explainOpen, setExplainOpen] = useState(false);
+  const weekTip = useTip("plan.week");
   const [lo, hi] = program.volumeTarget;
   const max = Math.max(hi + 4, ...MUSCLES.map((m) => program.weeklyVolume[m]));
   return (
@@ -50,7 +52,7 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
         <WeekStrip slots={sessions} />
       </section>
 
-      <section className="session-list" aria-label={`Week ${week} sessions`}>
+      <section className="session-list" aria-label={`Week ${week} sessions`} ref={weekTip}>
         {sessions.map((s, i) => (
           <SessionRow key={s.index} session={s} position={i} units={units} />
         ))}

@@ -8,6 +8,7 @@ import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
 import { Icon, Stepper } from "./common";
 import { CardioLineup, Lineup } from "./Lineup";
+import { useTip } from "./tips";
 import { SessionGlyph, WeekStrip } from "./Week";
 
 export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
@@ -30,6 +31,10 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const less = choices[at - 1];
   const more = choices[at + 1];
   const setTime = (m: number) => setMinutes(m === usual ? null : m);
+  const welcomeTip = useTip("today.welcome");
+  const weekTip = useTip("today.week");
+  const benchmarkTip = useTip("today.benchmark");
+  const timeTip = useTip("today.time");
   const remindBackup = backupDue(storage, history[0]?.finishedAt ?? null, now);
   const { week, slots } = useMemo(() => weekSlots(core, history), [core, history]);
   const last = [...history].reverse().find((r) => !r.skipped);
@@ -38,7 +43,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
 
   return (
     <div className="stack-lg">
-      <header className="page-head">
+      <header className="page-head" ref={welcomeTip}>
         <div className="stack" style={{ gap: 6 }}>
           <p className="eyebrow">
             Week {week} · session {core.nextIndex + 1}
@@ -53,7 +58,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         <SessionGlyph plan={plan} />
       </header>
 
-      <section className="card stack" style={{ gap: 14 }}>
+      <section className="card stack" style={{ gap: 14 }} ref={weekTip}>
         <div className="spread">
           <span className="eyebrow">This week</span>
           {streak > 1 ? <span className="meta small num">{streak}-week streak</span> : null}
@@ -74,12 +79,12 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         <div key={n} className="banner info"><b>Short on room</b>{n}</div>
       ))}
       {benchmarks ? (
-        <div className="banner info"><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
+        <div className="banner info" ref={benchmarkTip}><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
       ) : null}
 
       <section className="card stack" style={{ gap: 14 }}>
         <span className="eyebrow accent">Today</span>
-        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} /> : <CardioLineup plan={plan} />}
+        {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} tips /> : <CardioLineup plan={plan} />}
       </section>
 
       <div className="stack">
@@ -94,7 +99,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           Start session
           <Icon name="arrowRight" size={20} />
         </button>
-        <div className="time-adjust">
+        <div className="time-adjust" ref={timeTip}>
           <div className="stack" style={{ gap: 2 }}>
             <span className="label">Adjust time</span>
             {minutes !== null ? (

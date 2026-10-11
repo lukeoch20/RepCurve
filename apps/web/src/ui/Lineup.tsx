@@ -3,6 +3,7 @@ import type { Prescription, SessionPlan } from "@repcurve/engine";
 import type { Units } from "@repcurve/shared";
 import { repsUnit } from "../model/format";
 import { ExerciseName } from "./ExerciseInfo";
+import { useTip } from "./tips";
 
 function dose(p: Prescription): string {
   const reps = p.loadType === "time" ? `${p.targetReps} s` : `${p.targetReps}`;
@@ -10,19 +11,22 @@ function dose(p: Prescription): string {
   return `${p.sets} × ${reps}${side}`;
 }
 
-/** Compact preview of a strength session: supersets, then the finisher. */
-export function Lineup(props: { plan: SessionPlan; units: Units }): React.ReactElement {
+/** Compact preview of a strength session: supersets, then the finisher. `tips` points the tutorial at it. */
+export function Lineup(props: { plan: SessionPlan; units: Units; tips?: boolean }): React.ReactElement {
   const { plan } = props;
+  const pairTip = useTip("today.superset", !!props.tips && (plan.supersets[0]?.items.length ?? 0) > 1);
+  const doseTip = useTip("today.dose", !!props.tips);
+  const howtoTip = useTip("today.howto", !!props.tips);
   return (
     <div className="lineup">
-      {plan.supersets.map((ss) => (
-        <div className="lineup-group" key={ss.label}>
+      {plan.supersets.map((ss, g) => (
+        <div className="lineup-group" key={ss.label} ref={g === 0 ? pairTip : undefined}>
           <div className="lineup-tag">{ss.label}</div>
           <div>
-            {ss.items.map((p) => (
+            {ss.items.map((p, i) => (
               <div className="lineup-item" key={p.slot}>
-                <span className="what"><ExerciseName id={p.exerciseId} name={p.name} /></span>
-                <span className="dose">
+                <span className="what" ref={g === 0 && i === 0 ? howtoTip : undefined}><ExerciseName id={p.exerciseId} name={p.name} /></span>
+                <span className="dose" ref={g === 0 && i === 0 ? doseTip : undefined}>
                   {dose(p)}
                   {p.loadKg !== null ? <><br />{p.loadDisplay}</> : null}
                 </span>

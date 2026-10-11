@@ -5,6 +5,7 @@ import type { ActiveSession, Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { useNow, useStore } from "../store/useAppStore";
 import { Sheet, TimerRing } from "./common";
+import { useTip } from "./tips";
 
 const INTENT: Record<string, string> = { warmup: "Warm-up", easy: "Easy", steady: "Steady", hard: "Hard", cooldown: "Cool-down" };
 
@@ -39,6 +40,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
   }, [c.segmentIndex, c.finished, core.settings.sound]);
 
   const seg = plan.segments[c.segmentIndex]!;
+  const effortTip = useTip("cardio.effort");
   const remaining = cardioRemainingMs(active, now);
 
   return (
@@ -53,7 +55,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         </p>
       </header>
 
-      <section className="cardio-clock" aria-label="Segment timer">
+      <section className="cardio-clock" aria-label="Segment timer" ref={effortTip}>
         <div className="ring" role="timer">
           <TimerRing fraction={c.finished ? 1 : remaining / Math.max(1, seg.minutes * 60_000)} size={132} />
           <span className="face">

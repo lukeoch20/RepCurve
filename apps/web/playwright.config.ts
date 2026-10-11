@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Tutorial tips are off in tests unless a test turns them on (e2e/tutorial.spec.ts), so a tip
+// never sits over what a test taps. Both apps' keys: RepCurve and RepCurve Test.
+const TIPS_OFF = JSON.stringify({ off: true, seen: [] });
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
@@ -11,6 +15,18 @@ export default defineConfig({
     browserName: "chromium",
     locale: "en-US",
     trace: "retain-on-failure",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: "http://127.0.0.1:4173",
+          localStorage: [
+            { name: "repcurve.tips", value: TIPS_OFF },
+            { name: "repcurve-test.tips", value: TIPS_OFF },
+          ],
+        },
+      ],
+    },
   },
   webServer: {
     command: "pnpm exec vite preview --port 4173 --strictPort --host 127.0.0.1",
