@@ -70,6 +70,8 @@ export function hasItem(eq: Equipment, item: EquipmentItem): boolean {
       return eq.flatBench === true;
     case "bands":
       return eq.bands.length > 0;
+    case "jump_rope":
+      return eq.jumpRope === true;
   }
 }
 

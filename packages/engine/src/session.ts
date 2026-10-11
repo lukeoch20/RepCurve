@@ -148,8 +148,12 @@ function choosePair(
   return chosen.length > 0 ? chosen : null;
 }
 
-function warmupFor(first: Chosen[] | undefined): WarmupItem[] {
-  const items: WarmupItem[] = [{ name: "Easy movement", prescription: "30 s marching, arm circles, hip circles" }];
+function warmupFor(first: Chosen[] | undefined, equipment: StrengthSessionInput["equipment"]): WarmupItem[] {
+  const items: WarmupItem[] = [
+    equipment.jumpRope
+      ? { name: "Easy jump rope", prescription: "1 min of light bounces, then arm and hip circles" }
+      : { name: "Easy movement", prescription: "30 s marching, arm circles, hip circles" },
+  ];
   for (const c of first ?? []) {
     items.push({ name: `${c.exercise.name} (light)`, prescription: "1 easy set of 8, bodyweight or lightest dumbbell" });
   }
@@ -288,7 +292,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     budgetMinutes: budget,
     estimatedMinutes,
     warmupMinutes: warmupMin,
-    warmup: warmupFor(pairsChosen[0]),
+    warmup: warmupFor(pairsChosen[0], input.equipment),
     supersets,
     finisher,
     cardio: null,

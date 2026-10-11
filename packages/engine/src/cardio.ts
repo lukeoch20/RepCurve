@@ -35,26 +35,30 @@ export function buildCardioSession(input: CardioSessionInput): SessionPlan {
 
   const segments: CardioSegment[] = [];
   let plan: CardioPlan;
+  // With a jump rope, interval days use it: every one without a treadmill, every other fortnight with one.
+  const rope = intervals && input.equipment.jumpRope === true && (!input.equipment.treadmill || input.week % 4 < 2);
   if (intervals) {
     const warm = 3;
     const cool = 2;
-    // Work intervals lengthen once the count has had time to build.
-    const hardMin = input.week >= 7 ? 2 : 1;
+    // Work intervals lengthen once the count has had time to build (a minute at a time on the rope).
+    const hardMin = input.week >= 7 && !rope ? 2 : 1;
     const pair = hardMin + 1;
     const fit = Math.floor((budget - warm - cool) / pair);
     const reps = Math.max(1, Math.min(fit, Math.max(2, Math.min(4 + input.week, 10) + nudge)));
-    segments.push({ minutes: warm, intent: "warmup", effort: 3, note: "Brisk walk" });
+    segments.push({ minutes: warm, intent: "warmup", effort: 3, note: rope ? "March in place, then easy bounces with the rope" : "Brisk walk" });
     for (let i = 0; i < reps; i++) {
       const hard: CardioSegment = { minutes: hardMin, intent: "hard", effort: 8 };
-      if (i === 0) hard.note = "Fast walk, incline, or jog: breathing hard";
+      if (i === 0) hard.note = rope ? "Jump rope at a steady rhythm: breathing hard. Trip? Just start again" : "Fast walk, incline, or jog: breathing hard";
       segments.push(hard);
-      segments.push({ minutes: 1, intent: "easy", effort: 3 });
+      const easy: CardioSegment = { minutes: 1, intent: "easy", effort: 3 };
+      if (i === 0 && rope) easy.note = "Rope down: walk around and shake out your arms";
+      segments.push(easy);
     }
     // Time left over in a long session becomes a steady block, not a long cool-down.
     const spare = Math.max(0, budget - warm - cool - reps * pair);
     if (spare >= 3) segments.push({ minutes: spare, intent: "steady", effort: 5, note: "Steady and conversational" });
     segments.push({ minutes: cool + (spare >= 3 ? 0 : spare), intent: "cooldown", effort: 2 });
-    plan = { mode, style: "intervals", segments, totalMinutes: budget };
+    plan = { mode: rope ? "jump_rope" : mode, style: "intervals", segments, totalMinutes: budget };
   } else {
     const style = mode === "treadmill" ? "incline_walk" : "steady";
     const main = budget - 4;
@@ -86,7 +90,7 @@ export function buildCardioSession(input: CardioSessionInput): SessionPlan {
     dayIndex: input.dayIndex,
     kind: "cardio",
     variant: "cardio",
-    name: plan.style === "intervals" ? "Intervals" : plan.style === "incline_walk" ? "Incline walk" : "Steady cardio",
+    name: plan.style === "intervals" ? (plan.mode === "jump_rope" ? "Jump rope intervals" : "Intervals") : plan.style === "incline_walk" ? "Incline walk" : "Steady cardio",
     budgetMinutes: budget,
     estimatedMinutes: budget,
     warmupMinutes: 0,
