@@ -2,7 +2,7 @@ import { preferExercise } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { reducer, INITIAL } from "../store/reducer";
-import { currentProgram, newCore, planFor, positionOf, weekSlots } from "./plan";
+import { currentProgram, newCore, planFor, planWork, positionOf, timeChoices, todayPlan, weekSlots } from "./plan";
 import { previewProgram } from "./projection";
 import type { AppState } from "../store/reducer";
 import { DEFAULT_SETTINGS } from "./types";
@@ -103,5 +103,28 @@ describe("weekSessions", () => {
     expect(sessions[0]!.status).toBe("next");
     for (const s of sessions) expect(s.plan.kind).toBe(s.kind);
     expect(exerciseCount(sessions[0]!.plan)).toBeGreaterThan(2);
+  });
+});
+
+describe("today's time choices", () => {
+  const T = Date.UTC(2026, 9, 1);
+  it("run from 10 to 40 minutes and include the usual length", () => {
+    const choices = timeChoices(newCore(profile, equipment, T), [], T);
+    expect(choices[0]).toBe(10);
+    expect(choices[choices.length - 1]).toBe(40);
+    expect(choices).toContain(20);
+  });
+
+  it("only offer lengths that change the session", () => {
+    for (const nextIndex of [0, 4, 5]) {
+      const core = { ...newCore(profile, equipment, T), nextIndex };
+      const works = timeChoices(core, [], T).map((m) => planWork(todayPlan(core, [], T, m)));
+      for (let i = 1; i < works.length; i++) expect(works[i]!).toBeGreaterThan(works[i - 1]!);
+    }
+  });
+
+  it("keep an unusual usual length, such as 45 minutes", () => {
+    const core = newCore({ ...profile, minutesPerSession: 45 }, equipment, T);
+    expect(timeChoices(core, [], T)).toContain(45);
   });
 });

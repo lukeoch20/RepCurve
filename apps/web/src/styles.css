@@ -129,6 +129,10 @@ svg { flex: none; }
 .btn.outline { background: transparent; border-color: var(--accent); color: var(--accent); }
 .btn.big { min-height: 56px; font-size: 1.02rem; width: 100%; }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); padding: 0 8px; }
+.link-btn { align-self: flex-start; padding: 2px 0; border: 0; background: none; color: var(--accent); font-size: 0.8rem; font-weight: 500; text-align: left; }
+.time-adjust { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.time-adjust .stepper { flex: 0 0 172px; }
+.stepper button:disabled { opacity: 0.35; }
 .btn.danger { color: var(--stop); }
 .btn.danger.solid { background: var(--stop); color: #fff; border-color: var(--stop); }
 .btn.small { min-height: 36px; padding: 0 14px; font-size: 0.86rem; }
