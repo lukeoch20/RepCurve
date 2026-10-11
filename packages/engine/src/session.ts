@@ -10,6 +10,8 @@ interface Variant {
   key: string;
   name: string;
   pairs: [Pattern, Pattern][];
+  /** Pairs added only when today's time goes beyond the full session (all pairs at their most rounds). */
+  extra: [Pattern, Pattern][];
   offsets: Partial<Record<Pattern, number>>;
 }
 
@@ -19,18 +21,21 @@ export const VARIANTS: Variant[] = [
     key: "A",
     name: "Full body A",
     pairs: [["squat", "horizontal_push"], ["hinge", "row"], ["vertical_push", "vertical_pull"]],
+    extra: [["isolation", "isolation"], ["squat", "horizontal_push"]],
     offsets: {},
   },
   {
     key: "B",
     name: "Full body B",
     pairs: [["hinge", "horizontal_push"], ["squat", "row"], ["vertical_push", "vertical_pull"]],
+    extra: [["isolation", "isolation"], ["hinge", "horizontal_push"]],
     offsets: { squat: 1, hinge: 1 },
   },
   {
     key: "C",
     name: "Full body C",
     pairs: [["squat", "row"], ["hinge", "horizontal_push"], ["vertical_push", "isolation"]],
+    extra: [["isolation", "isolation"], ["squat", "row"]],
     offsets: {},
   },
 ];
@@ -111,18 +116,22 @@ function choosePair(
   used: Set<string>,
   /** Patterns already in this session, which a stand-in should not repeat. */
   taken: Set<Pattern>,
+  /** Slot names start with this, e.g. "A" or "A.extra1". */
+  slotKey: string = variant.key,
 ): Chosen[] | null {
   const chosen: Chosen[] = [];
   const pick = (pattern: Pattern, offset: number) =>
     pickExercise(input.pool, pattern, input.level, input.strengthIndex, offset, used, bodyweightBoost(input), (e) =>
       chosen.every((c) => !sharesPrimeMover(c.exercise, e)),
     );
-  for (const pattern of pair) {
+  pair.forEach((pattern, i) => {
     const ex = pick(pattern, variant.offsets[pattern] ?? 0);
-    if (!ex) continue;
+    if (!ex) return;
     used.add(ex.id);
-    chosen.push(choose(ex, `${variant.key}.${pattern}`, input));
-  }
+    // A pair of the same movement (two arm exercises) needs two slot names.
+    const slot = pair[0] === pair[1] ? `${slotKey}.${pattern}${i + 1}` : `${slotKey}.${pattern}`;
+    chosen.push(choose(ex, slot, input));
+  });
   if (chosen.length === 1) {
     // Pair the lone exercise with another movement rather than run a one-exercise superset.
     // A movement not yet in the session is preferred; a second exercise of one already in it is next best.
@@ -132,7 +141,7 @@ function choosePair(
       const ex = pick(pattern, 0);
       if (!ex) continue;
       used.add(ex.id);
-      chosen.push(choose(ex, `${variant.key}.${pattern}.alt`, input));
+      chosen.push(choose(ex, `${slotKey}.${pattern}.alt`, input));
       break;
     }
   }
@@ -178,9 +187,9 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const minRounds = Math.min(2, input.rounds);
   const taken = new Set<Pattern>();
 
-  const tryAdd = (pair: [Pattern, Pattern], rounds: number, force = false): boolean => {
+  const tryAdd = (pair: [Pattern, Pattern], rounds: number, force = false, slotKey?: string): boolean => {
     if (input.maxSupersets !== undefined && supersets.length >= input.maxSupersets) return false;
-    const chosen = choosePair(pair, variant, input, used, taken);
+    const chosen = choosePair(pair, variant, input, used, taken, slotKey);
     if (!chosen) return false;
     const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec);
     if (secs > remainingSec && !force) {
@@ -240,6 +249,29 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     if (!tryAdd(pair, input.rounds) && input.rounds > minRounds) tryAdd(pair, minRounds);
   }
   // 4. Spend what is left on extra rounds, up to the cap.
+  grow(maxRounds);
+  // 5. More time than the full session needs (a long day): more exercises, then their rounds.
+  // These come after everything above, so sessions that fit the usual budget never change.
+  variant.extra.forEach((pair, i) => {
+    const slotKey = `${variant.key}.extra${i + 1}`;
+    if (tryAdd(pair, input.rounds, false, slotKey)) return;
+    if (input.rounds > minRounds && tryAdd(pair, minRounds, false, slotKey)) return;
+    // Every pair at its most rounds and a little time left: a last round of the latest pair
+    // makes way for another exercise, rather than leaving the time unused.
+    if (!supersets.every((ss) => ss.rounds >= maxRounds)) return;
+    const last = [...supersets].reverse().find((ss) => ss.rounds > input.rounds);
+    if (!last) return;
+    const at = supersets.indexOf(last);
+    const round = supersetSeconds(pairsChosen[at]!.map(timed), 1, transitionSec, restSec);
+    const setRounds = (n: number, sec: number) => {
+      last.rounds = n;
+      last.estimatedSec += sec;
+      for (const p of last.items) p.sets = n;
+      remainingSec -= sec;
+    };
+    setRounds(last.rounds - 1, -round);
+    if (!tryAdd(pair, minRounds, false, slotKey)) setRounds(last.rounds + 1, round);
+  });
   grow(maxRounds);
 
   const supersetMin = supersets.reduce((s, ss) => s + ss.estimatedSec, 0) / 60;

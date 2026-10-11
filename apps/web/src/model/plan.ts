@@ -93,6 +93,35 @@ export function currentProgram(core: Core): Program {
   );
 }
 
+/** Candidate lengths for today: 10 to 40 minutes in fives, plus the user's usual length. */
+export function timeSteps(usual: number): number[] {
+  const steps = new Set([10, 15, 20, 25, 30, 35, 40, usual]);
+  return [...steps].sort((a, b) => a - b);
+}
+
+/**
+ * Today's time choices: only lengths that change the session (35 is left out when it plans
+ * the same as 30), plus the usual length.
+ */
+export function timeChoices(core: Core, history: SessionRecord[], now: number): number[] {
+  const usual = core.profile.minutesPerSession;
+  const out: { minutes: number; work: number }[] = [];
+  for (const minutes of timeSteps(usual)) {
+    const work = planWork(todayPlan(core, history, now, minutes));
+    const prev = out[out.length - 1];
+    if (!prev || work > prev.work) out.push({ minutes, work });
+    // The usual length is always a choice, standing in for a shorter one that plans the same.
+    else if (minutes === usual) out[out.length - 1] = { minutes, work };
+  }
+  return out.map((o) => o.minutes);
+}
+
+/** How much a plan asks of you, to tell whether more time actually adds anything. */
+export function planWork(plan: SessionPlan): number {
+  if (plan.kind === "cardio") return plan.cardio?.totalMinutes ?? plan.budgetMinutes;
+  return plan.supersets.reduce((n, ss) => n + ss.items.reduce((m, p) => m + p.sets, 0), 0) + (plan.finisher?.sets ?? 0);
+}
+
 /** The next session, personalised from the training state. */
 export function todayPlan(core: Core, history: SessionRecord[], now: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
