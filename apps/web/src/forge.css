@@ -146,9 +146,11 @@
 [data-style="forge"] .switch { border-radius: var(--radius-sm); background: var(--sunk); border: 1px solid var(--control-line); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2); }
 [data-style="forge"] .switch::after { top: 2px; left: 2px; border-radius: var(--radius-sm); background: var(--card); box-shadow: 0 0 0 1px var(--control-line); }
 /* a check on the "on" side, a dash on the "off" side */
-[data-style="forge"] .switch::before { content: ""; position: absolute; left: 31px; top: 13px; width: 9px; height: 0; border-top: 2px solid var(--muted); }
+/* Inside the 1px border the track is 48 × 28; the thumb leaves 0–22 free when on and 26–48 when off,
+   so the check centres on (11, 14) and the dash on (37, 14). */
+[data-style="forge"] .switch::before { content: ""; position: absolute; box-sizing: border-box; left: 32.5px; top: 13px; width: 9px; height: 2px; background: var(--muted); }
 [data-style="forge"] .switch:checked { background: var(--accent); border-color: var(--accent-line); }
-[data-style="forge"] .switch:checked::before { left: 8px; top: 8px; width: 10px; height: 5px; border: 0; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
+[data-style="forge"] .switch:checked::before { left: 5.5px; top: 9px; width: 11px; height: 6px; background: none; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
 
 /* tab bar: the card surface; the current tab sits in an ember wash under an ember rule */
 [data-style="forge"] .tabbar { background: var(--card); border-top: 1px solid var(--line); backdrop-filter: none; }
