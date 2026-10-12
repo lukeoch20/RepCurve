@@ -9,6 +9,7 @@ import { Medal } from "./Trophies";
 import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { useTip } from "./tips";
+import { PIXEL_ICONS } from "./pixelIcons";
 
 const UP = new Set(["load_up", "ladder_up", "widen_range"]);
 const DOWN = new Set(["load_down", "ladder_down", "pain"]);
@@ -51,6 +52,7 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
           <svg viewBox="0 0 48 48" width="56" height="56">
             <circle cx="24" cy="24" r="22" fill="var(--accent)" />
             <path className="celebrate-check" d="M14 25 l7 7 l13 -15" fill="none" stroke="var(--accent-ink)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path className="celebrate-check-px" d={PIXEL_ICONS["check"]} transform="translate(10 10) scale(2.33)" fill="var(--accent-ink)" shapeRendering="crispEdges" />
           </svg>
         </span>
         <p className="eyebrow">{r.name} · session {r.index + 1}</p>

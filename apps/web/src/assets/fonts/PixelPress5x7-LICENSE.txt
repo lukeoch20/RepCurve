@@ -1,0 +1,5 @@
+Pixel Press 5x7, version 1.0
+Original grid lettering created for RepCurve.
+Dedicated to the public domain under CC0 1.0 Universal.
+https://creativecommons.org/publicdomain/zero/1.0/
+Includes uppercase, lowercase mapped to uppercase, digits and basic punctuation.

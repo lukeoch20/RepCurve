@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { IS_TEST } from "../platform/channel";
+import { PIXEL_ICONS } from "./pixelIcons";
 
 export function Seg<T extends string | number>(props: {
   value: T | undefined;
@@ -119,7 +120,7 @@ export function CurveMark(props: { size?: number }): React.ReactElement {
   );
 }
 
-const ICONS = {
+export const ICONS = {
   today: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
   plan: "M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM4 10h16M8.5 3v4M15.5 3v4",
   progress: "M5 20V13M10 20V8M15 20v-5M20 20V5",
@@ -158,12 +159,18 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
+/** Line icons; the Pixel Press style shows the pixel versions instead (see pixel.css). */
 export function Icon(props: { name: IconName; size?: number; strokeWidth?: number }): React.ReactElement {
   const s = props.size ?? 22;
   return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={props.strokeWidth ?? 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={ICONS[props.name]} />
-    </svg>
+    <>
+      <svg className="icon-line" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={props.strokeWidth ?? 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={ICONS[props.name]} />
+      </svg>
+      <svg className="icon-pixel" width={s} height={s} viewBox="0 0 12 12" fill="currentColor" shapeRendering="crispEdges" aria-hidden="true">
+        <path d={PIXEL_ICONS[props.name]} />
+      </svg>
+    </>
   );
 }
 

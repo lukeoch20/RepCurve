@@ -1,0 +1,265 @@
+/* Pixel Press (RepCurve Style 003): small pixels, steady progress. A bright game-sprite look:
+   violet actions, mint chart marks and lavender paper; 5 × 7 grid lettering on short headings and
+   big numbers; square controls on a 2px edge grid with hard offset shadows; pixel icons and
+   stepped medals. Paint only: layout, spacing, tap sizes, wording and positions are unchanged. */
+
+/* Pixel Press 5x7: original grid lettering made for RepCurve, dedicated to the public domain
+   under CC0 1.0 (see assets/fonts/PixelPress5x7-LICENSE.txt). Small enough to ship inline. */
+@font-face {
+  font-family: "Pixel Press 5x7";
+  src: url("./assets/fonts/PixelPress5x7.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root[data-style="pixel"] {
+  --bg: #f2f0ff;
+  --card: #ffffff;
+  --sunk: #e4e0f4;
+  --ink: #24213d;
+  --muted: #605a78;
+  --line: #cbc4df;
+  --accent: #6535bf;
+  --accent-strong: #48228f;
+  --accent-ink: #ffffff;
+  --accent-wash: #ede3ff;
+  --accent-line: #8359b5;
+  --chart: #00777d;
+  --warn: #815100;
+  --warn-wash: #fff0c2;
+  --stop: #b3264f;
+  --stop-wash: #ffe2eb;
+  --shadow: 3px 3px 0 #7b7193;
+  --font-display: "Pixel Press 5x7", ui-monospace, monospace;
+  --font-body: "Liberation Sans", Arial, Helvetica, sans-serif;
+  --radius: 0px;
+  --radius-sm: 0px;
+  --tap: 48px;
+  /* Pixel Press's own: heading rows, control edges, focus, bevels */
+  --chrome: #ffffff;
+  --chrome-top: #ede3ff;
+  --chrome-ink: #24213d;
+  --control-line: #7b7193;
+  --focus: #48228f;
+  --button-top: #6535bf;
+  --bevel-hi: #ffffff;
+  --bevel-lo: #3d2367;
+  --medal-ink: #24213d;
+  color-scheme: light;
+}
+:root[data-style="pixel"][data-theme="dark"] {
+  --bg: #121226;
+  --card: #20203b;
+  --sunk: #18182f;
+  --ink: #f5f0ff;
+  --muted: #bbb4d3;
+  --line: #44415f;
+  --accent: #c1a3ff;
+  --accent-strong: #ddc9ff;
+  --accent-ink: #251340;
+  --accent-wash: #382650;
+  --accent-line: #a88cd2;
+  --chart: #61ddcc;
+  --warn: #ffe08a;
+  --warn-wash: #393018;
+  --stop: #ffa4c3;
+  --stop-wash: #44243b;
+  --shadow: 3px 3px 0 #090916;
+  --chrome: #20203b;
+  --chrome-top: #382650;
+  --chrome-ink: #f5f0ff;
+  --control-line: #9387b1;
+  --focus: #e2ceff;
+  --button-top: #c1a3ff;
+  --bevel-hi: #ddd0ff;
+  --bevel-lo: #100b21;
+  --medal-ink: #f5f0ff;
+  color-scheme: dark;
+}
+
+/* icons: the pixel drawings replace the line ones */
+[data-style="pixel"] .icon-line { display: none; }
+[data-style="pixel"] .icon-pixel { display: inline-block; }
+
+/* type: grid lettering for short headings and big numbers; the body stays an easy sans */
+[data-style="pixel"] :is(.title, .h2, .h3, .brand, .choice b, .stat b, .hero-num, .runner-clock, .ring .t, .stepper:not(.fixed) .value b, .week-day .k, .celebrate-stats .stat b) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+[data-style="pixel"] :is(.title, .h2, .h3, .brand, .choice b) { text-transform: uppercase; }
+/* the 5 × 7 grid reads large, so headings step down to the kit's sizes */
+[data-style="pixel"] .title { font-size: 1.75rem; line-height: 1.15; }
+[data-style="pixel"] .h2 { font-size: 1.35rem; }
+[data-style="pixel"] .h3 { font-size: 1.08rem; }
+[data-style="pixel"] .choice b { font-size: 1.1rem; }
+[data-style="pixel"] .eyebrow { font-weight: 700; }
+[data-style="pixel"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 0; }
+
+/* cards: square pixel frames with a hard offset shadow and notched corners */
+[data-style="pixel"] :is(.card, .stat, .celebrate-stats .stat) { border: 2px solid var(--line); border-radius: 0; box-shadow: var(--shadow); }
+[data-style="pixel"] :is(.card.tint, .card.flat) { box-shadow: none; }
+[data-style="pixel"] .card { position: relative; }
+[data-style="pixel"] .card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--bg), var(--bg)) left top / 2px 2px no-repeat,
+    linear-gradient(var(--bg), var(--bg)) right top / 2px 2px no-repeat,
+    linear-gradient(var(--bg), var(--bg)) left bottom / 2px 2px no-repeat,
+    linear-gradient(var(--bg), var(--bg)) right bottom / 2px 2px no-repeat;
+}
+/* a card's heading becomes a heading row in grid lettering over a pixel rule */
+[data-style="pixel"] .card:not(.tint, .flat) > :is(.h3, .eyebrow, .card-head, .spread:has(> .h3, > .eyebrow)):first-child {
+  margin: -16px -16px 4px;
+  padding: 12px 16px;
+  background: var(--chrome);
+  color: var(--chrome-ink);
+  box-shadow: inset 0 -2px 0 var(--line);
+}
+[data-style="pixel"] .card:not(.tint, .flat, .stack) > :is(.h3, .eyebrow, .card-head, .spread):first-child { margin-bottom: 12px; }
+[data-style="pixel"] .card:not(.tint, .flat) > .eyebrow:first-child,
+[data-style="pixel"] .card:not(.tint, .flat) > :first-child > :is(.eyebrow, .h3) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chrome-ink);
+}
+
+/* buttons: square blocks on a 2px grid; the hard edge moves to the top when pressed */
+[data-style="pixel"] .btn,
+[data-style="pixel"] .icon-btn,
+[data-style="pixel"] .chip,
+[data-style="pixel"] .dock-actions button {
+  border: 2px solid var(--control-line);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--control-line), 2px 2px 0 var(--control-line);
+}
+[data-style="pixel"] :is(.btn, .chip) { font-weight: 700; }
+[data-style="pixel"] :is(.btn, .icon-btn, .chip, .dock-actions button):active { transform: translateY(1px); background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
+[data-style="pixel"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
+  background: var(--accent);
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  box-shadow: inset 0 -2px 0 var(--bevel-lo), 2px 2px 0 var(--bevel-lo);
+}
+[data-style="pixel"] :is(.btn.primary, .btn.go, .dock-actions button.go):active { background: var(--accent-strong); box-shadow: inset 0 2px 0 var(--bevel-lo); }
+/* a chosen chip or segment: violet fill, bold, and an underline so the choice never rests on colour */
+[data-style="pixel"] .chip[aria-pressed="true"],
+[data-style="pixel"] .seg button[aria-pressed="true"] {
+  background: var(--accent) linear-gradient(var(--accent-ink), var(--accent-ink)) no-repeat center bottom 6px / calc(100% - 20px) 2px;
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--bevel-lo), 2px 2px 0 var(--bevel-lo);
+}
+[data-style="pixel"] .btn.outline { background: transparent; border-color: var(--accent); color: var(--accent); box-shadow: none; }
+[data-style="pixel"] .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); box-shadow: none; }
+[data-style="pixel"] .btn.danger { color: var(--stop); }
+[data-style="pixel"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: var(--card); box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.3), 2px 2px 0 rgb(0 0 0 / 0.3); }
+[data-style="pixel"] :is(.btn, .chip, .icon-btn):disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--control-line); box-shadow: none; }
+[data-style="pixel"] .btn.ghost:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
+
+/* segmented control: a recessed square track; the chosen segment gets a light top rule too */
+[data-style="pixel"] .seg { background: var(--sunk); border: 2px solid var(--control-line); border-radius: 0; padding: 0; }
+[data-style="pixel"] .seg button { border-radius: 0; }
+[data-style="pixel"] .seg button[aria-pressed="true"] {
+  background-position: center bottom 5px;
+  box-shadow: inset 0 2px 0 var(--accent), inset 0 4px 0 var(--bevel-hi), inset 0 -2px 0 var(--bevel-lo);
+}
+[data-style="pixel"] .seg.quiet button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: inset 0 -2px 0 var(--control-line), 0 0 0 2px var(--control-line); }
+
+/* choices and tiles: a clear square edge; chosen ones get the violet wash, edge and an inset stripe */
+[data-style="pixel"] .choice button { border: 2px solid var(--control-line); border-radius: 0; }
+[data-style="pixel"] .choice button[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: inset 2px 0 0 var(--accent-wash), inset 5px 0 0 var(--accent); }
+[data-style="pixel"] .tile { border: 2px solid var(--control-line); border-radius: 0; }
+[data-style="pixel"] .tile[aria-checked="true"] { border-color: var(--accent-line); box-shadow: none; }
+
+/* fields, steppers, switches */
+[data-style="pixel"] .input { border: 2px solid var(--control-line); border-radius: 0; }
+[data-style="pixel"] .stepper { border: 2px solid var(--control-line); border-radius: 0; }
+[data-style="pixel"] .stepper button { border: 2px solid var(--control-line); border-radius: 0; background: var(--card); color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--control-line); }
+[data-style="pixel"] .stepper button:active { background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
+[data-style="pixel"] .stepper button:disabled { opacity: 1; color: var(--muted); background: var(--sunk); box-shadow: none; }
+[data-style="pixel"] .switch { border-radius: 0; background: var(--sunk); border: 1px solid var(--control-line); box-shadow: inset 0 0 0 1px var(--control-line); }
+[data-style="pixel"] .switch::after { top: 2px; left: 2px; border-radius: 0; background: var(--card); box-shadow: 0 0 0 2px var(--control-line); }
+/* a check on the "on" side, a dash on the "off" side (same geometry as the other artist styles:
+   inside the 1px border the track is 48 × 28, so the check centres on (11, 14) and the dash on (37, 14)) */
+[data-style="pixel"] .switch::before { content: ""; position: absolute; box-sizing: border-box; left: 32.5px; top: 13px; width: 9px; height: 2px; background: var(--muted); }
+[data-style="pixel"] .switch:checked { background: var(--accent); border-color: var(--accent-line); box-shadow: inset 0 0 0 1px var(--accent-line); }
+[data-style="pixel"] .switch:checked::before { left: 5.5px; top: 9px; width: 11px; height: 6px; background: none; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
+
+/* tab bar: the card surface; the current tab sits in a violet wash under a violet rule */
+[data-style="pixel"] .tabbar { background: var(--card); border-top: 2px solid var(--line); backdrop-filter: none; }
+[data-style="pixel"] .tabbar button { color: var(--muted); margin: 4px; min-height: 54px; border-radius: 0; border: 2px solid transparent; }
+[data-style="pixel"] .tabbar button[aria-current="page"] { background: var(--accent-wash); color: var(--accent); border-color: var(--accent-line); box-shadow: inset 0 3px 0 var(--accent); font-weight: 700; }
+
+/* the workout header is a violet block */
+[data-style="pixel"] .runner-head { background: var(--accent); color: var(--accent-ink); border-bottom: 2px solid var(--bevel-lo); backdrop-filter: none; }
+[data-style="pixel"] .runner-head :is(.eyebrow, .meta, .title, .h2, .h3) { color: var(--accent-ink); }
+[data-style="pixel"] .runner-head .progress-track { background: color-mix(in srgb, var(--accent-ink) 25%, transparent); }
+[data-style="pixel"] .runner-head .progress-fill { background: var(--accent-ink); }
+
+/* the rest timer card */
+[data-style="pixel"] .dock-inner { border-radius: 0; border: 2px solid var(--control-line); box-shadow: var(--shadow); }
+[data-style="pixel"] .dock.go .dock-inner { background: var(--accent); border-color: var(--accent-line); color: var(--accent-ink); }
+[data-style="pixel"] .dock.go :is(.dock-label, .dock-next, .ring, .ring .l) { color: var(--accent-ink); }
+[data-style="pixel"] .dock.go .ring circle { stroke: color-mix(in srgb, var(--accent-ink) 30%, transparent); }
+[data-style="pixel"] .dock.go .ring circle + circle { stroke: var(--accent-ink); }
+[data-style="pixel"] .dock-label { color: var(--accent); font-weight: 700; }
+
+/* banners: a 2px edge in their own colour */
+[data-style="pixel"] .banner { border: 2px solid; border-radius: 0; }
+[data-style="pixel"] :is(.banner.info, .banner.good) { border-color: var(--accent); }
+[data-style="pixel"] :is(.banner.info, .banner.good) b { color: var(--accent); }
+[data-style="pixel"] .banner.adjust { border-color: var(--warn); }
+[data-style="pixel"] .banner.adjust b { color: var(--warn); }
+[data-style="pixel"] .banner.stop { border-color: var(--stop); }
+[data-style="pixel"] .banner.stop b { color: var(--stop); }
+[data-style="pixel"] .suggestion { border-radius: 0; }
+
+/* small shapes: square; the week circles and pair letters stay round, as in the kit */
+[data-style="pixel"] :is(.progress-track, .progress-fill, .challenge-bar, .challenge-bar i, .trophy-bar, .trophy-bar i, .range-track, .range-band, .muscle .bar, .muscle .bar i, .week-dots span, .steps i, .meter, .meter i) { border-radius: 0; }
+[data-style="pixel"] :is(.challenge-bar, .trophy-bar, .meter) { background: var(--sunk); box-shadow: inset 0 0 0 2px var(--line); }
+[data-style="pixel"] :is(.streak, .level-chip) { border-radius: 0; border: 2px solid var(--accent-line); background: var(--accent-wash); color: var(--accent); }
+[data-style="pixel"] .example-tag { border-radius: 0; border: 2px solid var(--control-line); }
+[data-style="pixel"] .set-row .cell { border-radius: 0; }
+[data-style="pixel"] .cal-day { border-radius: 0; }
+[data-style="pixel"] .glyph { border-radius: 0; border: 2px solid var(--control-line); background: var(--sunk); color: var(--chart); }
+[data-style="pixel"] :is(.lineup-tag, .block-tag) { border-color: var(--control-line); color: var(--accent); }
+[data-style="pixel"] .week-day.upcoming .k { border-color: var(--control-line); }
+[data-style="pixel"] .dot { border-radius: 0; }
+[data-style="pixel"] .sheet { border-radius: 0; border-top: 4px solid var(--accent); }
+[data-style="pixel"] .tip-spot { border-radius: 0; outline-color: var(--focus); }
+[data-style="pixel"] .chart-tip { background: var(--accent); color: var(--accent-ink); border-radius: 0; font-weight: 700; }
+
+/* medals: stepped sprites with ribbon tabs; tier colours from the kit */
+[data-style="pixel"] .medal :is(.ribbon, .disc, .rim, .mark) { display: none; }
+[data-style="pixel"] .medal .px { display: inline; }
+[data-style="pixel"] .medal .px-ribbon { fill: var(--accent); }
+[data-style="pixel"] .medal .px-edge { fill: var(--medal-ink); }
+[data-style="pixel"] .medal .px-fill { fill: var(--tier); }
+[data-style="pixel"] .medal .px-mark { fill: #24213d; font-family: var(--font-display); font-weight: 400; }
+[data-style="pixel"] .medal.bronze { --tier: #b97a4c; }
+[data-style="pixel"] .medal.silver { --tier: #c5bfb5; }
+[data-style="pixel"] .medal.gold { --tier: #d4ae59; }
+[data-style="pixel"] .medal.platinum { --tier: #d2d9d6; }
+[data-style="pixel"] .medal.locked .px-ribbon,
+[data-style="pixel"] .medal.locked .px-edge { fill: var(--control-line); }
+[data-style="pixel"] .medal.locked .px-fill { fill: var(--sunk); }
+[data-style="pixel"] .medal.locked .px-mark { fill: var(--muted); }
+[data-style="pixel"] .confetti i { border-radius: 0; }
+[data-style="pixel"] .confetti i.c1 { background: #61ddcc; }
+[data-style="pixel"] .confetti i.c2 { background: #d4ae59; }
+[data-style="pixel"] .confetti i.c3 { background: #f5b1d2; opacity: 1; }
+[data-style="pixel"] .celebrate-check { display: none; }
+[data-style="pixel"] .celebrate-check-px { display: inline; }
