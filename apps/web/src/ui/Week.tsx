@@ -3,7 +3,7 @@ import type { SessionPlan } from "@repcurve/engine";
 import type { Units } from "@repcurve/shared";
 import { exerciseCount, type WeekSession, type WeekSlot } from "../model/plan";
 import { cardioLabel, plural } from "../model/format";
-import { Icon } from "./common";
+import { Icon, type IconName } from "./common";
 import { CardioLineup, Lineup } from "./Lineup";
 
 const STATUS: Record<WeekSlot["status"], string> = { done: "done", skipped: "skipped", next: "up next", upcoming: "coming up" };
@@ -27,10 +27,29 @@ export function sessionSummary(plan: SessionPlan): string {
   return `${plural(exerciseCount(plan), "exercise")} · ~${Math.round(plan.estimatedMinutes)} min`;
 }
 
+/** Each kind of day has its own emblem. */
+const EMBLEM: Record<string, IconName> = {
+  A: "fullBody",
+  B: "fullBody",
+  C: "fullBody",
+  push: "push",
+  "ppl-push": "push",
+  pull: "pull",
+  "ppl-pull": "pull",
+  upper: "upper",
+  lower: "lower",
+  legs: "lower",
+  cardio: "run",
+};
+
+export function emblemFor(plan: Pick<SessionPlan, "kind" | "variant">): IconName {
+  return EMBLEM[plan.variant] ?? (plan.kind === "cardio" ? "run" : "dumbbell");
+}
+
 export function SessionGlyph(props: { plan: SessionPlan }): React.ReactElement {
   return (
-    <span className="glyph" aria-hidden="true">
-      <Icon name={props.plan.kind === "cardio" ? "run" : "dumbbell"} size={26} />
+    <span className="glyph" aria-hidden="true" data-day={props.plan.variant}>
+      <Icon name={emblemFor(props.plan)} size={26} />
     </span>
   );
 }
