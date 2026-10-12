@@ -8,6 +8,8 @@ import {
   type ExerciseChange,
   type Prescription,
   type SessionPlan,
+  type SwapEvent,
+  type SwapReason,
 } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
@@ -188,6 +190,7 @@ export function swapExercise(
   slot: string,
   exerciseId: string,
   permanent: boolean,
+  reason?: SwapReason,
 ): { active: ActiveSession; core: Core } {
   const p = prescriptionAt(active.plan, slot);
   if (!p || setsForSlot(active, slot).length > 0) return { active, core };
@@ -202,7 +205,9 @@ export function swapExercise(
   };
   const { [slot]: _a, ...advice } = active.advice;
   const { [slot]: _n, ...nextSet } = active.nextSet;
-  return { active: { ...active, plan, advice, nextSet }, core: permanent ? { ...core, state } : core };
+  const swap: SwapEvent = { slot, from: p.exerciseId, to: exerciseId, permanent, ...(reason ? { reason } : {}) };
+  const swaps = [...(active.swaps ?? []), swap];
+  return { active: { ...active, plan, advice, nextSet, swaps }, core: permanent ? { ...core, state } : core };
 }
 
 // ---------------------------------------------------------------- timers
@@ -380,6 +385,7 @@ function baseRecord(active: ActiveSession, now: number): Omit<SessionRecord, "ch
     sets: active.sets,
     deload: active.plan.deload,
     comeback: active.plan.comeback,
+    ...(active.swaps && active.swaps.length > 0 ? { swaps: active.swaps } : {}),
   };
 }
 

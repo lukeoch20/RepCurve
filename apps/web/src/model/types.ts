@@ -1,4 +1,4 @@
-import type { CardioActivity, ExerciseChange, SessionPlan, TrainingState } from "@repcurve/engine";
+import type { CardioActivity, ExerciseChange, SessionPlan, SwapEvent, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
 export interface Settings {
@@ -111,6 +111,8 @@ export interface ActiveSession {
   nextSet: Record<string, { loadKg: number | null; reps: number }>;
   /** Slots the user chose to skip for the rest of this session. */
   skippedSlots: string[];
+  /** Swaps made in this session, and why: the training profile learns from them. Missing means none. */
+  swaps?: SwapEvent[];
 }
 
 export interface CardioResult {
@@ -137,6 +139,8 @@ export interface SessionRecord {
   deload: boolean;
   comeback: boolean;
   skipped: boolean;
+  /** Swaps made in the session, and why. Missing on older records. */
+  swaps?: SwapEvent[];
 }
 
 export interface AppData {

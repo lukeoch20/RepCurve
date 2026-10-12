@@ -163,6 +163,9 @@ export function migrateRecord(r: unknown): SessionRecord | null {
     deload: r["deload"] === true,
     comeback: r["comeback"] === true,
     skipped: r["skipped"] === true,
+    ...(Array.isArray(r["swaps"])
+      ? { swaps: (r["swaps"] as unknown[]).filter((w): w is NonNullable<SessionRecord["swaps"]>[number] => isObj(w) && known(w["from"]) && known(w["to"]) && typeof w["slot"] === "string") }
+      : {}),
   };
 }
 

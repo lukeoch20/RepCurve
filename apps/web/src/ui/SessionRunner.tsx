@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, type Prescription, type SwapReason } from "@repcurve/engine";
+import { alternativesFor, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
 import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
 import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, plural, repsUnit } from "../model/format";
 import { contextFor, exerciseCount } from "../model/plan";
+import { profileFor } from "../model/profile";
 import {
   elapsedMs,
   loggedSet,
@@ -275,8 +276,10 @@ function ExerciseBlock(props: {
       </div>
       {p.painCheck && logged.length === 0 && !skipped && !painChecked ? (
         <div className="banner adjust" role="status">
-          <b>Last time this hurt</b>
-          How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's kept a step lighter either way.
+          <b>{p.caution ? `Your ${p.caution.toLowerCase()} hurt recently` : "Last time this hurt"}</b>
+          {p.caution
+            ? `This one works your ${p.caution.toLowerCase()} too. How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's held steady until your ${p.caution.toLowerCase()} has had a couple of pain-free sessions.`
+            : "How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's kept a step lighter either way."}
           <div className="row-wrap" style={{ marginTop: 10 }}>
             <button type="button" className="btn small" onClick={() => setPainChecked(true)}>Feels fine</button>
             <button type="button" className="btn small" onClick={() => setGentleSwap(true)}>Something gentler</button>
@@ -518,10 +521,14 @@ function PainSheet(props: { active: ActiveSession; slot: string; setIndex: numbe
 }
 
 function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; reason?: SwapReason; onClose: () => void }): React.ReactElement {
-  const { dispatch } = useStore();
+  const { dispatch, data } = useStore();
   const [reason, setReason] = useState<SwapReason | undefined>(props.reason);
+  // A reason the user picked is remembered; the gentler options offered after pain are not "too hard".
+  const [chosen, setChosen] = useState(false);
   const [permanent, setPermanent] = useState(false);
+  const [sticks, setSticks] = useState(false);
   const ctx = contextFor(props.core);
+  const profile = useMemo(() => profileFor(props.core, data.history, Date.now()), [props.core, data.history]);
   const inSession = useMemo(
     () => [...props.active.plan.supersets.flatMap((ss) => ss.items), ...(props.active.plan.finisher ? [props.active.plan.finisher] : [])].map((x) => x.exerciseId),
     [props.active.plan],
@@ -529,8 +536,12 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
   const alts = alternativesFor(props.p, ctx, inSession, reason);
   const pickReason = (r: SwapReason) => {
     setReason(r);
-    // Busy equipment is a today problem; not liking an exercise is a for-good one.
-    setPermanent(r === "dislike");
+    setChosen(true);
+    // Busy equipment is a today problem; not liking an exercise is a for-good one, and so is finding it
+    // too hard or unsteady a second time.
+    const stick = swapSticks(profile, props.p.exerciseId, r);
+    setPermanent(stick);
+    setSticks(stick && r !== "dislike");
   };
   return (
     <Sheet title={`Swap ${props.p.name}`} onClose={props.onClose}>
@@ -552,7 +563,7 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
             key={e.id}
             type="button"
             onClick={() => {
-              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent });
+              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent, ...(chosen && reason ? { reason } : {}) });
               props.onClose();
             }}
           >
@@ -567,7 +578,9 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
       <label className="toggle" htmlFor="perm">
         <span className="grow">
           <b>Always use this instead</b>
-          <span className="meta small" style={{ display: "block" }}>Otherwise the swap is for today only.</span>
+          <span className="meta small" style={{ display: "block" }}>
+            {sticks ? `You've swapped ${props.p.name} for this reason before, so this one sticks. Untick to keep it for today only.` : "Otherwise the swap is for today only."}
+          </span>
         </span>
         <input id="perm" type="checkbox" role="switch" className="switch" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} />
       </label>
