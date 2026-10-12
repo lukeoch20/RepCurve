@@ -2,9 +2,10 @@ import React, { useMemo, useState } from "react";
 import { MUSCLES } from "@repcurve/engine";
 import { loadUnitsFor } from "@repcurve/shared";
 import { plural } from "../model/format";
-import { currentProgram, weekSessions } from "../model/plan";
+import { contextFor, currentProgram, weekSessions } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { Icon } from "./common";
+import { ExerciseLibrary } from "./ExerciseInfo";
 import { useTip } from "./tips";
 import { SessionRow, WeekStrip } from "./Week";
 
@@ -35,6 +36,8 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
   const units = loadUnitsFor(core.profile, core.equipment);
   const adjusted = adjustmentSummary(history);
   const [explainOpen, setExplainOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const available = useMemo(() => new Set(contextFor(core).pool.exercises.map((e) => e.id)), [core]);
   const weekTip = useTip("plan.week");
   const [lo, hi] = program.volumeTarget;
   const max = Math.max(hi + 4, ...MUSCLES.map((m) => program.weeklyVolume[m]));
@@ -99,6 +102,10 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
           })}
         </div>
       </section>
+      <button type="button" className="btn" onClick={() => setLibraryOpen(true)}>
+        Browse all exercises
+      </button>
+      {libraryOpen ? <ExerciseLibrary available={available} onClose={() => setLibraryOpen(false)} /> : null}
       <p className="meta small">
         Plan numbers come from training research: weekly hard sets drive muscle growth with diminishing returns, sets taken close to failure count most, and short sessions work when the weekly total is there.
       </p>

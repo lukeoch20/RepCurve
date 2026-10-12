@@ -14,6 +14,9 @@ export async function onboard(page: Page) {
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByText("80 minutes")).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
+  // Where: at home, picked to start.
+  await expect(page.getByRole("group", { name: "Where you train" }).getByRole("button", { name: /At home/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Next" }).click();
   const weights = page.getByRole("group", { name: "Dumbbell weights" });
   for (const w of ["10", "15", "20", "25", "30"]) await weights.getByRole("button", { name: w, exact: true }).click();
   await page.getByRole("switch", { name: "Treadmill" }).check();

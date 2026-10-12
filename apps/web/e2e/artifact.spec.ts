@@ -80,6 +80,7 @@ test("the claude.ai page saves to the account database and survives a reload", a
   await p.getByRole("button", { name: /A little/ }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();
+  await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("group", { name: "Dumbbells" }).getByRole("button", { name: "None" }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();

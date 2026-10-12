@@ -1,8 +1,10 @@
 import type { Split } from "@repcurve/shared";
-import { initialTrainingState, type TrainingState } from "@repcurve/engine";
+import { initialTrainingState, type CardioActivity, type TrainingState } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
+import { MACHINES } from "@repcurve/shared";
 import type { Equipment, Profile } from "@repcurve/shared";
-import { DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type SessionRecord, type Settings } from "./types";
+import { upgradeEquipment } from "./equipment";
+import { DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
 
 /**
  * Bring stored or imported data up to the current shape: fill defaults that older versions
@@ -43,6 +45,23 @@ export function validEquipment(e: unknown): e is Equipment {
   return false;
 }
 
+/** Equipment in the current shape: band anchors for older band setups, only machines the app knows. */
+function migrateEquipment(e: Equipment): Equipment {
+  const out = upgradeEquipment(e);
+  return Array.isArray(out.machines) ? { ...out, machines: out.machines.filter((m) => MACHINES.includes(m)) } : out;
+}
+
+function migrateLocations(l: unknown): Locations | undefined {
+  if (!isObj(l)) return undefined;
+  const out: Locations = { at: l["at"] === "gym" ? "gym" : "home" };
+  if (validEquipment(l["home"])) out.home = migrateEquipment(l["home"]);
+  if (validEquipment(l["gym"])) out.gym = migrateEquipment(l["gym"]);
+  if (!out[out.at]) out.at = out.home ? "home" : "gym";
+  return out.home || out.gym ? out : undefined;
+}
+
+const ACTIVITIES: CardioActivity[] = ["walking", "running", "cycling", "elliptical", "rowing", "stairs", "jump_rope", "marching"];
+
 function migrateSettings(s: unknown): Settings {
   const o = isObj(s) ? s : {};
   return {
@@ -51,6 +70,7 @@ function migrateSettings(s: unknown): Settings {
     sound: typeof o["sound"] === "boolean" ? o["sound"] : DEFAULT_SETTINGS.sound,
     keepAwake: typeof o["keepAwake"] === "boolean" ? o["keepAwake"] : DEFAULT_SETTINGS.keepAwake,
     haptics: typeof o["haptics"] === "boolean" ? o["haptics"] : DEFAULT_SETTINGS.haptics,
+    ...(typeof o["cardioActivity"] === "string" && ACTIVITIES.includes(o["cardioActivity"] as CardioActivity) ? { cardioActivity: o["cardioActivity"] as CardioActivity } : {}),
   };
 }
 
@@ -91,12 +111,22 @@ export function migrateCore(c: unknown): Core | null {
     version: 1,
     // Setups from before splits existed move to push/pull, the default.
     profile: { ...c["profile"], split: splitOf(c["profile"]) },
-    equipment: c["equipment"],
+    equipment: migrateEquipment(c["equipment"]),
     settings: migrateSettings(c["settings"]),
     state: migrateState(c["state"]),
     startedAt,
     nextIndex: isNum(c["nextIndex"]) ? Math.max(0, Math.floor(c["nextIndex"])) : 0,
   };
+  if (Array.isArray(c["activities"])) {
+    core.activities = (c["activities"] as unknown[]).filter(
+      (a): a is NonNullable<Core["activities"]>[number] => isObj(a) && isNum(a["at"]) && isNum(a["minutes"]) && a["minutes"] > 0 && typeof a["name"] === "string",
+    ).map((a) => ({ at: a.at, name: a.name, minutes: a.minutes, vigorous: a.vigorous === true }));
+  }
+  const locations = migrateLocations(c["locations"]);
+  if (locations) {
+    core.locations = locations;
+    core.equipment = locations[locations.at]!;
+  }
   if (isNum(c["positionOffset"])) core.positionOffset = Math.floor(c["positionOffset"]);
   return core;
 }

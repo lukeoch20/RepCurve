@@ -17,6 +17,7 @@ async function setUp(page: Page, split?: string) {
   await expect(choice).toContainText("Upper day: chest, back, shoulders and arms");
   if (split) await choice.getByRole("button", { name: new RegExp(`^${split}`) }).click();
   await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
   const weights = page.getByRole("group", { name: "Dumbbell weights" });
   for (const w of ["10", "15", "20"]) await weights.getByRole("button", { name: w, exact: true }).click();
   await page.getByRole("button", { name: "Next" }).click();
@@ -39,7 +40,7 @@ test("full body and upper/lower can be chosen instead, and changed later", async
   await page.getByRole("button", { name: "Edit profile, schedule and equipment" }).click();
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("group", { name: "Split" }).getByRole("button", { name: /^Upper \/ Lower/ }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next" }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await page.getByRole("button", { name: "Today" }).click();
   await expect(page.getByRole("heading", { name: "Upper body" })).toBeVisible();

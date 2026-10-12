@@ -5,13 +5,14 @@ export { makeContext } from "./context.js";
 export type { EngineContext } from "./context.js";
 export { trainingLevel, volumeTarget } from "./level.js";
 export { weeklyTemplate } from "./template.js";
-export { buildPool, pickExercise } from "./pool.js";
+export { buildPool, pickExercise, hasGymEquipment, classOf } from "./pool.js";
+export { coverageNotes } from "./session.js";
+export { cardioOptions } from "./cardio.js";
 export {
   progressExercise,
   calibrate,
   freshProgress,
   ladderNeighbour,
-  alternativeOnOtherLadder,
   convertLoad,
 } from "./progression.js";
 export type { ExerciseProgress, ProgressionAction, ProgressionResult } from "./progression.js";
@@ -25,6 +26,7 @@ export {
   prescriptionFor,
   prescriptionsOf,
   alternativesFor,
+  type SwapReason,
   swapPrescription,
   COMEBACK_DAYS,
   STRAIN_THRESHOLD,

@@ -104,7 +104,7 @@ export const TIPS = [
     id: "run.hurt",
     kind: "lifting",
     title: "Burn is fine, pain is not",
-    body: "A burning, tired feeling in the muscle is normal. Sharp pain, or pain in a joint, means stop: tap It hurt and that exercise is swapped for a gentler one next time.",
+    body: "A burning, tired feeling in the muscle is normal. Sharp pain, or pain in a joint, means stop: tap It hurt. That exercise stops for today, and next time it's a step lighter with a check-in before you start.",
   },
   {
     id: "run.menu",

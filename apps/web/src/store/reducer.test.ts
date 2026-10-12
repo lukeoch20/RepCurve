@@ -68,3 +68,25 @@ describe("dayLabel", () => {
     expect(dayLabel(new Date(2026, 8, 20, 12).getTime(), now)).toBe(new Date(2026, 8, 20).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
   });
 });
+
+describe("reducer: training at home and at a gym", () => {
+  const gym: Equipment = { ...equipment, barbell: true, rack: true, cables: true, machines: ["leg_press", "lat_pulldown", "chest_press"] };
+
+  it("plans from where the user trains today, and switches with the place", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+    expect(s.data.core!.equipment).toEqual(equipment);
+    s = reducer(s, { type: "location", at: "gym" });
+    expect(s.data.core!.equipment).toEqual(gym);
+    expect(s.data.core!.locations!.at).toBe("gym");
+    // Changing units from Settings keeps both places.
+    s = reducer(s, { type: "setup", profile: { ...profile, units: "kg" }, equipment: s.data.core!.equipment, now: T0 });
+    expect(s.data.core!.locations!.home).toEqual(equipment);
+    expect(s.data.core!.equipment).toEqual(gym);
+  });
+
+  it("doesn't switch place in the middle of a session", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+    s = reducer(s, { type: "start", now: T0, minutes: null });
+    expect(reducer(s, { type: "location", at: "gym" })).toBe(s);
+  });
+});

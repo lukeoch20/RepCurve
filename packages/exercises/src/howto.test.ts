@@ -34,7 +34,7 @@ describe("how-to guides", () => {
 
   it("only treats a bench as optional when the exercise doesn't require one", () => {
     for (const e of EXERCISES) {
-      const needsBench = e.requires.every((set) => set.includes("bench") || set.includes("flat_bench"));
+      const needsBench = e.requires.every((set) => set.includes("bench") || set.includes("flat_bench") || set.includes("adjustable_bench"));
       if (needsBench) continue;
       const h = getHowTo(e.id)!;
       for (const line of [h.setup, ...h.steps]) {

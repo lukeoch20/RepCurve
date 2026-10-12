@@ -61,9 +61,9 @@ export function App(): React.ReactElement {
   } else if (!core || editingSetup) {
     body = (
       <Onboarding
-        {...(core ? { initial: { profile: core.profile, equipment: core.equipment }, onCancel: () => setEditingSetup(false) } : {})}
-        onDone={(profile, equipment) => {
-          store.dispatch({ type: "setup", profile, equipment, now: Date.now() });
+        {...(core ? { initial: { profile: core.profile, equipment: core.equipment, ...(core.locations ? { locations: core.locations } : {}) }, onCancel: () => setEditingSetup(false) } : {})}
+        onDone={(profile, equipment, locations) => {
+          store.dispatch({ type: "setup", profile, equipment, locations, now: Date.now() });
           setEditingSetup(false);
           setTab("today");
         }}

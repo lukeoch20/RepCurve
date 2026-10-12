@@ -16,6 +16,12 @@ export interface TimedItem {
   reps?: number;
 }
 
+/** One-time setup for a set of exercises: adjusting machines, loading bars, anchoring bands. */
+export function setupSeconds(exercises: Exercise[]): number {
+  return exercises.reduce((sum, e) => sum + (e.setupSec ?? 0), 0);
+}
+
+/** Seconds for `rounds` rounds of a superset (setup not included: it happens once). */
 export function supersetSeconds(items: TimedItem[], rounds: number, transitionSec: number, restSec: number): number {
   const work = items.reduce((sum, it) => sum + setSeconds(it.exercise, it.repRange, it.reps), 0);
   const perRound = work + transitionSec * (items.length - 1) + restSec;
@@ -40,13 +46,13 @@ export function restSecondsForBudget(budget: number): number {
 
 export const TRANSITION_SEC = 20;
 
-/** Seconds a planned core finisher takes, with 30 s between sets. */
+/** Seconds a planned core finisher takes, with 30 s between sets and any setup. */
 export function finisherSeconds(e: Exercise, repRange: [number, number], sets: number, reps?: number): number {
-  return sets * setSeconds(e, repRange, reps) + Math.max(0, sets - 1) * 30;
+  return (e.setupSec ?? 0) + sets * setSeconds(e, repRange, reps) + Math.max(0, sets - 1) * 30;
 }
 
 /** Sets of a core finisher that fit its reserved time (at least one, at most three). */
 export function finisherSets(e: Exercise, repRange: [number, number], budgetMinutes: number, reps?: number): number {
   const reserved = finisherMinutes(budgetMinutes) * 60;
-  return Math.max(1, Math.min(3, Math.floor((reserved + 30) / (setSeconds(e, repRange, reps) + 30))));
+  return Math.max(1, Math.min(3, Math.floor((reserved - (e.setupSec ?? 0) + 30) / (setSeconds(e, repRange, reps) + 30))));
 }

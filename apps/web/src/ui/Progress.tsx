@@ -8,6 +8,7 @@ import { userProjection, weeksSince } from "../model/projection";
 import type { Core, SessionRecord } from "../model/types";
 import { Seg } from "./common";
 import { ProjectionCard } from "./ProjectionCard";
+import { ActivityCard } from "./ActivityCard";
 import { ShareBars, TrendChart } from "./charts";
 import { useTip } from "./tips";
 import { CalendarCard, ChallengeCard, LifetimeCard, RecordsWall, TrophyShelf } from "./Trophies";
@@ -57,6 +58,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         <div className="stat"><b className="num">{minutes}</b><span>minutes</span></div>
         <div className="stat"><b className="num">{streak}</b><span>week streak</span></div>
       </div>
+
+      <ActivityCard core={core} history={history} now={now} />
 
       {lift ? (
         <StrengthTrend lifts={lifts} lift={lift} onLift={setLiftId} range={range} now={now} units={units} />

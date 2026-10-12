@@ -27,3 +27,30 @@ describe("splits in saved data", () => {
     expect(migrateCore(odd)!.profile.split).toBe("push_pull");
   });
 });
+
+describe("equipment from before the evidence review", () => {
+  it("keeps band rows for people who already had bands (they assumed a door anchor)", () => {
+    const withBands = migrateCore(newCore(profile, { ...equipment, bands: ["medium"] }, 0))!;
+    expect(withBands.equipment.bandAnchor).toBe(true);
+    expect(migrateCore(newCore(profile, equipment, 0))!.equipment.bandAnchor).toBeUndefined();
+  });
+
+  it("keeps valid places, drops machines it doesn't know, and trains where the user said", () => {
+    const gym: Equipment = { ...equipment, cables: true, machines: ["leg_press", "teleporter" as never] };
+    const raw = { ...newCore(profile, equipment, 0), locations: { home: equipment, gym, at: "gym" } };
+    const c = migrateCore(JSON.parse(JSON.stringify(raw)))!;
+    expect(c.locations?.at).toBe("gym");
+    expect(c.equipment.machines).toEqual(["leg_press"]);
+    const broken = migrateCore(JSON.parse(JSON.stringify({ ...raw, locations: { home: equipment, gym: { nope: 1 }, at: "gym" } })))!;
+    expect(broken.locations?.at).toBe("home");
+    expect(broken.locations?.gym).toBeUndefined();
+  });
+
+  it("keeps logged outside activity and a cardio preference", () => {
+    const raw = { ...newCore(profile, equipment, 0), activities: [{ at: 5, name: "Walk", minutes: 30, vigorous: false }, { at: 6, minutes: -1 }] };
+    raw.settings = { ...raw.settings, cardioActivity: "cycling" };
+    const c = migrateCore(JSON.parse(JSON.stringify(raw)))!;
+    expect(c.activities).toEqual([{ at: 5, name: "Walk", minutes: 30, vigorous: false }]);
+    expect(c.settings.cardioActivity).toBe("cycling");
+  });
+});

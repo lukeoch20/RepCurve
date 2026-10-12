@@ -390,6 +390,14 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .howto-list li::marker { color: var(--accent); }
 .howto-list.avoid li::marker { color: var(--stop); }
 .sheet:focus { outline: none; }
+.sources summary { cursor: pointer; }
+.meter { height: 10px; border-radius: 999px; background: var(--sunk); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); }
+.dot.on { background: var(--accent); }
+.sources a { color: var(--accent); }
+.library-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.library-row { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 48px; padding: 8px 2px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; text-align: left; }
 
 /* RepCurve Test: always visible, so it's never mistaken for the real app */
 .test-strip { display: flex; align-items: center; justify-content: center; gap: 8px; padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px; background: var(--ink); color: var(--bg); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; text-align: center; }

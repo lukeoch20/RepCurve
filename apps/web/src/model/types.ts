@@ -1,4 +1,4 @@
-import type { ExerciseChange, SessionPlan, TrainingState } from "@repcurve/engine";
+import type { CardioActivity, ExerciseChange, SessionPlan, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
 export interface Settings {
@@ -10,6 +10,8 @@ export interface Settings {
   keepAwake: boolean;
   /** A buzz on each logged set and a bigger one at the end, where the phone allows it. */
   haptics: boolean;
+  /** The cardio activity the user picked last; used whenever the day's equipment and format allow. */
+  cardioActivity?: CardioActivity;
 }
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
@@ -17,11 +19,35 @@ export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, soun
 export const REST_CHOICES = [30, 45, 60, 75, 90, 120, 150, 180];
 export const TRANSITION_CHOICES = [10, 15, 20, 30, 45];
 
+/** Activity done outside RepCurve (a walk, a match, a swim), counted toward the weekly target. */
+export interface ExtraActivity {
+  /** Epoch ms when it was logged; also its id. */
+  at: number;
+  name: string;
+  minutes: number;
+  /** Breathing hard, few words at a time: counts double. */
+  vigorous: boolean;
+}
+
+export type Location = "home" | "gym";
+
+/** Equipment for each place the user trains, and where today's training happens. */
+export interface Locations {
+  home?: Equipment;
+  gym?: Equipment;
+  at: Location;
+}
+
 /** Everything about the user and their training that isn't a session log. */
 export interface Core {
   version: 1;
   profile: Profile;
+  /** Equipment where the user is training now: what plans are built from. */
   equipment: Equipment;
+  /** Places the user trains. Missing on setups from before locations existed. */
+  locations?: Locations;
+  /** Activity logged outside RepCurve. Missing means none. */
+  activities?: ExtraActivity[];
   settings: Settings;
   state: TrainingState;
   /** ISO timestamp of the first day. */
