@@ -7,6 +7,29 @@ import { Icon, Sheet } from "./common";
 
 const TIER_LABEL = { bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum" } as const;
 
+/** Pixel Press medal sprite on a 12 × 12 grid of 4-unit pixels: ribbon tabs, a stepped edge and the disc. */
+const sprite = (rows: string[], on: string) =>
+  rows
+    .map((row, y) => [...row.matchAll(new RegExp(`${on}+`, "g"))].map((m) => `M${m.index! * 4} ${y * 4}h${m[0].length * 4}v4h-${m[0].length * 4}z`).join(""))
+    .join("");
+const MEDAL_SPRITE = [
+  "...rr..rr...",
+  "...rr..rr...",
+  "...eeeeee...",
+  "..effffffe..",
+  ".effffffffe.",
+  ".effffffffe.",
+  ".effffffffe.",
+  ".effffffffe.",
+  ".effffffffe.",
+  "..effffffe..",
+  "...eeeeee...",
+  "............",
+];
+const PX_RIBBON = sprite(MEDAL_SPRITE, "r");
+const PX_EDGE = sprite(MEDAL_SPRITE, "e");
+const PX_FILL = sprite(MEDAL_SPRITE, "f");
+
 /** A medal: tier colour and a short mark when earned, an outline while locked. */
 export function Medal(props: { badge: Pick<Badge, "mark" | "tier" | "earned">; size?: number }): React.ReactElement {
   const s = props.size ?? 48;
@@ -16,9 +39,18 @@ export function Medal(props: { badge: Pick<Badge, "mark" | "tier" | "earned">; s
       <path className="ribbon" d="M15 2h7l4 14h-7zM33 2h-7l-4 14h7z" />
       <circle className="disc" cx="24" cy="29" r="16" />
       <circle className="rim" cx="24" cy="29" r="12.5" fill="none" />
-      <text x="24" y="33.5" textAnchor="middle" fontSize={props.badge.mark.length > 2 ? 9 : 12} fontWeight="700">
+      <text className="mark" x="24" y="33.5" textAnchor="middle" fontSize={props.badge.mark.length > 2 ? 9 : 12} fontWeight="700">
         {props.badge.mark}
       </text>
+      {/* The Pixel Press sprite: shown instead of the round medal in that style. */}
+      <g className="px" shapeRendering="crispEdges">
+        <path className="px-ribbon" d={PX_RIBBON} />
+        <path className="px-edge" d={PX_EDGE} />
+        <path className="px-fill" d={PX_FILL} />
+        <text className="px-mark" x="24" y="31" textAnchor="middle" fontSize={props.badge.mark.length > 2 ? 9 : 11}>
+          {props.badge.mark}
+        </text>
+      </g>
     </svg>
   );
 }

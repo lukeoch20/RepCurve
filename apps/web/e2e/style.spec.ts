@@ -4,7 +4,7 @@ import { onboard } from "./helpers";
 const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 const styleGroup = (page: Page) => page.getByRole("group", { name: "Style" });
 
-test("Bluebird light is the default look, with Bluebird dark, Fired Forge and Classic in Settings",async ({ page }) => {
+test("Bluebird light is the default look, with Bluebird dark, Fired Forge, Pixel Press and Classic in Settings", async ({ page }) => {
   await onboard(page);
   await expect(page.locator("html")).toHaveAttribute("data-style", "bluebird");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -34,6 +34,25 @@ test("Bluebird light is the default look, with Bluebird dark, Fired Forge and Cl
   await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-style", "forge");
   await expect(styleGroup(page).getByRole("button", { name: /Fired Forge dark/ })).toHaveAttribute("aria-pressed", "true");
+
+  // Pixel Press, light and dark: grid lettering, pixel icons and stepped medals.
+  await styleGroup(page).getByRole("button", { name: /Pixel Press light/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "pixel");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  expect(await background(page)).toBe("rgb(242, 240, 255)");
+  const title = page.getByRole("heading", { name: "Make it yours" });
+  expect(await title.evaluate((h) => getComputedStyle(h).fontFamily)).toContain("Pixel Press 5x7");
+  expect(await page.evaluate(async () => (await document.fonts.load('16px "Pixel Press 5x7"', "PUSH")).length)).toBeGreaterThan(0);
+  const tab = page.getByRole("button", { name: "Settings" });
+  await expect(tab.locator(".icon-pixel")).toBeVisible();
+  await expect(tab.locator(".icon-line")).toBeHidden();
+  await styleGroup(page).getByRole("button", { name: /Pixel Press dark/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(await background(page)).toBe("rgb(18, 18, 38)");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "pixel");
+  await expect(styleGroup(page).getByRole("button", { name: /Pixel Press dark/ })).toHaveAttribute("aria-pressed", "true");
 
   // Classic: the original look, following the phone's light or dark mode.
   await styleGroup(page).getByRole("button", { name: /Classic/ }).click();

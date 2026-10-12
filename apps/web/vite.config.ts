@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => {
               ],
             },
             workbox: {
-              globPatterns: ["**/*.{js,css,html,svg,png}"],
+              globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
               // The real app's offline worker covers /RepCurve/, which contains /RepCurve/test/. It must
               // never answer for the test app: no test files cached, and test pages go to the network.
               ...(test ? {} : { globIgnores: ["test/**"], navigateFallbackDenylist: [/\/test\//] }),
