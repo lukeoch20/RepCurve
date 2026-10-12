@@ -71,6 +71,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Each icon ships a line and a pixel drawing; only Pixel Press shows the pixel one. */
+.icon-pixel { display: none; }
 html, body { margin: 0; }
 body {
   background: var(--bg);
@@ -445,6 +447,7 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 }
 
 /* gamification */
+.medal .px, .celebrate-check-px { display: none; }
 .medal .ribbon { fill: color-mix(in srgb, var(--accent) 70%, var(--card)); }
 .medal .disc { fill: var(--tier); }
 .medal .rim { stroke: color-mix(in srgb, white 45%, var(--tier)); stroke-width: 1.5; }
