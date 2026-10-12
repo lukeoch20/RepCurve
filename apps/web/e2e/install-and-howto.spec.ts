@@ -50,9 +50,10 @@ test("tapping an exercise shows how to do it, before and during a workout", asyn
   await page.getByRole("button", { name: "Goblet squat" }).click();
   const sheet = page.getByRole("dialog", { name: "Goblet squat" });
   await expect(sheet).toContainText("Each rep");
-  await expect(sheet).toContainText("Works your quads and glutes");
-  // Easier and harder versions open in place (the sheet takes their name), with a way back.
-  await sheet.getByRole("button", { name: /^Harder:/ }).click();
+  await expect(sheet).toContainText("Works your quadriceps and gluteus maximus");
+  await expect(sheet).toContainText("Why it's here");
+  // Other exercises for the same job open in place (the sheet takes their name), with a way back.
+  await sheet.getByRole("button", { name: "Dumbbell front squat" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toHaveAccessibleName("Dumbbell front squat");
   await dialog.getByRole("button", { name: "Back to Goblet squat" }).click();

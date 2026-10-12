@@ -3,11 +3,15 @@ import type { Equipment, Exercise, Muscle, Pattern, Profile, Split, TrainingLeve
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
 import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
-import { TRANSITION_SEC, finisherMinutes, finisherSeconds, finisherSets, restSecondsForBudget, supersetSeconds, warmupMinutes } from "./timing.js";
+import { TRANSITION_SEC, finisherMinutes, finisherSeconds, finisherSets, restSecondsForBudget, setupSeconds, supersetSeconds, warmupMinutes } from "./timing.js";
 import type { Pool, Prescription, SessionPlan, Superset, WarmupItem } from "./types.js";
 
-/** A place in a pair: a movement, optionally narrowed to one muscle (curls for biceps, raises for shoulders). */
-export type SlotSpec = Pattern | { pattern: Pattern; muscle: Muscle };
+/**
+ * A place in a pair: a movement, optionally a family within it. For isolation the family is the job
+ * (curls for biceps, lateral raises, hamstring curls); for compound movements it's a preference
+ * (a lunge rather than a squat, a bridge rather than a Romanian deadlift).
+ */
+export type SlotSpec = Pattern | { pattern: Pattern; family: string };
 type Pair = [SlotSpec, SlotSpec];
 
 interface Variant {
@@ -23,42 +27,48 @@ interface Variant {
   allowShared?: boolean;
 }
 
-const iso = (muscle: Muscle): SlotSpec => ({ pattern: "isolation", muscle });
+const iso = (family: string): SlotSpec => ({ pattern: "isolation", family });
+const lunge: SlotSpec = { pattern: "squat", family: "lunge" };
+const bridge: SlotSpec = { pattern: "hinge", family: "bridge" };
 
-/** Pattern pairs per session variant, in priority order. */
+/**
+ * Pattern pairs per session variant, in priority order. Hamstrings get a knee-flexion exercise
+ * (a curl or walkout) as well as hinges, and shoulders get lateral and rear work, per the 2026
+ * evidence review; pairs avoid two exercises that compete for the same muscles.
+ */
 export const VARIANTS: Variant[] = [
   {
     key: "A",
     name: "Full body A",
     pairs: [["squat", "horizontal_push"], ["hinge", "row"], ["vertical_push", "vertical_pull"]],
-    extra: [["isolation", "isolation"], ["squat", "horizontal_push"]],
+    extra: [[iso("lateral_raise"), iso("calf")], [iso("knee_flexion"), iso("biceps")]],
     offsets: {},
   },
   {
     key: "B",
     name: "Full body B",
-    pairs: [["hinge", "horizontal_push"], ["squat", "row"], ["vertical_push", "vertical_pull"]],
-    extra: [["isolation", "isolation"], ["hinge", "horizontal_push"]],
-    offsets: { squat: 1, hinge: 1 },
+    pairs: [[lunge, "vertical_push"], [iso("knee_flexion"), "row"], ["horizontal_push", "vertical_pull"]],
+    extra: [[iso("triceps"), iso("calf")], [bridge, iso("rear_delt")]],
+    offsets: {},
   },
   {
     key: "C",
     name: "Full body C",
-    pairs: [["squat", "row"], ["hinge", "horizontal_push"], ["vertical_push", "isolation"]],
-    extra: [["isolation", "isolation"], ["squat", "row"]],
+    pairs: [["squat", "row"], ["hinge", "horizontal_push"], ["vertical_push", iso("knee_flexion")]],
+    extra: [[iso("lateral_raise"), iso("biceps")], [iso("calf"), iso("triceps")]],
     offsets: {},
   },
 ];
 
 const PUSH_FALLBACK: Pattern[] = ["horizontal_push", "vertical_push", "squat", "core"];
 // Core work is the last resort on a split day with little equipment (no bar, bands, bench or dumbbells).
-const PULL_FALLBACK: Pattern[] = ["row", "vertical_pull", "hinge", "core"];
+const PULL_FALLBACK: Pattern[] = ["row", "vertical_pull", "hinge", "isolation", "core"];
 const UPPER_FALLBACK: Pattern[] = ["horizontal_push", "row", "vertical_push", "vertical_pull", "core"];
 const LOWER_FALLBACK: Pattern[] = ["squat", "hinge", "core"];
 
 const LOWER: Omit<Variant, "key" | "name"> = {
-  pairs: [["squat", "hinge"], ["squat", "hinge"], ["squat", iso("calves")]],
-  extra: [["hinge", "squat"], ["squat", "hinge"]],
+  pairs: [["squat", "hinge"], [lunge, iso("knee_flexion")], [iso("knee_extension"), iso("calf")]],
+  extra: [[bridge, iso("hip_abduction")], ["squat", "hinge"]],
   offsets: {},
   fallback: LOWER_FALLBACK,
   allowShared: true,
@@ -71,9 +81,9 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "push",
       name: "Push day",
-      // Mostly upper body: one squat pair, then presses with triceps and shoulders.
-      pairs: [["horizontal_push", "squat"], ["vertical_push", iso("triceps")], ["horizontal_push", iso("shoulders")]],
-      extra: [["vertical_push", "squat"], ["horizontal_push", iso("calves")]],
+      // Mostly upper body: one squat pair, then presses with triceps and lateral raises.
+      pairs: [["horizontal_push", "squat"], ["vertical_push", iso("triceps")], ["horizontal_push", iso("lateral_raise")]],
+      extra: [["vertical_push", lunge], [iso("knee_extension"), iso("calf")]],
       offsets: {},
       fallback: PUSH_FALLBACK,
       allowShared: true,
@@ -81,9 +91,9 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "pull",
       name: "Pull day",
-      // Mostly upper body: one hinge pair, then pulls with biceps and another row.
-      pairs: [["row", "hinge"], ["vertical_pull", iso("biceps")], ["row", "hinge"]],
-      extra: [["row", iso("calves")], ["vertical_pull", "row"]],
+      // Mostly upper body: one hinge pair, pulls with biceps, and a hamstring curl.
+      pairs: [["row", "hinge"], ["vertical_pull", iso("biceps")], ["row", iso("knee_flexion")]],
+      extra: [[iso("rear_delt"), iso("calf")], ["vertical_pull", "row"]],
       offsets: {},
       fallback: PULL_FALLBACK,
       allowShared: true,
@@ -94,7 +104,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       key: "upper",
       name: "Upper body",
       pairs: [["horizontal_push", "row"], ["vertical_push", "vertical_pull"], [iso("biceps"), iso("triceps")]],
-      extra: [[iso("shoulders"), "horizontal_push"], ["row", "vertical_push"]],
+      extra: [[iso("lateral_raise"), iso("rear_delt")], ["row", "vertical_push"]],
       offsets: {},
       fallback: UPPER_FALLBACK,
     },
@@ -104,7 +114,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "ppl-push",
       name: "Push day",
-      pairs: [["horizontal_push", "vertical_push"], ["horizontal_push", iso("triceps")], ["vertical_push", iso("shoulders")]],
+      pairs: [["horizontal_push", "vertical_push"], ["horizontal_push", iso("triceps")], ["vertical_push", iso("lateral_raise")]],
       extra: [["horizontal_push", "vertical_push"]],
       offsets: {},
       fallback: ["horizontal_push", "vertical_push", "core"],
@@ -113,7 +123,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "ppl-pull",
       name: "Pull day",
-      pairs: [["row", "vertical_pull"], ["row", iso("biceps")], ["hinge", "row"]],
+      pairs: [["row", "vertical_pull"], ["row", iso("biceps")], ["hinge", iso("rear_delt")]],
       extra: [["row", "vertical_pull"]],
       offsets: {},
       // Deadlift-style hinges belong on pull day when there's little to pull with.
@@ -197,10 +207,14 @@ function bodyweightBoost(input: StrengthSessionInput): number {
 /** Patterns that can stand in when one side of a pair has no exercise the user can do. */
 const FALLBACK_PATTERNS: Pattern[] = ["row", "horizontal_push", "squat", "hinge", "vertical_push", "vertical_pull", "isolation"];
 
+/** The core finisher rotates through the trunk's jobs: resisting extension, flexing, resisting side-bending and rotation. */
+const CORE_FAMILIES = ["anti_extension", "trunk_flexion", "anti_lateral", "anti_rotation"];
+
 const sharesPrimeMover = (a: Exercise, b: Exercise) => a.primary.some((m) => b.primary.includes(m));
 
 const specPattern = (s: SlotSpec): Pattern => (typeof s === "string" ? s : s.pattern);
-const specName = (s: SlotSpec): string => (typeof s === "string" ? s : `${s.pattern}.${s.muscle}`);
+const specFamily = (s: SlotSpec): string | undefined => (typeof s === "string" ? undefined : s.family);
+const specName = (s: SlotSpec): string => (typeof s === "string" ? s : `${s.pattern}.${s.family}`);
 
 function choosePair(
   pair: Pair,
@@ -214,13 +228,22 @@ function choosePair(
 ): Chosen[] | null {
   const chosen: Chosen[] = [];
   // A movement already in the session comes from another ladder (dumbbell press after push-ups, not an easier push-up).
-  const pick = (pattern: Pattern, offset: number, muscle?: Muscle) =>
-    pickExercise(input.pool, pattern, input.level, input.strengthIndex + (taken.has(pattern) ? 1 : 0), offset, used, bodyweightBoost(input), (e) =>
-      (!muscle || e.primary.includes(muscle)) && (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))),
+  // An isolation slot must be its family (a curl is not a lateral raise); for compound movements the family is a preference.
+  const pick = (pattern: Pattern, offset: number, family?: string) =>
+    pickExercise(
+      input.pool,
+      pattern,
+      input.level,
+      input.strengthIndex + (taken.has(pattern) ? 1 : 0),
+      offset,
+      used,
+      bodyweightBoost(input),
+      (e) => (pattern !== "isolation" || !family || e.family === family) && (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))),
+      family,
     );
   pair.forEach((spec, i) => {
     const pattern = specPattern(spec);
-    const ex = pick(pattern, variant.offsets[pattern] ?? 0, typeof spec === "string" ? undefined : spec.muscle);
+    const ex = pick(pattern, variant.offsets[pattern] ?? 0, specFamily(spec));
     if (!ex) return;
     used.add(ex.id);
     // A pair of the same movement (two arm exercises) needs two slot names.
@@ -228,12 +251,26 @@ function choosePair(
     const slot = specName(pair[0]) === specName(pair[1]) ? `${slotKey}.${name}${i + 1}` : `${slotKey}.${name}`;
     chosen.push(choose(ex, slot, input));
   });
+  if (chosen.length === 0) {
+    // Nothing in the pair fits the equipment (no pull-up bar, no machine): the day still gets a
+    // pair from its own movements, preferring ones not yet in the session.
+    const moves = (variant.fallback ?? FALLBACK_PATTERNS).filter((p) => p !== "core");
+    for (const pattern of [...moves.filter((p) => !taken.has(p)), ...moves.filter((p) => taken.has(p))]) {
+      const ex = pick(pattern, 0);
+      if (!ex) continue;
+      used.add(ex.id);
+      chosen.push(choose(ex, `${slotKey}.${pattern}.alt`, input));
+      break;
+    }
+  }
   if (chosen.length === 1) {
     // Pair the lone exercise with another movement rather than run a one-exercise superset.
     // A movement not yet in the session is preferred; a second exercise of one already in it is next best.
     const fallback = variant.fallback ?? FALLBACK_PATTERNS;
     const inPair = pair.map(specPattern);
-    const order = [...fallback.filter((p) => !taken.has(p)), ...fallback.filter((p) => taken.has(p))];
+    // Core work is the last resort: a second leg or upper-body movement comes first.
+    const moves = fallback.filter((p) => p !== "core");
+    const order = [...moves.filter((p) => !taken.has(p)), ...moves.filter((p) => taken.has(p)), ...(fallback.includes("core") ? ["core" as Pattern] : [])];
     const partner = (shareOk: boolean) => {
       for (const pattern of order) {
         if (inPair.includes(pattern) && !variant.fallback) continue;
@@ -253,16 +290,26 @@ function choosePair(
   return chosen.length > 0 ? chosen : null;
 }
 
-function warmupFor(first: Chosen[] | undefined, equipment: StrengthSessionInput["equipment"]): WarmupItem[] {
-  const items: WarmupItem[] = [
-    equipment.jumpRope
-      ? { name: "Easy jump rope", prescription: "1 min of light bounces, then arm and hip circles" }
-      : { name: "Easy movement", prescription: "30 s marching, arm circles, hip circles" },
-  ];
+/** A short general warm-up, then an easy practice set of the first exercises. A rope is never required. */
+function warmupFor(first: Chosen[] | undefined): WarmupItem[] {
+  const items: WarmupItem[] = [{ name: "Easy movement", prescription: "30 s marching, arm circles, hip circles" }];
   for (const c of first ?? []) {
-    items.push({ name: `${c.exercise.name} (light)`, prescription: "1 easy set of 8, bodyweight or lightest dumbbell" });
+    const light = c.exercise.loadType === "bodyweight" || c.exercise.loadType === "time" ? "an easier version" : "a light weight";
+    items.push({ name: `${c.exercise.name} (light)`, prescription: `1 easy set of 8 with ${light}` });
   }
   return items;
+}
+
+/** What the equipment can't cover, said plainly with the smallest step that would. */
+export function coverageNotes(pool: Pool): string[] {
+  const planned = [...pool.byLadder.values()].flat();
+  const notes: string[] = [];
+  if (!planned.some((e) => e.pattern === "row" || e.pattern === "vertical_pull")) {
+    notes.push(
+      "Nothing you have trains pulling (rows and pulldowns) with weight you can increase. The smallest fix is resistance bands with a door anchor: they add band rows and pulldowns. Add them under equipment in Settings.",
+    );
+  }
+  return notes;
 }
 
 export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
@@ -278,7 +325,8 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   let finisher: Prescription | null = null;
   let finisherSec = 0;
   if (finisherMinutes(budget) > 0) {
-    const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input));
+    const family = CORE_FAMILIES[input.strengthIndex % CORE_FAMILIES.length];
+    const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input), () => true, family);
     if (core) {
       used.add(core.id);
       const c = choose(core, `${variant.key}.core`, input);
@@ -302,7 +350,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     if (input.maxSupersets !== undefined && supersets.length >= input.maxSupersets) return false;
     const chosen = choosePair(pair, variant, input, used, taken, slotKey);
     if (!chosen) return false;
-    const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec);
+    const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec) + setupSeconds(chosen.map((c) => c.exercise));
     if (secs > remainingSec && !force) {
       for (const c of chosen) used.delete(c.exercise.id);
       return false;
@@ -406,12 +454,13 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     budgetMinutes: budget,
     estimatedMinutes,
     warmupMinutes: warmupMin,
-    warmup: warmupFor(pairsChosen[0], input.equipment),
+    warmup: warmupFor(pairsChosen[0]),
     supersets,
     finisher,
     cardio: null,
     deload: false,
     comeback: false,
     ...(notes.length > 0 ? { notes } : {}),
+    ...(coverageNotes(input.pool).length > 0 ? { coverage: coverageNotes(input.pool) } : {}),
   };
 }

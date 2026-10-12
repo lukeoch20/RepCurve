@@ -1,0 +1,4182 @@
+{
+  "schema_version": "proposal-1.0",
+  "review_date": "2026-10-11",
+  "purpose": "Proposed exercise catalog and decision metadata; not a deployed app configuration or clinical rehabilitation protocol.",
+  "counts": {
+    "current_strength_records": 44,
+    "proposed_additions": 62,
+    "total_strength_records": 106,
+    "selectable_strength_records": 105,
+    "retired_legacy_records": 1,
+    "P1_additions": 33,
+    "P2_additions": 29,
+    "cardio_modalities": 8
+  },
+  "field_semantics": {
+    "equipment_options_all_of": "Outer array is OR; each inner list is AND. Environmental supports count as requirements.",
+    "primary_display_group": "Navigation label only; not an exclusive target or proof of equal training effect.",
+    "prime_movers": "Qualitative anatomical targets, not measured fractional volume credits.",
+    "default_pool": "Eligible for consideration after user-specific equipment, skill, tolerance and time filters; never schedule every eligible record.",
+    "priority": "P1 = next release; P2 = optional expansion; keep = retained default candidate; optional/advanced = retained opt-in; retire = legacy record excluded from new automatic plans.",
+    "evidence_basis": "Direct evidence applies only within the cited study conditions. Pattern extrapolation is explicitly not a direct trial of the exact entry.",
+    "laterality": "Unilateral repetitions are per side. Alternating repetitions are also entered per side in this proposed schema.",
+    "progression": "No universal numerical ranking across exercises; load, assistance, ROM and support configuration remain distinct."
+  },
+  "strength_exercises": [
+    {
+      "id": "incline_push_up",
+      "name": "Incline push-up",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "stable_elevated_hand_support"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Record hand-support height; knee push-ups are a parallel option, not the next fixed level.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "knee_push_up",
+      "name": "Knee push-up",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful regression; adjust repetitions and range before assuming a harder variation is needed.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R10"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "push_up",
+      "name": "Push-up",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Main home press; progress reps, leverage or external load when needed.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R10"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "feet_elevated_push_up",
+      "name": "Feet-elevated push-up",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "stable_foot_platform",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Optional press variation with more shoulder demand; not a mandatory destination.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_floor_press",
+      "name": "Dumbbell floor press",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful without a bench; shorter bottom range is a tradeoff, not a reason to exclude it.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_bench_press",
+      "name": "Dumbbell bench press",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "flat_bench"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Keep independent load history from floor press; bench changes the motion range.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_lateral_raise",
+      "name": "Dumbbell lateral raise",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "lateral_deltoid"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "shoulder_abduction",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Tag lateral deltoids specifically; this is not interchangeable with overhead pressing.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R16"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "pike_push_up",
+      "name": "Pike push-up",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Skill-dependent vertical press; not a universal beginner shoulder exercise.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "feet_elevated_pike_push_up",
+      "name": "Feet-elevated pike push-up",
+      "origin": "current",
+      "priority": "advanced",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "stable_foot_platform",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Advanced variation; retain only as an opt-in progression.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_overhead_press",
+      "name": "Dumbbell overhead press",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Tag anterior deltoids and triceps; seated and standing setups need distinct metadata.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "single_arm_dumbbell_overhead_press",
+      "name": "Single-arm dumbbell overhead press",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Alternative for preference or loading limits; takes longer and is not inherently a higher level.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_overhead_triceps_extension",
+      "name": "Dumbbell overhead triceps extension",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Triceps",
+      "prime_movers": [
+        "triceps"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_extension",
+      "equipment_options_all_of": [
+        [
+          "dumbbell"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Keep; direct overhead-versus-neutral evidence used cables, so dumbbell transfer is an inference.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_row",
+      "name": "Band row",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "resistance_band",
+          "rated_row_anchor"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Specify a secure anchor or a separately taught seated foot-braced setup.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "towel_door_row",
+      "name": "Towel door row",
+      "origin": "current",
+      "priority": "retire",
+      "selectable": false,
+      "default_pool": false,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "towel",
+          "verified_load_bearing_door_setup"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Retire the generic door-based entry from automatic plans; replace with a rated suspension or band setup.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "one_arm_dumbbell_row",
+      "name": "One-arm dumbbell row",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "dumbbell"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Specify self-braced versus externally supported technique; add support equipment when used.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_bent_over_row",
+      "name": "Dumbbell bent-over row",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "A lower-back endurance limit can precede the back-muscle target; offer chest support.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "renegade_row",
+      "name": "Renegade row",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [
+        "abdominals",
+        "supporting_shoulder"
+      ],
+      "movement_pattern": "horizontal_pull_and_anti_rotation",
+      "equipment_options_all_of": [
+        [
+          "nonrolling_dumbbells",
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Classify as row plus anti-rotation; do not automatically replace a stable back-focused row.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "negative_pull_up",
+      "name": "Negative pull-up",
+      "origin": "current",
+      "priority": "advanced",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "pull_up_bar",
+          "stable_access_platform"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_eccentric_duration",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Needs a controlled way to reach the top; unfamiliar eccentric work deserves gradual exposure.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "chin_up",
+      "name": "Chin-up",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "pull_up_bar"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "body_mass_external_load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Parallel grip variation; not a universally easier rung below pull-ups.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "pull_up",
+      "name": "Pull-up",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "pull_up_bar"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "body_mass_external_load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Add assisted options; track body mass and assistance separately from external load.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_curl",
+      "name": "Dumbbell curl",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Biceps",
+      "prime_movers": [
+        "elbow_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_flexion",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Keep as a simple direct elbow-flexor exercise; label forearm position.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "bodyweight_squat",
+      "name": "Bodyweight squat",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Can become too easy for strength or growth; add external load when available.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "split_squat",
+      "name": "Split squat",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Parallel to reverse lunges; support can remove balance as the limiting factor.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "reverse_lunge",
+      "name": "Reverse lunge",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful option; do not count hamstrings as equal direct work to quads and glutes.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "bulgarian_split_squat",
+      "name": "Bulgarian split squat",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "stable_rear_foot_support",
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Higher balance and setup demands; not obligatory after a split squat.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "goblet_squat",
+      "name": "Goblet squat",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "dumbbell"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Efficient home compound; arm position or available load can eventually limit progression.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_front_squat",
+      "name": "Dumbbell front squat",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Loadable alternative; not a required step after goblet squats.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_reverse_lunge",
+      "name": "Dumbbell reverse lunge",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Log repetitions per side and budget time for both sides.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_bulgarian_split_squat",
+      "name": "Dumbbell Bulgarian split squat",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "stable_rear_foot_support"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful with limited dumbbell weight; make stability, tolerance and time explicit.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_glute_bridge",
+      "name": "Dumbbell glute bridge",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "dumbbell",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Progress load on the same pattern; hamstrings are secondary, not a curl substitute.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_hip_thrust",
+      "name": "Dumbbell hip thrust",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "dumbbell",
+          "stable_shoulder_support"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Require a stable padded support; a generic chair or step is not always suitable.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "glute_bridge",
+      "name": "Glute bridge",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Beginner hip-extension option; increase challenge when repeated easy reps cease to be productive.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "single_leg_glute_bridge",
+      "name": "Single-leg glute bridge",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Alternative when load is limited, with a per-side time cost.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "single_leg_hip_thrust",
+      "name": "Single-leg hip thrust",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "stable_shoulder_support"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Optional branch; do not force it instead of a loadable bilateral thrust.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_romanian_deadlift",
+      "name": "Dumbbell Romanian deadlift",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "spinal_erectors",
+        "trunk_muscles",
+        "grip"
+      ],
+      "movement_pattern": "hip_hinge",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Keep as the main home hinge and add a distinct knee-flexion exercise family.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "staggered_stance_dumbbell_rdl",
+      "name": "Staggered-stance dumbbell RDL",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "spinal_erectors",
+        "trunk_muscles",
+        "grip"
+      ],
+      "movement_pattern": "hip_hinge",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful asymmetric-loading branch; record front-leg emphasis and repeat on the other side.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "single_leg_dumbbell_rdl",
+      "name": "Single-leg dumbbell RDL",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "spinal_erectors",
+        "trunk_muscles",
+        "grip"
+      ],
+      "movement_pattern": "hip_hinge",
+      "equipment_options_all_of": [
+        [
+          "dumbbell"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Balance may limit loading; offer external hand support as a tracked variation.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_calf_raise",
+      "name": "Dumbbell calf raise",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "gastrocnemius",
+        "soleus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "balance_support"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Define knee position, bilateral versus unilateral technique, and optional step use.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dead_bug",
+      "name": "Dead bug",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_extension",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "alternating",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Progress limb leverage and controlled range; no need to advance to hanging work.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "origin": "current",
+      "priority": "keep",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_extension",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "hold_seconds_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Anti-extension; shoulders stabilize. Progress leverage rather than only extending hold duration.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hollow_hold",
+      "name": "Hollow hold",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_extension",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "hold_seconds_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Parallel anti-extension branch; not a universal next level after plank.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hanging_knee_raise",
+      "name": "Hanging knee raise",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "hip_flexors",
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "grip",
+        "shoulder_girdle"
+      ],
+      "movement_pattern": "hip_flexion_with_pelvic_control",
+      "equipment_options_all_of": [
+        [
+          "pull_up_bar"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Hip flexors are prime movers too; add posterior pelvic tilt when abdominal flexion is intended.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "kneeling_ab_roller_rollout",
+      "name": "Kneeling ab-roller rollout",
+      "origin": "current",
+      "priority": "optional",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_extension",
+      "equipment_options_all_of": [
+        [
+          "ab_roller",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Progress rollout distance gradually; kneeling pads are optional comfort equipment.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "standing_ab_roller_rollout",
+      "name": "Standing ab-roller rollout",
+      "origin": "current",
+      "priority": "advanced",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "abdominals"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_extension",
+      "equipment_options_all_of": [
+        [
+          "ab_roller",
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Advanced opt-in skill; not the default endpoint of core training.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "wall_push_up",
+      "name": "Wall push-up",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "wall",
+          "standing_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Accessible entry point before elevated-support push-ups.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "incline_dumbbell_bench_press",
+      "name": "Incline dumbbell bench press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "adjustable_bench"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Adds an incline press option; record bench angle.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_bench_press",
+      "name": "Barbell bench press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "bench_press_rack",
+          "flat_bench",
+          "bench_safeties_or_spotter"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Standard gym press with scalable loading and a distinct skill history.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "machine_chest_press",
+      "name": "Machine chest press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "chest_press_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Stable, quickly adjustable gym pressing option.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "cable_chest_fly",
+      "name": "Cable chest fly",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Chest",
+      "prime_movers": [
+        "pectoralis_major"
+      ],
+      "secondary_movers": [
+        "triceps",
+        "anterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_push",
+      "equipment_options_all_of": [
+        [
+          "dual_cable_station",
+          "handles"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Optional chest isolation when pressing alone does not match the goal.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_reverse_fly",
+      "name": "Dumbbell reverse fly",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "posterior_deltoid"
+      ],
+      "secondary_movers": [
+        "scapular_retractors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "shoulder_horizontal_abduction",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Adds direct posterior-deltoid work; specify torso or bench support.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_overhead_press",
+      "name": "Band overhead press",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "resistance_band"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Standing-on-band option for users without dumbbells; track band and stance.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "machine_shoulder_press",
+      "name": "Machine shoulder press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "shoulder_press_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Stable vertical press option with modest setup complexity.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "cable_lateral_raise",
+      "name": "Cable lateral raise",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "lateral_deltoid"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "shoulder_abduction",
+      "equipment_options_all_of": [
+        [
+          "cable_station",
+          "handle"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Preference and resistance-profile alternative to dumbbell lateral raises.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R16"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "reverse_pec_deck",
+      "name": "Reverse pec deck",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "posterior_deltoid"
+      ],
+      "secondary_movers": [
+        "scapular_retractors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "shoulder_horizontal_abduction",
+      "equipment_options_all_of": [
+        [
+          "reverse_fly_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Supported posterior-deltoid and upper-back isolation.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_overhead_press",
+      "name": "Barbell overhead press",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Shoulders",
+      "prime_movers": [
+        "anterior_deltoid"
+      ],
+      "secondary_movers": [
+        "triceps"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_push",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "rack"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Gym strength option; not required for complete shoulder coverage.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_triceps_pressdown",
+      "name": "Band triceps pressdown",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Triceps",
+      "prime_movers": [
+        "triceps"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_extension",
+      "equipment_options_all_of": [
+        [
+          "resistance_band",
+          "rated_high_anchor"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Simple home triceps option without overhead arm positioning.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "cable_triceps_pressdown",
+      "name": "Cable triceps pressdown",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Triceps",
+      "prime_movers": [
+        "triceps"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_extension",
+      "equipment_options_all_of": [
+        [
+          "cable_station",
+          "pressdown_attachment"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Quick gym isolation and alternative to an overhead extension.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R13"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "cable_overhead_triceps_extension",
+      "name": "Cable overhead triceps extension",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Triceps",
+      "prime_movers": [
+        "triceps"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_extension",
+      "equipment_options_all_of": [
+        [
+          "cable_station",
+          "extension_attachment"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Directly represented in overhead-position research; adjust setup for comfort.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R13"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_lat_pulldown",
+      "name": "Band lat pulldown",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "resistance_band",
+          "rated_high_anchor"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Accessible home vertical pulling before bodyweight pull-ups.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "suspension_row",
+      "name": "Suspension row",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "suspension_trainer",
+          "rated_suspension_anchor"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Body angle scales difficulty; record foot position and handle height.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_assisted_pull_up",
+      "name": "Band-assisted pull-up",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "pull_up_bar",
+          "assistance_band",
+          "stable_access_platform"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Bridges the large gap to unassisted pull-ups; assistance varies through the rep.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "chest_supported_dumbbell_row",
+      "name": "Chest-supported dumbbell row",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "adjustable_bench"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Reduces the unsupported hinge requirement; useful at home or in a gym.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "lat_pulldown",
+      "name": "Lat pulldown",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "lat_pulldown_machine",
+          "pulldown_attachment"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Scalable vertical pull for a wide range of strength levels.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "seated_cable_row",
+      "name": "Seated cable row",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "seated_row_station",
+          "row_attachment"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Scalable horizontal pull with straightforward load adjustment.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "chest_supported_machine_row",
+      "name": "Chest-supported machine row",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi",
+        "scapular_retractors"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "posterior_deltoid"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "horizontal_pull",
+      "equipment_options_all_of": [
+        [
+          "supported_row_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Stable alternative; machine geometry and grip should be recorded.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "assisted_pull_up_machine",
+      "name": "Assisted pull-up machine",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Back",
+      "prime_movers": [
+        "latissimus_dorsi"
+      ],
+      "secondary_movers": [
+        "elbow_flexors",
+        "scapular_depressors"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "vertical_pull",
+      "equipment_options_all_of": [
+        [
+          "assisted_pull_up_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "body_mass_assistance_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Adjustable assistance for users not ready for full-bodyweight pulling.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_curl",
+      "name": "Band curl",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Biceps",
+      "prime_movers": [
+        "elbow_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_flexion",
+      "equipment_options_all_of": [
+        [
+          "resistance_band"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Fills the band-only elbow-flexor option.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_hammer_curl",
+      "name": "Dumbbell hammer curl",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Biceps",
+      "prime_movers": [
+        "elbow_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_flexion",
+      "equipment_options_all_of": [
+        [
+          "dumbbells"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Neutral-grip elbow-flexor option, including brachialis and brachioradialis.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "machine_preacher_curl",
+      "name": "Machine preacher curl",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Biceps",
+      "prime_movers": [
+        "elbow_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_flexion",
+      "equipment_options_all_of": [
+        [
+          "preacher_curl_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Supported, loadable gym curl; arm position and machine fit matter.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "ez_bar_curl",
+      "name": "EZ-bar curl",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Biceps",
+      "prime_movers": [
+        "elbow_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "elbow_flexion",
+      "equipment_options_all_of": [
+        [
+          "ez_bar",
+          "plates"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Common gym curl alternative; no universal advantage over dumbbells.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "sit_to_stand",
+      "name": "Sit-to-stand",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "stable_chair"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Accessible squat entry point with a standardized seat height.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "supported_split_squat",
+      "name": "Supported split squat",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "stable_hand_support",
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Removes some balance demand; can later accept load in the free hand.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "step_up",
+      "name": "Step-up",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "stable_step",
+          "balance_support"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Functional step pattern; record height and hand support.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "dumbbell_step_up",
+      "name": "Dumbbell step-up",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "dumbbells",
+          "stable_step"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Loaded step option with explicit step height and per-side time.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_back_squat",
+      "name": "Barbell back squat",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "squat_rack",
+          "safeties"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Standard gym squat; optional for users who prefer machines.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R15"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "leg_press",
+      "name": "Leg press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "leg_press_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Stable multijoint lower-body option; record machine and seat settings.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R12"
+      ],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hack_squat_machine",
+      "name": "Hack squat machine",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "hack_squat_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Another loadable squat pattern; not a necessary separate weekly slot.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "smith_machine_squat",
+      "name": "Smith machine squat",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "smith_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Guided-bar squat alternative with its own load and technique history.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "leg_extension",
+      "name": "Leg extension",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "knee_extension",
+      "equipment_options_all_of": [
+        [
+          "leg_extension_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Direct knee extension complements compound quad training.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R12"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_front_squat",
+      "name": "Barbell front squat",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Quads",
+      "prime_movers": [
+        "quadriceps",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "adductor_magnus"
+      ],
+      "stabilizers": [
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_dominant",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "squat_rack",
+          "safeties"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Goal- and preference-driven squat variation with higher rack-position demands.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "bodyweight_hip_thrust",
+      "name": "Bodyweight hip thrust",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "stable_shoulder_support"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Missing intermediate setup for teaching the hip-thrust pattern.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_hip_thrust",
+      "name": "Barbell hip thrust",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "stable_shoulder_support",
+          "bar_pad"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Scalable gym glute option; include loading and setup time.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R15"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "machine_hip_thrust",
+      "name": "Machine hip thrust",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "hip_extension",
+      "equipment_options_all_of": [
+        [
+          "hip_thrust_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Efficient setup alternative when the gym has the machine.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_romanian_deadlift",
+      "name": "Band Romanian deadlift",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "spinal_erectors",
+        "trunk_muscles",
+        "grip"
+      ],
+      "movement_pattern": "hip_hinge",
+      "equipment_options_all_of": [
+        [
+          "resistance_band"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Standing-on-band hinge for users with bands but no dumbbells.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hamstring_walkout",
+      "name": "Hamstring walkout",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "gluteus_maximus",
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_flexion",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "No-special-equipment bridge-to-knee-flexion option; begin with short excursions.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "sliding_leg_curl",
+      "name": "Sliding leg curl",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "gluteus_maximus",
+        "trunk_muscles"
+      ],
+      "movement_pattern": "knee_flexion",
+      "equipment_options_all_of": [
+        [
+          "sliders",
+          "compatible_floor"
+        ],
+        [
+          "towels",
+          "smooth_floor"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Home knee-flexion exercise; range and eccentric-only regressions can scale difficulty.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_romanian_deadlift",
+      "name": "Barbell Romanian deadlift",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings",
+        "gluteus_maximus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [
+        "spinal_erectors",
+        "trunk_muscles",
+        "grip"
+      ],
+      "movement_pattern": "hip_hinge",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Loadable gym hinge; rack is optional but affects setup.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R11"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "seated_leg_curl",
+      "name": "Seated leg curl",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "knee_flexion",
+      "equipment_options_all_of": [
+        [
+          "seated_leg_curl_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "High-priority knee-flexion addition with direct hypertrophy evidence.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R11"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "lying_leg_curl",
+      "name": "Lying leg curl",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hamstrings",
+      "prime_movers": [
+        "hamstrings"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "knee_flexion",
+      "equipment_options_all_of": [
+        [
+          "lying_leg_curl_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Useful gym alternative when seated curls are unavailable or unsuitable.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R11"
+      ],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "bodyweight_standing_calf_raise",
+      "name": "Bodyweight standing calf raise",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "gastrocnemius",
+        "soleus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "balance_support"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Accessible calf entry point; optional step is a separate range modifier.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "single_leg_bodyweight_calf_raise",
+      "name": "Single-leg bodyweight calf raise",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "gastrocnemius",
+        "soleus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "balance_support"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Increases relative load without equipment; balance support remains useful.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "standing_machine_calf_raise",
+      "name": "Standing machine calf raise",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "gastrocnemius",
+        "soleus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "standing_calf_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Loadable straight-knee calf option with direct pattern evidence.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R14"
+      ],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "seated_machine_calf_raise",
+      "name": "Seated machine calf raise",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "soleus"
+      ],
+      "secondary_movers": [
+        "gastrocnemius"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "seated_calf_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Bent-knee alternative; do not market it as necessary for soleus growth.",
+      "evidence_basis": "direct_variant_trial",
+      "direct_trial_references": [
+        "R14"
+      ],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "seated_dumbbell_calf_raise",
+      "name": "Seated dumbbell calf raise",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Calves",
+      "prime_movers": [
+        "soleus"
+      ],
+      "secondary_movers": [
+        "gastrocnemius"
+      ],
+      "stabilizers": [],
+      "movement_pattern": "plantar_flexion",
+      "equipment_options_all_of": [
+        [
+          "dumbbell",
+          "stable_chair"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Home bent-knee option with load placed securely above the knee.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "side_plank",
+      "name": "Side plank",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "lateral_trunk_muscles"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_lateral_flexion",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "hold_seconds_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Adds lateral trunk endurance; bent-knee and full-leg versions share a family.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "reverse_crunch",
+      "name": "Reverse crunch",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "rectus_abdominis"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "trunk_flexion",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Accessible dynamic abdominal exercise without grip or hanging requirements.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "pallof_press",
+      "name": "Pallof press",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "trunk_muscles"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_rotation",
+      "equipment_options_all_of": [
+        [
+          "resistance_band",
+          "rated_chest_height_anchor"
+        ],
+        [
+          "cable_station",
+          "handle"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Anti-rotation branch; band and cable setups require separate performance contexts.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "suitcase_carry",
+      "name": "Suitcase carry",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "lateral_trunk_muscles"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "anti_lateral_flexion",
+      "equipment_options_all_of": [
+        [
+          "dumbbell",
+          "clear_walkway"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "load_and_distance_or_duration",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Grip plus lateral trunk bracing; log load, duration or distance, and side.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "cable_crunch",
+      "name": "Cable crunch",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "rectus_abdominis"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "trunk_flexion",
+      "equipment_options_all_of": [
+        [
+          "cable_station",
+          "rope_attachment"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Loadable trunk-flexion option for gym users.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "side_lying_hip_abduction",
+      "name": "Side-lying hip abduction",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Hip abductors",
+      "prime_movers": [
+        "gluteus_medius",
+        "gluteus_minimus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "hip_abduction",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Simple direct lateral-hip option; an accessory, not mandatory for every short session.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "band_hip_abduction",
+      "name": "Band hip abduction",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hip abductors",
+      "prime_movers": [
+        "gluteus_medius",
+        "gluteus_minimus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "hip_abduction",
+      "equipment_options_all_of": [
+        [
+          "loop_band",
+          "balance_support"
+        ]
+      ],
+      "laterality": "unilateral",
+      "rep_count_convention": "per_side",
+      "tracking": "resistance_setup_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Standing lateral-hip option; standardize band placement and range.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R09"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hip_abduction_machine",
+      "name": "Hip abduction machine",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hip abductors",
+      "prime_movers": [
+        "gluteus_medius",
+        "gluteus_minimus"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "hip_abduction",
+      "equipment_options_all_of": [
+        [
+          "hip_abduction_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Scalable gym accessory when lateral-hip work is a goal.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "hip_adduction_machine",
+      "name": "Hip adduction machine",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Hip adductors",
+      "prime_movers": [
+        "hip_adductors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "hip_adduction",
+      "equipment_options_all_of": [
+        [
+          "hip_adduction_machine"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Optional direct inner-thigh work; compounds already provide some coverage.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01",
+        "R08"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "45_degree_back_extension",
+      "name": "45-degree back extension",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Spinal erectors",
+      "prime_movers": [
+        "spinal_erectors",
+        "gluteus_maximus",
+        "hamstrings"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "trunk_or_hip_extension",
+      "equipment_options_all_of": [
+        [
+          "back_extension_bench"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Teach a defined hip/back-extension technique; targets vary with execution.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "trap_bar_deadlift",
+      "name": "Trap-bar deadlift",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus",
+        "quadriceps"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [
+        "spinal_erectors",
+        "grip"
+      ],
+      "movement_pattern": "combined_knee_hip_extension",
+      "equipment_options_all_of": [
+        [
+          "trap_bar",
+          "plates",
+          "clear_lifting_area"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Multijoint strength option involving quads, glutes and trunk; handle height changes the task.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "barbell_deadlift",
+      "name": "Barbell deadlift",
+      "origin": "proposed",
+      "priority": "P2",
+      "selectable": true,
+      "default_pool": false,
+      "primary_display_group": "Glutes",
+      "prime_movers": [
+        "gluteus_maximus",
+        "quadriceps"
+      ],
+      "secondary_movers": [
+        "hamstrings"
+      ],
+      "stabilizers": [
+        "spinal_erectors",
+        "grip"
+      ],
+      "movement_pattern": "combined_knee_hip_extension",
+      "equipment_options_all_of": [
+        [
+          "barbell",
+          "plates",
+          "clear_lifting_area"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "load_and_reps",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "Include for conventional-deadlift goals; not a required hypertrophy or beginner exercise.",
+      "evidence_basis": "pattern_and_practical_extrapolation",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    }
+  ],
+  "cardio_modalities": [
+    {
+      "id": "walking",
+      "name": "Walking",
+      "equipment_options_all_of": [
+        [
+          "outdoor_route"
+        ],
+        [
+          "treadmill"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "walk_intervals"
+      ],
+      "impact": "low",
+      "note": "Includes flat and incline walking; incline is a setting, not a separate required mode."
+    },
+    {
+      "id": "running",
+      "name": "Jogging or running",
+      "equipment_options_all_of": [
+        [
+          "outdoor_route"
+        ],
+        [
+          "treadmill"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "higher",
+      "note": "Walk-run intervals provide an entry route; do not equate slow speed with low individual effort."
+    },
+    {
+      "id": "cycling",
+      "name": "Cycling",
+      "equipment_options_all_of": [
+        [
+          "stationary_bike"
+        ],
+        [
+          "recumbent_bike"
+        ],
+        [
+          "bicycle",
+          "suitable_route"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "low",
+      "note": "High-priority home/gym cardio addition."
+    },
+    {
+      "id": "elliptical",
+      "name": "Elliptical",
+      "equipment_options_all_of": [
+        [
+          "elliptical"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "low",
+      "note": "Useful alternative when running is not preferred."
+    },
+    {
+      "id": "rowing",
+      "name": "Rowing ergometer",
+      "equipment_options_all_of": [
+        [
+          "rower"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "low",
+      "note": "Needs technique familiarization and contributes lower-back, grip and posterior-chain fatigue."
+    },
+    {
+      "id": "stairs",
+      "name": "Stair climber or stair walking",
+      "equipment_options_all_of": [
+        [
+          "stair_climber"
+        ],
+        [
+          "suitable_stairs",
+          "handrail"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "variable",
+      "note": "Budget leg fatigue; stairs require balance and environment checks."
+    },
+    {
+      "id": "jump_rope",
+      "name": "Jump rope",
+      "equipment_options_all_of": [
+        [
+          "jump_rope",
+          "clear_floor",
+          "overhead_clearance"
+        ]
+      ],
+      "formats": [
+        "intervals"
+      ],
+      "impact": "higher",
+      "note": "Skill and repeated impact matter; possessing a rope does not make it the default warm-up."
+    },
+    {
+      "id": "marching",
+      "name": "Indoor marching or low-impact movement",
+      "equipment_options_all_of": [
+        [
+          "clear_floor"
+        ]
+      ],
+      "formats": [
+        "steady",
+        "intervals"
+      ],
+      "impact": "low",
+      "note": "Accessible weather-independent option; verify that effort reaches the intended intensity."
+    }
+  ],
+  "required_future_fields": [
+    "validated_instruction_media",
+    "setup_specific_variant_id",
+    "estimated_setup_and_execution_time_calibrated_to_actual_usage",
+    "available_loads_and_increment_sizes",
+    "session_context_and_equipment_location",
+    "user_reported_tolerance_and_restrictions",
+    "variant_specific_performance_history"
+  ],
+  "sources": [
+    {
+      "id": "R01",
+      "year": 2026,
+      "authors": "Currier et al. / ACSM",
+      "title": "American College of Sports Medicine Position Stand. Resistance Training Prescription for Muscle Function, Hypertrophy, and Physical Performance in Healthy Adults: An Overview of Reviews",
+      "journal": "Medicine & Science in Sports & Exercise 58(4):851-872",
+      "doi": "10.1249/MSS.0000000000003897",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41843416/",
+      "design": "Overview of 137 reviews; >30,000 participants; search through October 2024.",
+      "finding": "Progressive resistance training improves multiple outcomes. Regular training of major muscle groups is the foundation; prescriptions should reflect the goal.",
+      "application_and_limit": "Broad support for home and gym modes; strongest evidence for programming principles, not a ranking of individual exercises. The 2026 publication does not itself include all 2025-26 research.",
+      "access": "Indexed abstract plus official ACSM summary"
+    },
+    {
+      "id": "R02",
+      "year": 2026,
+      "authors": "Pelland et al.",
+      "title": "The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains",
+      "journal": "Sports Medicine 56:481-505; online December 4, 2025",
+      "doi": "10.1007/s40279-025-02344-w",
+      "url": "https://link.springer.com/article/10.1007/s40279-025-02344-w",
+      "design": "67 studies, 2,058 participants; about 79% male; mean age about 25.",
+      "finding": "More weekly sets predicted greater gains with diminishing returns. Frequency had a clearer independent relationship with strength than with hypertrophy. Fractional accounting for indirect sets fitted the data best.",
+      "application_and_limit": "Support adjustable weekly volume and distinguish direct from indirect work. A 0.5 contribution is a modeling convention, not a universal biological conversion.",
+      "access": "Publisher abstract"
+    },
+    {
+      "id": "R03",
+      "year": 2023,
+      "authors": "Currier et al.",
+      "title": "Resistance training prescription for muscle strength and hypertrophy in healthy adults: a systematic review and Bayesian network meta-analysis",
+      "journal": "British Journal of Sports Medicine 57:1211-1220",
+      "doi": "10.1136/bjsports-2023-106807",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37414459/",
+      "design": "Strength network: 178 studies / 5,097 participants; hypertrophy: 119 / 3,364.",
+      "finding": "Many prescriptions improved outcomes. Heavier loading was especially relevant to maximal strength; multiple sets were useful for hypertrophy.",
+      "application_and_limit": "Provide strength and muscle-growth settings without making a single rep range the only effective choice. Network rankings do not prove one universal best program.",
+      "access": "Indexed abstract and publisher record"
+    },
+    {
+      "id": "R04",
+      "year": 2025,
+      "authors": "Zhang et al.",
+      "title": "Superset Versus Traditional Resistance Training Prescriptions: A Systematic Review and Meta-analysis Exploring Acute and Chronic Effects on Mechanical, Metabolic, and Perceptual Variables",
+      "journal": "Sports Medicine 55:953-975",
+      "doi": "10.1007/s40279-025-02176-8",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39903375/",
+      "design": "19 studies, 313 participants; mixed acute and longer-term outcomes.",
+      "finding": "Supersets shortened sessions and generally preserved adaptations, while raising perceived effort. Same-muscle pairings could reduce completed training volume.",
+      "application_and_limit": "Offer noncompeting pairs as a time-saving option. The chronic evidence is smaller than the total study count; preserve performance and recovery.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R05",
+      "year": 2021,
+      "authors": "Iversen et al.",
+      "title": "No Time to Lift? Designing Time-Efficient Training Programs for Strength and Hypertrophy: A Narrative Review",
+      "journal": "Sports Medicine 51:2079-2095",
+      "doi": "10.1007/s40279-021-01490-1",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/34125411/",
+      "design": "Narrative synthesis focused on limited-time training.",
+      "finding": "Bilateral multijoint exercises, selective warm-ups, and economical set structures can reduce the time burden.",
+      "application_and_limit": "A useful design framework, not a trial validating a particular 20-minute app routine. Avoid assuming unilateral work is always the best upgrade.",
+      "access": "PubMed abstract and indexed full-text sections"
+    },
+    {
+      "id": "R06",
+      "year": 2025,
+      "authors": "Without Fail trial",
+      "title": "Without Fail: Muscular Adaptations in Single-Set Resistance Training Performed to Failure or with Repetitions-in-Reserve",
+      "journal": "Medicine & Science in Sports & Exercise 57(9):2021-2031",
+      "doi": "10.1249/MSS.0000000000003728",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40249908/",
+      "design": "42 trained young men and women; one set of nine exercises, twice weekly, for eight weeks.",
+      "finding": "Both failure and two-repetitions-in-reserve groups improved most outcomes. Some muscle-growth outcomes modestly favored failure; strength changes were similar.",
+      "application_and_limit": "Justifies a low-volume fallback. It does not establish that one set maximizes gains or that a shorter four-exercise plan reproduces this trial.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R07",
+      "year": 2024,
+      "authors": "Robinson et al.",
+      "title": "Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions",
+      "journal": "Sports Medicine 54:2209-2231",
+      "doi": "10.1007/s40279-024-02069-2",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38970765/",
+      "design": "Exploratory meta-regressions; repetitions in reserve were estimated from study descriptions.",
+      "finding": "Training closer to failure was associated with more hypertrophy; strength gains were less sensitive across the studied range.",
+      "application_and_limit": "Teach effort and use challenging sets, but do not force failure or describe a precise RIR cutoff as settled science.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R08",
+      "year": 2023,
+      "authors": "Free-weight versus machine meta-analysis",
+      "title": "Effect of free-weight vs. machine-based strength training on maximal strength, hypertrophy and jump performance - a systematic review and meta-analysis",
+      "journal": "BMC Sports Science, Medicine and Rehabilitation",
+      "doi": "10.1186/s13102-023-00713-4",
+      "url": "https://link.springer.com/article/10.1186/s13102-023-00713-4",
+      "design": "13 studies; only five contributed hypertrophy outcomes.",
+      "finding": "No clear hypertrophy advantage for either mode; strength improvements were substantially specific to the trained and tested mode.",
+      "application_and_limit": "Machines belong in the main gym pool. This is not proof that every machine and free-weight variation is equivalent, or that one mode is universally safer.",
+      "access": "Publisher abstract/full-text sections"
+    },
+    {
+      "id": "R09",
+      "year": 2019,
+      "authors": "Lopes et al.",
+      "title": "Effects of training with elastic resistance versus conventional resistance on muscular strength: A systematic review and meta-analysis",
+      "journal": "SAGE Open Medicine",
+      "doi": "10.1177/2050312119831116",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/30815258/",
+      "design": "Systematic review and meta-analysis of elastic versus conventional resistance.",
+      "finding": "Elastic resistance can improve strength with broadly comparable results to conventional resistance in the included comparisons.",
+      "application_and_limit": "Bands are a legitimate home option. Evidence here concerns strength, not proof of equal hypertrophy for every band exercise. Standardize anchor position and band setup.",
+      "access": "Indexed abstract"
+    },
+    {
+      "id": "R10",
+      "year": 2017,
+      "authors": "Kikuchi and Nakazato",
+      "title": "Low-load bench press and push-up induce similar muscle hypertrophy and strength gain",
+      "journal": "Journal of Exercise Science & Fitness",
+      "doi": "10.1016/j.jesf.2017.06.003",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/29541130/",
+      "design": "18 young men; eight weeks, twice weekly; load-matched push-ups and low-load bench press.",
+      "finding": "The groups had similar muscle-growth and strength improvements under the tested conditions.",
+      "application_and_limit": "Keep scalable push-ups as a principal home chest exercise. Small, narrow trial; do not extrapolate to equal maximal-strength outcomes at every ability level.",
+      "access": "Indexed abstract"
+    },
+    {
+      "id": "R11",
+      "year": 2021,
+      "authors": "Maeo et al.",
+      "title": "Greater Hamstrings Muscle Hypertrophy but Similar Damage Protection after Training at Long versus Short Muscle Lengths",
+      "journal": "Medicine & Science in Sports & Exercise 53(4):825-837",
+      "doi": "10.1249/MSS.0000000000002523",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33009197/",
+      "design": "Within-person comparison of seated versus prone knee-flexion training.",
+      "finding": "Whole-hamstring volume increased more with seated than prone curls (about 14% versus 9%); the difference involved the biarticular muscles.",
+      "application_and_limit": "Add knee-flexion work and favor seated curls when available and comfortable. This was not a direct comparison of curls versus RDLs or sliders.",
+      "access": "Indexed abstract"
+    },
+    {
+      "id": "R12",
+      "year": 2026,
+      "authors": "Kinoshita et al.",
+      "title": "Hypertrophic Effects of Single- versus Multi-Joint Exercise: A Direct Comparison between Knee Extension and Leg Press",
+      "journal": "Medicine & Science in Sports & Exercise 58(7):1566-1580; online February 2026",
+      "doi": "10.1249/MSS.0000000000003957",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41630124/",
+      "design": "17 untrained adults; opposite legs trained for 12 weeks; MRI outcomes.",
+      "finding": "Rectus femoris growth favored knee extension (13.2% versus 1.1%); other quadriceps regions and total quadriceps were more similar. Leg press also grew gluteus maximus and adductor magnus.",
+      "application_and_limit": "Include leg press as a compound option and leg extension as complementary quad work. The small single study does not make isolation mandatory in every short workout.",
+      "access": "Indexed PubMed abstract and publisher record"
+    },
+    {
+      "id": "R13",
+      "year": 2023,
+      "authors": "Maeo et al.",
+      "title": "Triceps brachii hypertrophy is substantially greater after elbow extension training performed in the overhead versus neutral arm position",
+      "journal": "European Journal of Sport Science 23(7):1240-1250; online 2022",
+      "doi": "10.1080/17461391.2022.2100279",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35819335/",
+      "design": "21 adults; opposite arms; cable extensions twice weekly for 12 weeks.",
+      "finding": "Overhead extensions produced greater triceps growth than neutral-arm extensions in this protocol, particularly in the long head.",
+      "application_and_limit": "Retain the overhead pattern and add a cable version plus pressdowns as an alternative. The direct trial used cables, not the existing dumbbell variation.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R14",
+      "year": 2023,
+      "authors": "Kinoshita et al.",
+      "title": "Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training",
+      "journal": "Frontiers in Physiology 14:1272106",
+      "doi": "10.3389/fphys.2023.1272106",
+      "url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2023.1272106/full",
+      "design": "14 untrained adults; opposite legs; 12 weeks.",
+      "finding": "Standing raises produced substantially more gastrocnemius growth; soleus growth was similar between conditions.",
+      "application_and_limit": "Prioritize a straight-knee calf option. Seated raises remain useful alternatives, but the trial does not show that seated work is required for soleus growth.",
+      "access": "Publisher full text"
+    },
+    {
+      "id": "R15",
+      "year": 2023,
+      "authors": "Plotkin et al.",
+      "title": "Hip thrust and back squat training elicit similar gluteus muscle hypertrophy and transfer similarly to the deadlift",
+      "journal": "Frontiers in Physiology 14:1279170",
+      "doi": "10.3389/fphys.2023.1279170",
+      "url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2023.1279170/full",
+      "design": "Nine-week randomized training comparison using MRI; final peer-reviewed version.",
+      "finding": "Gluteal hypertrophy was similar, thigh growth favored squats, and strength gains favored the practiced exercise.",
+      "application_and_limit": "Squats and hip thrusts are legitimate choices for different priorities. Acute muscle-activation rankings alone should not determine the catalog.",
+      "access": "Publisher abstract/full-text sections"
+    },
+    {
+      "id": "R16",
+      "year": 2025,
+      "authors": "Larsen et al.",
+      "title": "Dumbbell versus cable lateral raises for lateral deltoid hypertrophy: an experimental study",
+      "journal": "Frontiers in Physiology 16:1611468",
+      "doi": "10.3389/fphys.2025.1611468",
+      "url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2025.1611468/full",
+      "design": "24 completers; trained men and women; opposite arms; eight weeks; matched motion range.",
+      "finding": "Dumbbells and cables produced similar lateral-deltoid growth under these conditions.",
+      "application_and_limit": "Add cables for preference and availability, not as a superior level unlocked after dumbbells. Different motion ranges were not tested.",
+      "access": "Publisher full text"
+    },
+    {
+      "id": "R17",
+      "year": 2025,
+      "authors": "Wolf et al.",
+      "title": "Lengthened partial repetitions elicit similar muscular adaptations as full range of motion repetitions during resistance training in trained individuals",
+      "journal": "PeerJ",
+      "doi": "",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39959841/",
+      "design": "30 trained participants; opposite arms; eight-week upper-body intervention.",
+      "finding": "Lengthened partials and full-range training produced similar measured arm hypertrophy and pulldown strength-endurance changes.",
+      "application_and_limit": "Use controlled, tolerable full range by default; retain lengthened partials as an optional technique. This is not evidence for replacing all full-range training.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R18",
+      "year": 2024,
+      "authors": "Singer et al.",
+      "title": "Give it a rest: a systematic review with Bayesian meta-analysis on the effect of inter-set rest interval duration on muscle hypertrophy",
+      "journal": "Frontiers in Sports and Active Living 6:1429789",
+      "doi": "10.3389/fspor.2024.1429789",
+      "url": "https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1429789/full",
+      "design": "Nine studies; wide and overlapping estimates.",
+      "finding": "Results suggested a small benefit from resting more than 60 seconds; additional differences above 90 seconds were not clearly detected.",
+      "application_and_limit": "Do not achieve short sessions by indiscriminately removing rest. Adjust rest to restore useful performance rather than treating one duration as a universal optimum.",
+      "access": "Publisher full text"
+    },
+    {
+      "id": "R19",
+      "year": 2024,
+      "authors": "Ramos-Campo et al.",
+      "title": "Efficacy of Split Versus Full-Body Resistance Training on Strength and Muscle Growth: A Systematic Review With Meta-Analysis",
+      "journal": "Journal of Strength and Conditioning Research 38(7):1330-1340",
+      "doi": "",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38595233/",
+      "design": "14 studies, 392 participants.",
+      "finding": "Split and full-body routines produced similar outcomes when training volume was matched.",
+      "application_and_limit": "Default to full-body sessions for two or three available days; allow splits for preference and scheduling. Full-body is a convenience choice, not a universal physiological winner.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R20",
+      "year": 2022,
+      "authors": "Kassiano et al.",
+      "title": "Does Varying Resistance Exercises Promote Superior Muscle Hypertrophy and Strength Gains? A Systematic Review",
+      "journal": "Journal of Strength and Conditioning Research 36(6):1753-1762",
+      "doi": "10.1519/JSC.0000000000004258",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35438660/",
+      "design": "Eight studies, 241 participants, all young men.",
+      "finding": "Planned variation may aid regional development; excessive random variation and redundant choices can impede useful training continuity.",
+      "application_and_limit": "Keep a small stable exercise menu across a training block. Change exercises for a reason, with a separate performance history for each variation.",
+      "access": "PubMed abstract"
+    },
+    {
+      "id": "R21",
+      "year": 2026,
+      "authors": "Advanced-methods network meta-analysis",
+      "title": "The Effects of Advanced Resistance Training Prescription Methods on Strength, Power, Hypertrophy, and Performance Adaptations in Healthy Adults: A Systematic Review and Bayesian Network Meta-analysis",
+      "journal": "Sports Medicine; published April 8, 2026",
+      "doi": "10.1007/s40279-026-02428-1",
+      "url": "https://link.springer.com/article/10.1007/s40279-026-02428-1",
+      "design": "Review and network meta-analysis of traditional training and seven advanced methods.",
+      "finding": "Advanced methods did not consistently outperform traditional training for strength, power, or hypertrophy in untrained to moderately trained adults.",
+      "application_and_limit": "Treat techniques such as advanced set structures as optional tools; simple progression remains a sound default. Highly trained populations were less well represented.",
+      "access": "Publisher abstract"
+    },
+    {
+      "id": "R22",
+      "year": 2020,
+      "authors": "Bull et al. / WHO",
+      "title": "World Health Organization 2020 guidelines on physical activity and sedentary behaviour",
+      "journal": "British Journal of Sports Medicine",
+      "doi": "",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33239350/",
+      "design": "International public-health guideline, with official WHO current guidance cross-check.",
+      "finding": "Adults should accumulate 150-300 minutes of moderate or 75-150 minutes of vigorous aerobic activity weekly, or an equivalent mix, alongside strengthening at least twice weekly.",
+      "application_and_limit": "Count walking outside formal workouts. Short strength sessions do not automatically fulfill aerobic targets; activity below the target still has value.",
+      "access": "Indexed guideline abstract and WHO official guidance"
+    },
+    {
+      "id": "R23",
+      "year": 2026,
+      "authors": "Stefanovic, Werndle and Reljic",
+      "title": "Effects of High-Intensity Interval Training on Cardiorespiratory Fitness and Cardiometabolic Health in Real-World Settings: A Systematic Review and Meta-Analysis",
+      "journal": "Sports 14(7):311; July 22, 2026",
+      "doi": "10.3390/sports14070311",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/42506854/",
+      "design": "31 studies, 1,119 participants; controlled and uncontrolled reports; search through December 2025.",
+      "finding": "Real-world HIIT was associated with improved cardiorespiratory fitness and selected cardiometabolic outcomes.",
+      "application_and_limit": "Offer intervals on suitable modes, including bikes. Within-group pooled changes do not establish superiority over continuous training or identify a universally best interval protocol.",
+      "access": "Indexed PubMed abstract"
+    },
+    {
+      "id": "R24",
+      "year": 2026,
+      "authors": "Resistance-training variables review",
+      "title": "Effects of resistance training variables on muscle hypertrophy in resistance-trained individuals: A systematic review",
+      "journal": "Journal of Bodywork and Movement Therapies 48:1149-1152; online August 21, 2026",
+      "doi": "10.1016/j.jbmt.2026.08.025",
+      "url": "https://www.sciencedirect.com/science/article/pii/S1360859226002561",
+      "design": "Six studies in a qualitative synthesis; search through April 2025.",
+      "finding": "The review emphasizes training volume and effort as central contributors, with less consistent independent effects of other variables.",
+      "application_and_limit": "Recent corroboration, given limited weight because the synthesis is small. Do not optimize raw tonnage across exercises: load times reps is not a comparable hypertrophy dose across movements.",
+      "access": "Indexed publisher abstract"
+    }
+  ]
+}

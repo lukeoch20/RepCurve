@@ -1,4 +1,6 @@
 import type { Equipment, Profile } from "@repcurve/shared";
+import { addActivity, removeActivity } from "../model/activity";
+import { atLocation } from "../model/equipment";
 import { newCore, rescheduled } from "../model/plan";
 import {
   adjustTimer,
@@ -8,6 +10,7 @@ import {
   logSet,
   pause,
   removeSet,
+  setPainArea,
   resume,
   setTimerLength,
   skipSegment,
@@ -22,7 +25,7 @@ import {
   type SetRef,
   type SetValues,
 } from "../model/session";
-import type { AppData, CardioResult, SessionRecord, Settings } from "../model/types";
+import type { AppData, CardioResult, ExtraActivity, Location, Locations, SessionRecord, Settings } from "../model/types";
 
 export interface AppState {
   data: AppData;
@@ -33,12 +36,18 @@ export interface AppState {
 
 export type Action =
   | { type: "loaded"; data: AppData }
-  | { type: "setup"; profile: Profile; equipment: Equipment; now: number }
+  /** `locations` replaces the places the user trains; leave it out to keep them. */
+  | { type: "setup"; profile: Profile; equipment: Equipment; locations?: Locations; now: number }
+  /** Train somewhere else today: the plan follows that place's equipment. */
+  | { type: "location"; at: Location }
   | { type: "settings"; settings: Partial<Settings> }
+  | { type: "addActivity"; activity: ExtraActivity }
+  | { type: "removeActivity"; at: number }
   | { type: "start"; now: number; minutes: number | null }
   | { type: "log"; ref: SetRef; values: SetValues; now: number }
   | { type: "edit"; slot: string; setIndex: number; values: SetValues }
   | { type: "remove"; slot: string; setIndex: number }
+  | { type: "painArea"; slot: string; setIndex: number; area: string | null }
   | { type: "skipSlot"; slot: string }
   | { type: "unskipSlot"; slot: string }
   | { type: "swap"; slot: string; exerciseId: string; permanent: boolean }
@@ -67,11 +76,28 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, data: a.data, ready: true };
     case "setup": {
       // First run creates the training record; later edits keep history and progress.
-      const nextCore = core ? rescheduled(core, a.profile, a.equipment) : newCore(a.profile, a.equipment, a.now);
+      const locations = a.locations ?? core?.locations;
+      const here = locations ? atLocation(locations, locations.at) : null;
+      const equipment = here && a.locations ? here.equipment : a.equipment;
+      const nextCore = core ? rescheduled(core, a.profile, equipment) : newCore(a.profile, equipment, a.now);
+      if (locations) {
+        // The place being trained at keeps the equipment just saved.
+        nextCore.locations = { ...locations, [locations.at]: equipment };
+      }
       return { ...s, data: { ...s.data, core: nextCore } };
+    }
+    case "location": {
+      if (!core?.locations || active) return s;
+      const here = atLocation(core.locations, a.at);
+      if (!here) return s;
+      return { ...s, data: { ...s.data, core: { ...rescheduled(core, core.profile, here.equipment), locations: here.locations } } };
     }
     case "settings":
       return core ? { ...s, data: { ...s.data, core: { ...core, settings: { ...core.settings, ...a.settings } } } } : s;
+    case "addActivity":
+      return core ? { ...s, data: { ...s.data, core: addActivity(core, a.activity) } } : s;
+    case "removeActivity":
+      return core ? { ...s, data: { ...s.data, core: removeActivity(core, a.at) } } : s;
     case "start":
       if (!core || active) return s;
       return { ...s, data: { ...s.data, active: startSession(core, history, a.now, a.minutes) } };
@@ -92,6 +118,8 @@ export function reducer(s: AppState, a: Action): AppState {
       return withActive(editSet(active, a.slot, a.setIndex, a.values, core));
     case "remove":
       return withActive(removeSet(active, a.slot, a.setIndex, core));
+    case "painArea":
+      return withActive(setPainArea(active, a.slot, a.setIndex, a.area));
     case "skipSlot":
       return withActive(skipSlot(active, a.slot));
     case "unskipSlot":

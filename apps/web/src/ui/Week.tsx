@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { SessionPlan } from "@repcurve/engine";
 import type { Units } from "@repcurve/shared";
 import { exerciseCount, type WeekSession, type WeekSlot } from "../model/plan";
-import { plural } from "../model/format";
+import { cardioLabel, plural } from "../model/format";
 import { Icon } from "./common";
 import { CardioLineup, Lineup } from "./Lineup";
 
@@ -23,7 +23,7 @@ export function WeekStrip(props: { slots: WeekSlot[] }): React.ReactElement {
 }
 
 export function sessionSummary(plan: SessionPlan): string {
-  if (plan.kind === "cardio") return `${plan.cardio?.mode === "treadmill" ? "Treadmill" : plan.cardio?.mode === "jump_rope" ? "Jump rope" : "Walk or jog"} · ${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min`;
+  if (plan.kind === "cardio") return `${cardioLabel(plan.cardio)} · ${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min`;
   return `${plural(exerciseCount(plan), "exercise")} · ~${Math.round(plan.estimatedMinutes)} min`;
 }
 

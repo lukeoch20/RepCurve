@@ -53,17 +53,14 @@ describe("RC-16: changing days per week keeps the user's week", () => {
 });
 
 describe("RC-01: Plan tab volume follows the sessions the user gets", () => {
-  it("reflects the longer one-sided variants a progressing lifter moves to", () => {
+  it("reflects exercises the user swapped in for good", () => {
     const core = newCore(profile, equipment, 0);
-    const total = (v: Record<string, number>) => Object.values(v).reduce((a, b) => a + b, 0);
-    let state = core.state;
-    for (const [from, to] of [["goblet_squat", "db_reverse_lunge"], ["db_rdl", "db_single_leg_rdl"], ["db_bent_over_row", "db_renegade_row"]] as const) {
-      state = preferExercise(state, from, to);
-    }
+    // Romanian deadlifts bother their back, so hamstring walkouts take their place: less glute work.
+    const state = preferExercise(core.state, "db_rdl", "hamstring_walkout");
     const before = currentProgram(core).weeklyVolume;
     const after = currentProgram({ ...core, state }).weeklyVolume;
-    expect(total(after)).not.toBe(total(before));
-    expect(after.quads).toBeGreaterThan(0);
+    expect(after.glutes).toBeLessThan(before.glutes);
+    expect(after.hamstrings).toBeGreaterThan(0);
   });
 });
 

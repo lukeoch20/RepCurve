@@ -70,6 +70,7 @@ export function planFor(core: Core, index: number, minutes?: number | null, last
     transitionSec: core.settings.transitionSec,
     ...(minutes ? { minutes } : {}),
     ...(lastCardioEffort !== undefined ? { lastCardioEffort } : {}),
+    ...(core.settings.cardioActivity ? { cardioActivity: core.settings.cardioActivity } : {}),
   });
 }
 

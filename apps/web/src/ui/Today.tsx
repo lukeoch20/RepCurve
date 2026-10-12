@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
-import { dayLabel, plural } from "../model/format";
+import { ACTIVITY_NAME, cardioLabel, dayLabel, plural } from "../model/format";
 import { exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
-import { Icon, Stepper } from "./common";
+import { Icon, Seg, Stepper } from "./common";
+import { placesOf } from "../model/equipment";
 import { CardioLineup, Lineup } from "./Lineup";
 import { useTip } from "./tips";
 import { ChallengeCard } from "./Trophies";
@@ -55,11 +56,23 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           <p className="meta num">
             {plan.kind === "strength"
               ? `~${Math.round(plan.estimatedMinutes)} min · ${plural(exerciseCount(plan), "exercise")}${plan.finisher ? " incl. core finisher" : ""}`
-              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${plan.cardio?.mode === "treadmill" ? "treadmill" : plan.cardio?.mode === "jump_rope" ? "jump rope" : "walk or jog"}`}
+              : `${plan.cardio?.totalMinutes ?? plan.budgetMinutes} min · ${cardioLabel(plan.cardio).toLowerCase()}`}
           </p>
         </div>
         <SessionGlyph plan={plan} />
       </header>
+
+      {placesOf(core).length === 2 && core.locations ? (
+        <div className="field">
+          <span className="label">Training at</span>
+          <Seg
+            label="Training at"
+            value={core.locations.at}
+            onChange={(at) => dispatch({ type: "location", at })}
+            options={[{ value: "home", label: "Home" }, { value: "gym", label: "Gym" }]}
+          />
+        </div>
+      ) : null}
 
       <section className="card stack" style={{ gap: 14 }} ref={weekTip}>
         <div className="spread">
@@ -79,11 +92,28 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {remindBackup ? (
         <div className="banner adjust"><b>Time for a backup</b>Your training is saved only on this device, and it's been a month since the last backup. Export one in Settings.</div>
       ) : null}
+      {plan.coverage?.map((n) => (
+        <div key={n} className="banner adjust"><b>Missing a movement</b>{n}</div>
+      ))}
       {plan.notes?.map((n) => (
         <div key={n} className="banner info"><b>Short on room</b>{n}</div>
       ))}
       {benchmarks ? (
         <div className="banner info" ref={benchmarkTip}><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>
+      ) : null}
+
+      {plan.kind === "cardio" && (plan.cardio?.options?.length ?? 0) > 1 ? (
+        <div className="field">
+          <span className="label">Activity</span>
+          <div className="row-wrap" role="group" aria-label="Activity">
+            {plan.cardio!.options!.map((a) => (
+              <button key={a} type="button" className="chip" aria-pressed={plan.cardio!.activity === a} onClick={() => dispatch({ type: "settings", settings: { cardioActivity: a } })}>
+                {ACTIVITY_NAME[a]}
+              </button>
+            ))}
+          </div>
+          <span className="meta small">Same plan and effort on any of them. Your pick is remembered for next time.</span>
+        </div>
       ) : null}
 
       <section className="card stack" style={{ gap: 14 }}>

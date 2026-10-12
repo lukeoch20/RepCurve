@@ -1,10 +1,11 @@
 import { STARTING_LOAD_RATIO } from "@repcurve/exercises";
-import { availableDumbbellLoadsKg, loadForReps, roundDownToOwned } from "@repcurve/shared";
+import { availableLoadsKg, loadForReps, loadUnitsFor, roundDownToOwned } from "@repcurve/shared";
 import type { Equipment, Exercise, Profile, Rir, TrainingLevel } from "@repcurve/shared";
 import { LEVEL_LOAD_MULTIPLIER } from "./level.js";
 
-export function isLoaded(e: Exercise): boolean {
-  return e.loadType === "dumbbell_pair" || e.loadType === "single_dumbbell";
+/** Exercises with a weight to choose: dumbbells, a barbell, or a machine or cable stack. */
+export function isLoaded(e: Pick<Exercise, "loadType">): boolean {
+  return e.loadType === "dumbbell_pair" || e.loadType === "single_dumbbell" || e.loadType === "barbell" || e.loadType === "machine" || e.loadType === "cable";
 }
 
 /** Reps the starting load is aimed at: a third of the way into the range. */
@@ -15,7 +16,8 @@ export function startingTargetReps(repRange: [number, number]): number {
 /**
  * Starting load for an exercise. If an e1RM is known, derive the load for the
  * lower part of the rep range at the target RIR; otherwise use a
- * conservative bodyweight ratio. Always rounded down to an owned dumbbell.
+ * conservative bodyweight ratio. Always rounded down to a load that can be set (an owned dumbbell,
+ * a plate step on the bar, a stack setting), and never below the lightest one.
  */
 export function startingLoadKg(
   e: Exercise,
@@ -27,7 +29,7 @@ export function startingLoadKg(
   e1rmKg?: number,
 ): number | null {
   if (!isLoaded(e)) return null;
-  const owned = availableDumbbellLoadsKg(equipment.dumbbells);
+  const owned = availableLoadsKg(e, equipment, loadUnitsFor(profile, equipment));
   if (owned.length === 0) return null;
   let target: number;
   if (e1rmKg && e1rmKg > 0) {
@@ -40,9 +42,13 @@ export function startingLoadKg(
 }
 
 export function repRangeFor(e: Exercise, level: TrainingLevel): [number, number] {
-  if (e.loadType === "time") return [30, 60];
+  if (e.loadType === "time") return e.unilateral ? [20, 45] : [30, 60];
+  if (e.family === "anti_rotation") return [8, 12];
   if (e.pattern === "core") return [8, 15];
-  if (e.pattern === "vertical_pull") return e.ladderLevel === 1 ? [3, 6] : [3, 10];
+  // Unassisted bodyweight pulling: few reps to start; negatives are slow and fewer still.
+  if (e.pattern === "vertical_pull" && e.loadType === "bodyweight" && !e.assisted) return e.ladder === "vpull_negative" ? [3, 6] : [3, 10];
+  // Walkouts and sliding curls are hard for their reps; leg curls on a machine use the isolation range.
+  if (e.family === "knee_flexion" && e.loadType === "bodyweight") return [6, 15];
   if (e.pattern === "isolation") return [10, 20];
   // One-sided sets take twice as long, so they stay in a lower range per side.
   if (e.unilateral && e.loadType !== "band") return e.loadType === "bodyweight" ? [6, 15] : [6, 12];

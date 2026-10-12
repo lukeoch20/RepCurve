@@ -67,7 +67,7 @@ describe("RC-03: a mid-session move to a heavier dumbbell resets the rep target"
 });
 
 describe("RC-06: pain counts in every session type", () => {
-  it("swaps a painful exercise even in a deload", () => {
+  it("holds a painful exercise and checks in next time, even in a deload", () => {
     const ctx = referenceContext();
     const state: TrainingState = { ...initialTrainingState(), deloadRemaining: 3, strengthSessionsLogged: 6 };
     const plan = applyState(planSessionWith(ctx, 8), state, ctx);
@@ -76,7 +76,9 @@ describe("RC-06: pain counts in every session type", () => {
     const r = recordSession(state, plan, logs, ctx);
     const c = r.changes.find((x) => x.exerciseId === "goblet_squat")!;
     expect(c.action).toBe("pain");
-    expect(c.nextExerciseId).not.toBe("goblet_squat");
+    // A replacement for the same muscles isn't automatically pain-free: no automatic swap.
+    expect(c.nextExerciseId).toBe("goblet_squat");
+    expect(r.state.exercises["goblet_squat"]!.painCheck).toBe(true);
   });
 });
 

@@ -1,5 +1,27 @@
 import { displayLoad, formatLoad } from "@repcurve/shared";
 import type { LoadType, Rir, Units } from "@repcurve/shared";
+import type { CardioActivity, CardioPlan } from "@repcurve/engine";
+
+/** Short names for choosing an activity. */
+export const ACTIVITY_NAME: Record<CardioActivity, string> = {
+  walking: "Walk",
+  running: "Run",
+  cycling: "Bike",
+  elliptical: "Elliptical",
+  rowing: "Rower",
+  stairs: "Stairs",
+  jump_rope: "Jump rope",
+  marching: "March indoors",
+};
+
+/** What a cardio session is done on or as, e.g. "Treadmill walk", "Bike". */
+export function cardioLabel(c: CardioPlan | null | undefined): string {
+  if (!c) return "Cardio";
+  const activity = c.activity ?? (c.mode === "jump_rope" ? "jump_rope" : "walking");
+  if (activity === "walking") return c.mode === "treadmill" ? "Treadmill walk" : "Walk or jog";
+  if (activity === "running") return c.mode === "treadmill" ? "Treadmill run" : "Run";
+  return ACTIVITY_NAME[activity];
+}
 
 export const EFFORT_OPTIONS: { rir: Rir; label: string; hint: string }[] = [
   { rir: 4, label: "Easy", hint: "4 or more reps left" },

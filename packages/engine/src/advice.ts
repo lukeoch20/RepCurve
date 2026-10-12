@@ -29,7 +29,7 @@ export function adviseNextSet(p: Prescription, done: SetLog[], ctx: EngineContex
       loadKg: p.loadKg,
       targetReps: p.targetReps,
       tone: "stop",
-      message: "Skip the rest of this one. It will be swapped next time. Sharp or lingering pain is worth getting checked.",
+      message: "Stop this one for today. Next time it's a step lighter, and you'll be asked how it feels first. Sharp or lingering pain is worth getting checked.",
     };
   }
 
@@ -39,14 +39,15 @@ export function adviseNextSet(p: Prescription, done: SetLog[], ctx: EngineContex
   const fmt = (w: number) => formatLoad(w, e.loadType, units);
   const unit = e.loadType === "time" ? "seconds" : "reps";
   const cap = maxRepsFor(e);
+  const owned = ctx.loadsFor(e);
 
   if (isLoaded(e) && last.loadKg !== null) {
     const e1 = e1RM(last.loadKg, last.reps, last.rir);
     const fit = (w: number) => repsAtLoad(e1, w) - rirT;
     if (p.benchmarkSet && sets.length === 1) {
       let chosen: number | null = null;
-      for (const w of ctx.ownedLoadsKg) if (fit(w) >= lo) chosen = w;
-      const load = chosen ?? ctx.ownedLoadsKg[0] ?? last.loadKg;
+      for (const w of owned) if (fit(w) >= lo) chosen = w;
+      const load = chosen ?? owned[0] ?? last.loadKg;
       const target = clamp(fit(load), lo, hi);
       if (Math.abs(load - last.loadKg) < 1e-6) {
         return { loadKg: load, targetReps: target, tone: "good", message: `Benchmark logged. Stay at ${fmt(load)} and aim for ${target} reps.` };
@@ -54,14 +55,14 @@ export function adviseNextSet(p: Prescription, done: SetLog[], ctx: EngineContex
       return { loadKg: load, targetReps: target, tone: "adjust", message: `Benchmark logged. Use ${fmt(load)} for the rest and aim for ${target} reps.` };
     }
     if (last.reps < lo && last.rir <= 1) {
-      const prev = prevOwnedLoad(last.loadKg, ctx.ownedLoadsKg);
+      const prev = prevOwnedLoad(last.loadKg, owned);
       if (prev !== null) {
         return { loadKg: prev, targetReps: clamp(fit(prev), lo, hi), tone: "adjust", message: `That was a grind. Drop to ${fmt(prev)} for the next set.` };
       }
       return { loadKg: last.loadKg, targetReps: Math.max(1, last.reps), tone: "adjust", message: "That was a grind. Same weight, and fewer reps is fine. Keep the form clean." };
     }
     if (last.rir >= 4 && last.reps >= hi) {
-      const up = nextOwnedLoad(last.loadKg, ctx.ownedLoadsKg);
+      const up = nextOwnedLoad(last.loadKg, owned);
       if (up !== null && fit(up) >= lo) {
         return { loadKg: up, targetReps: clamp(fit(up), lo, hi), tone: "adjust", message: `Too easy. Try ${fmt(up)} next set.` };
       }

@@ -157,6 +157,16 @@ export function editSet(active: ActiveSession, slot: string, setIndex: number, v
   return { ...active, sets, ...coach(active, slot, sets, core) };
 }
 
+/** Where a flagged set hurt, for the record and for spotting a pattern later. */
+export function setPainArea(active: ActiveSession, slot: string, setIndex: number, area: string | null): ActiveSession {
+  const existing = loggedSet(active, slot, setIndex);
+  if (!existing?.painFlag) return active;
+  const updated: LoggedSet = { ...existing };
+  if (area) updated.painArea = area;
+  else delete updated.painArea;
+  return { ...active, sets: active.sets.map((s) => (s === existing ? updated : s)) };
+}
+
 export function removeSet(active: ActiveSession, slot: string, setIndex: number, core: Core): ActiveSession {
   const sets = active.sets.filter((s) => !(s.slot === slot && s.setIndex === setIndex));
   return { ...active, sets, ...coach(active, slot, sets, core) };

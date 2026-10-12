@@ -13,7 +13,7 @@ import {
   type ProgressionResult,
 } from "./progression.js";
 import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
-import { finisherSeconds, supersetSeconds } from "./timing.js";
+import { finisherSeconds, setupSeconds, supersetSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
 
 /** Everything that carries over from one session to the next. Plain JSON, safe to persist. */
@@ -73,9 +73,9 @@ export function prescriptionsOf(session: SessionPlan): Prescription[] {
   return [...session.supersets.flatMap((ss) => ss.items), ...(session.finisher ? [session.finisher] : [])];
 }
 
-function ownedOrRounded(loadKg: number, ctx: EngineContext): number {
-  if (ctx.ownedLoadsKg.some((w) => Math.abs(w - loadKg) < 1e-6)) return loadKg;
-  return roundDownToOwned(loadKg, ctx.ownedLoadsKg) ?? loadKg;
+function ownedOrRounded(loadKg: number, owned: number[]): number {
+  if (owned.some((w) => Math.abs(w - loadKg) < 1e-6)) return loadKg;
+  return roundDownToOwned(loadKg, owned) ?? loadKg;
 }
 
 /** A prescription for `exercise` in `slot`, using what the state remembers about it. */
@@ -93,10 +93,11 @@ export function prescriptionFor(
   const cap = maxRepsFor(exercise);
   const repRange: [number, number] = [Math.min(stored[0], cap), Math.min(stored[1], cap)];
   let loadKg: number | null = null;
-  if (isLoaded(exercise) && ctx.ownedLoadsKg.length > 0) {
+  const owned = ctx.loadsFor(exercise);
+  if (isLoaded(exercise) && owned.length > 0) {
     const remembered = progress?.loadKg ?? fallback?.loadKg ?? null;
     loadKg = remembered !== null
-      ? ownedOrRounded(remembered, ctx)
+      ? ownedOrRounded(remembered, owned)
       : startingLoadKg(exercise, ctx.profile, ctx.equipment, ctx.level, repRange, TARGET_RIR);
   }
   const targetReps = clamp(
@@ -104,7 +105,7 @@ export function prescriptionFor(
     repRange[0],
     repRange[1],
   );
-  return buildPrescription({
+  const p = buildPrescription({
     exercise,
     slot,
     sets,
@@ -115,12 +116,14 @@ export function prescriptionFor(
     benchmarkSet: false,
     units: ctx.loadUnits,
   });
+  if (progress?.painCheck) p.painCheck = true;
+  return p;
 }
 
 function lighter(p: Prescription, ctx: EngineContext): Prescription {
   if (p.loadKg === null) return { ...p, benchmarkSet: false };
-  const prev = prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg);
   const e = getExercise(p.exerciseId);
+  const prev = prevOwnedLoad(p.loadKg, ctx.loadsFor(e));
   if (prev === null) return { ...p, benchmarkSet: false };
   return buildPrescription({
     exercise: e,
@@ -160,7 +163,10 @@ export function fitToBudget(session: SessionPlan): SessionPlan {
   let finisher = plannedFinisher ? { ...plannedFinisher } : null;
 
   const timedItem = (p: Prescription) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps });
-  const secsFor = (ss: Superset, rounds = ss.rounds) => supersetSeconds(ss.items.map(timedItem), rounds, ss.transitionSec, ss.restSec);
+  // Setup (machines, bars, band anchors) happens once; each round costs the same after that.
+  const roundSecs = (ss: Superset) => supersetSeconds(ss.items.map(timedItem), 1, ss.transitionSec, ss.restSec);
+  const secsFor = (ss: Superset) =>
+    supersetSeconds(ss.items.map(timedItem), ss.rounds, ss.transitionSec, ss.restSec) + setupSeconds(ss.items.map((p) => getExercise(p.exerciseId)));
   const finisherSecs = (f: Prescription | null) => (f ? finisherSeconds(getExercise(f.exerciseId), f.repRange, f.sets, f.targetReps) : 0);
   const totalSec = () => session.warmupMinutes * 60 + supersets.reduce((s, ss) => s + secsFor(ss), 0) + finisherSecs(finisher);
   const budgetSec = session.budgetMinutes * 60;
@@ -172,8 +178,8 @@ export function fitToBudget(session: SessionPlan): SessionPlan {
   /** Of the supersets that can lose a round, the cheapest round that clears the overage, else the most expensive. */
   const roundToCut = (minRounds: number): Superset | undefined => {
     const over = totalSec() - limitSec;
-    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => secsFor(a, 1) - secsFor(b, 1));
-    return options.find((ss) => secsFor(ss, 1) >= over) ?? options[options.length - 1];
+    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => roundSecs(a) - roundSecs(b));
+    return options.find((ss) => roundSecs(ss) >= over) ?? options[options.length - 1];
   };
 
   while (totalSec() > limitSec + 1e-9) {
@@ -198,9 +204,9 @@ export function fitToBudget(session: SessionPlan): SessionPlan {
     const candidates = supersets
       .map((ss) => ({ ss, planned: roundCap }))
       .filter((c) => c.ss.rounds < c.planned)
-      .sort((a, b) => secsFor(a.ss, 1) - secsFor(b.ss, 1));
+      .sort((a, b) => roundSecs(a.ss) - roundSecs(b.ss));
     for (const c of candidates) {
-      if (totalSec() + secsFor(c.ss, 1) <= budgetSec) {
+      if (totalSec() + roundSecs(c.ss) <= budgetSec) {
         setRounds(c.ss, c.ss.rounds + 1);
         restored = true;
         break;
@@ -269,12 +275,48 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
   return fitToBudget({ ...session, supersets, finisher, deload, comeback });
 }
 
-/** Other exercises that train the same movement and that the user can do with their equipment. */
-export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = []): Exercise[] {
+/** Why someone wants a different exercise; each wants different options first. */
+export type SwapReason = "busy" | "hard" | "balance" | "dislike";
+
+const TIER_RANK = { default: 0, optional: 1, advanced: 2, retired: 3 } as const;
+
+/**
+ * Other exercises that do the same job and that the user can do with their equipment, best match
+ * first: same family, then the planner's own choices before optional branches and advanced skills.
+ * The reason reorders them: equipment busy or missing puts different equipment first; too hard puts
+ * easier and more stable options first (no advanced skills); balance puts two-sided options first.
+ */
+export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = [], reason?: SwapReason): Exercise[] {
+  const current = getExercise(p.exerciseId);
   const exclude = new Set([p.exerciseId, ...excludeIds]);
-  return ctx.pool.exercises
-    .filter((e) => e.pattern === p.pattern && !exclude.has(e.id))
-    .sort((a, b) => (a.ladder === b.ladder ? a.ladderLevel - b.ladderLevel : a.ladder.localeCompare(b.ladder)));
+  const isolationFamily = (e: Exercise) => current.pattern !== "isolation" || e.family === current.family;
+  let options = ctx.pool.exercises.filter((e) => e.pattern === p.pattern && !exclude.has(e.id) && isolationFamily(e));
+  if (reason === "hard" || reason === "balance") options = options.filter((e) => e.tier !== "advanced");
+  const key = (e: Exercise): number[] => {
+    const family = e.family === current.family ? 0 : 1;
+    // Entry regressions (wall push-ups, sit-to-stands) are for when it's too hard, not a first offer.
+    const tier = TIER_RANK[e.tier] + (e.ladderLevel === 0 && reason !== "hard" ? 0.5 : 0);
+    switch (reason) {
+      case "busy":
+        return [e.loadType === current.loadType ? 1 : 0, family, tier];
+      case "hard": {
+        const easierRung = e.ladder === current.ladder && e.ladderLevel < current.ladderLevel ? 0 : 1;
+        const stable = e.unilateral ? 1 : 0;
+        return [easierRung, family, stable, tier];
+      }
+      case "balance":
+        return [e.unilateral ? 1 : 0, family, tier];
+      default:
+        return [family, tier];
+    }
+  };
+  return options
+    .map((e) => ({ e, k: key(e) }))
+    .sort((a, b) => {
+      for (let i = 0; i < a.k.length; i++) if (a.k[i] !== b.k[i]) return a.k[i]! - b.k[i]!;
+      return a.e.ladder === b.e.ladder ? a.e.ladderLevel - b.e.ladderLevel : a.e.ladder.localeCompare(b.e.ladder);
+    })
+    .map((x) => x.e);
 }
 
 /**
@@ -314,7 +356,7 @@ function progressFromPrescription(p: Prescription, ctx: EngineContext): Exercise
 }
 
 function hasEasierOption(p: Prescription, ctx: EngineContext): boolean {
-  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg) !== null) return true;
+  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.loadsFor(getExercise(p.exerciseId))) !== null) return true;
   return ladderNeighbour(getExercise(p.exerciseId), ctx, -1) !== null;
 }
 

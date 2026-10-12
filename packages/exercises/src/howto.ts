@@ -2,6 +2,10 @@
  * How to perform each exercise: setup, steps, what to feel for, and the usual mistakes.
  * Plain language for people training alone at home. General guidance, not medical advice.
  */
+import { HOW_TO_FREE } from "./howto-free.js";
+import { HOW_TO_GYM } from "./howto-gym.js";
+import { HOW_TO_HOME } from "./howto-home.js";
+
 export interface HowTo {
   /** Getting into position, including what to hold and where. */
   setup: string;
@@ -15,7 +19,7 @@ export interface HowTo {
 
 const SWITCH = "Do all your reps on one side, then switch sides. That's one set.";
 
-export const HOW_TO: Record<string, HowTo> = {
+const BASE: Record<string, HowTo> = {
   // ---------------- Squat ----------------
   goblet_squat: {
     setup: "Stand with feet about shoulder-width apart, toes turned out slightly. Hold one dumbbell upright against your chest with both hands cupping the top end.",
@@ -355,15 +359,15 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Using a door that opens toward you, which can swing open as you pull", "Towel slipping off a lever handle: wrap it twice and test first", "Letting go suddenly: always lower under control"],
   },
   band_row: {
-    setup: "Sit on the floor with legs straight. Loop a resistance band around your feet (or anchor it to a post at chest height and stand). Hold one end in each hand, arms straight.",
+    setup: "Anchor a resistance band at chest height: in a door anchor on the hinge side of a closed door that opens away from you, or around a sturdy post. Test it with a firm pull. Hold one end in each hand, arms straight in front, and step back until the band is slightly taut.",
     steps: [
-      "Sit tall and brace.",
+      "Stand tall with soft knees and brace.",
       "Pull your hands toward your lower ribs, elbows close to your body.",
       "Squeeze your shoulder blades together.",
       "Return slowly until your arms are straight.",
     ],
-    cues: ["Tall posture, no leaning back", "Shoulders down", "Control the band on the way back"],
-    mistakes: ["Rocking backward to pull", "Shrugging", "Letting the band snap back"],
+    cues: ["Tall posture, no leaning back", "Shoulders down", "Step further back to make it harder"],
+    mistakes: ["Rocking backward to pull", "Shrugging", "Letting the band snap back", "Anchoring to anything that can move, like a door handle or furniture"],
   },
 
   // ---------------- Vertical pull ----------------
@@ -503,6 +507,8 @@ export const HOW_TO: Record<string, HowTo> = {
     mistakes: ["Bouncing", "Short range", "Rolling onto the outside of the foot"],
   },
 };
+
+export const HOW_TO: Record<string, HowTo> = { ...BASE, ...HOW_TO_HOME, ...HOW_TO_FREE, ...HOW_TO_GYM };
 
 /** How to do an exercise, if the library has a guide for it. */
 export function getHowTo(id: string): HowTo | undefined {

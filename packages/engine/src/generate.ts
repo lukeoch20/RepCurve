@@ -5,7 +5,7 @@ import { volumeTarget } from "./level.js";
 import { buildStrengthSession, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
 import type { Pattern } from "@repcurve/shared";
-import type { GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
+import type { CardioActivity, GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
 import { hardSets, weeklyVolume } from "./volume.js";
 
 export const BASE_ROUNDS = 3;
@@ -20,6 +20,8 @@ export interface PlanOptions {
   e1rmByExercise?: Record<string, number>;
   /** Effort (1–10) reported for the last cardio session; steers the next one. */
   lastCardioEffort?: number;
+  /** The cardio activity the user prefers, used whenever the equipment and format allow it. */
+  cardioActivity?: CardioActivity;
 }
 
 /** Week and day for a position in the session sequence. */
@@ -52,6 +54,7 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
       dayIndex,
       cardioPerWeek: ctx.template.filter((k) => k === "cardio").length,
       ...(opts.lastCardioEffort !== undefined ? { lastEffort: opts.lastCardioEffort } : {}),
+      ...(opts.cardioActivity ? { activity: opts.cardioActivity } : {}),
     });
   }
   // Splits rotate across weeks (push, pull, push | pull, push, pull) so every day type gets its turn;

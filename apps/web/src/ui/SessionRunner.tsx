@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, type Prescription } from "@repcurve/engine";
+import { alternativesFor, type Prescription, type SwapReason } from "@repcurve/engine";
+import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
 import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, plural, repsUnit } from "../model/format";
@@ -19,7 +20,7 @@ import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
-import { ExerciseInfo } from "./ExerciseInfo";
+import { ExerciseInfo, TIER_LABEL } from "./ExerciseInfo";
 import { useTip } from "./tips";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
@@ -228,6 +229,9 @@ function ExerciseBlock(props: {
   const [infoOpen, setInfoOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
+  const [painSet, setPainSet] = useState<number | null>(null);
+  const [painChecked, setPainChecked] = useState(false);
+  const [gentleSwap, setGentleSwap] = useState(false);
   const skipped = active.skippedSlots.includes(p.slot);
   const logged = setsForSlot(active, p.slot);
   const advice = active.advice[p.slot];
@@ -269,6 +273,17 @@ function ExerciseBlock(props: {
           </button>
         )}
       </div>
+      {p.painCheck && logged.length === 0 && !skipped && !painChecked ? (
+        <div className="banner adjust" role="status">
+          <b>Last time this hurt</b>
+          How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's kept a step lighter either way.
+          <div className="row-wrap" style={{ marginTop: 10 }}>
+            <button type="button" className="btn small" onClick={() => setPainChecked(true)}>Feels fine</button>
+            <button type="button" className="btn small" onClick={() => setGentleSwap(true)}>Something gentler</button>
+            <button type="button" className="btn small" onClick={() => dispatch({ type: "skipSlot", slot: p.slot })}>Skip it today</button>
+          </div>
+        </div>
+      ) : null}
       {p.benchmarkSet && logged.length === 0 && !skipped ? (
         <div className="banner info bench">
           <b>Benchmark set</b>
@@ -328,6 +343,7 @@ function ExerciseBlock(props: {
                 setIndex={setIndex}
                 existing={!!done}
                 onSave={(values) => {
+                  if (values.painFlag && !done?.painFlag) setPainSet(setIndex);
                   if (done) dispatch({ type: "edit", slot: p.slot, setIndex, values });
                   else {
                     if (core.settings.haptics) haptic("set");
@@ -346,6 +362,8 @@ function ExerciseBlock(props: {
       })}
       {infoOpen ? <ExerciseInfo exerciseId={p.exerciseId} onClose={() => setInfoOpen(false)} /> : null}
       {swapOpen ? <SwapSheet core={core} active={active} p={p} onClose={() => setSwapOpen(false)} /> : null}
+      {gentleSwap ? <SwapSheet core={core} active={active} p={p} reason="hard" onClose={() => setGentleSwap(false)} /> : null}
+      {painSet !== null ? <PainSheet active={active} slot={p.slot} setIndex={painSet} onClose={() => setPainSet(null)} /> : null}
     </article>
   );
 }
@@ -361,7 +379,7 @@ function SetEditor(props: {
 }): React.ReactElement {
   const { core, active, p, setIndex } = props;
   const initial = prefill(active, p.slot, setIndex);
-  const owned = contextFor(core).ownedLoadsKg;
+  const owned = contextFor(core).loadsFor(getExercise(p.exerciseId));
   const [loadKg, setLoadKg] = useState<number | null>(initial.loadKg);
   const [reps, setReps] = useState(initial.reps);
   const [rir, setRir] = useState<Rir>(initial.rir);
@@ -403,7 +421,7 @@ function SetEditor(props: {
             <button type="button" aria-label="Lighter" onClick={() => stepLoad(-1)} disabled={loadIdx === 0}>−</button>
             <div className="value">
               <b>{loadNumber(loadKg, units)}</b>
-              <span>{units}{p.loadType === "dumbbell_pair" ? " each" : ""}</span>
+              <span>{units}{p.loadType === "dumbbell_pair" ? " each" : p.loadType === "barbell" ? " total" : ""}</span>
             </div>
             <button type="button" aria-label="Heavier" onClick={() => stepLoad(1)} disabled={loadIdx === owned.length - 1}>+</button>
           </div>
@@ -429,7 +447,7 @@ function SetEditor(props: {
         <span className="effort-hint">{isBenchmark ? "For the benchmark, stop when you have about 2 left." : effortHint}</span>
       </div>
       {props.existing ? (
-        <Toggle id={`pain-${p.slot}-${setIndex}`} label="It hurt" hint="Flags pain: this exercise is swapped for an easier one next time." checked={pain} onChange={setPain} />
+        <Toggle id={`pain-${p.slot}-${setIndex}`} label="It hurt" hint="Flags pain: this exercise stops for today and comes back lighter, after a check-in." checked={pain} onChange={setPain} />
       ) : null}
       <div className="row">
         <button
@@ -455,20 +473,80 @@ function SetEditor(props: {
   );
 }
 
-function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; onClose: () => void }): React.ReactElement {
+const SWAP_REASONS: { value: SwapReason; label: string; hint: string }[] = [
+  { value: "busy", label: "It's taken", hint: "Different equipment first. For today only." },
+  { value: "hard", label: "Too hard", hint: "Easier and more stable options first." },
+  { value: "balance", label: "Couldn't balance", hint: "Two-sided options first." },
+  { value: "dislike", label: "Don't like it", hint: "Same job, other ways. Used from now on." },
+];
+
+const PAIN_AREAS = ["Knee", "Hip", "Lower back", "Shoulder", "Elbow", "Wrist", "Neck", "Somewhere else"];
+
+/**
+ * After "It hurt": the exercise is done for today. Where it hurt is noted, and the signs that mean
+ * stopping the whole workout are spelled out. A gentler alternative is offered next time, after a check-in.
+ */
+function PainSheet(props: { active: ActiveSession; slot: string; setIndex: number; onClose: () => void }): React.ReactElement {
   const { dispatch } = useStore();
+  const area = loggedSet(props.active, props.slot, props.setIndex)?.painArea ?? null;
+  return (
+    <Sheet title="Stopping this exercise" onClose={props.onClose}>
+      <p className="meta">That's it for this exercise today. Next time it comes back a step lighter, and you'll be asked how it feels before you start.</p>
+      <div className="field">
+        <span className="label">Where did it hurt?</span>
+        <div className="row-wrap" role="group" aria-label="Where it hurt">
+          {PAIN_AREAS.map((a) => (
+            <button key={a} type="button" className="chip" aria-pressed={area === a} onClick={() => dispatch({ type: "painArea", slot: props.slot, setIndex: props.setIndex, area: area === a ? null : a })}>
+              {a}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="banner stop">
+        <b>Stop the whole workout if</b>
+        you have chest pain or pressure, feel faint or dizzy, are unusually short of breath, or the pain is severe, a joint gives way, or it swells. Get medical help for chest pain or fainting.
+        <div className="row" style={{ marginTop: 10 }}>
+          <button type="button" className="btn danger" onClick={() => { props.onClose(); dispatch({ type: "finish", now: Date.now() }); }}>
+            End workout
+          </button>
+        </div>
+      </div>
+      <p className="meta small">Otherwise carry on with the rest if everything else feels fine. Pain that's sharp or keeps coming back is worth getting checked.</p>
+      <button type="button" className="btn primary" onClick={props.onClose}>Carry on</button>
+    </Sheet>
+  );
+}
+
+function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; reason?: SwapReason; onClose: () => void }): React.ReactElement {
+  const { dispatch } = useStore();
+  const [reason, setReason] = useState<SwapReason | undefined>(props.reason);
   const [permanent, setPermanent] = useState(false);
   const ctx = contextFor(props.core);
   const inSession = useMemo(
     () => [...props.active.plan.supersets.flatMap((ss) => ss.items), ...(props.active.plan.finisher ? [props.active.plan.finisher] : [])].map((x) => x.exerciseId),
     [props.active.plan],
   );
-  const alts = alternativesFor(props.p, ctx, inSession);
+  const alts = alternativesFor(props.p, ctx, inSession, reason);
+  const pickReason = (r: SwapReason) => {
+    setReason(r);
+    // Busy equipment is a today problem; not liking an exercise is a for-good one.
+    setPermanent(r === "dislike");
+  };
   return (
     <Sheet title={`Swap ${props.p.name}`} onClose={props.onClose}>
-      <p className="meta">Same movement, different exercise. Pick one you can do right now.</p>
+      <div className="field">
+        <span className="label">Why swap?</span>
+        <div className="row-wrap" role="group" aria-label="Why swap">
+          {SWAP_REASONS.map((r) => (
+            <button key={r.value} type="button" className="chip" aria-pressed={reason === r.value} onClick={() => pickReason(r.value)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <span className="meta small">{reason ? SWAP_REASONS.find((r) => r.value === reason)!.hint : "Same job, different exercise. Pick one you can do right now."}</span>
+      </div>
       <div className="choice">
-        {alts.length === 0 ? <p className="meta">Nothing else trains this movement with your equipment.</p> : null}
+        {alts.length === 0 ? <p className="meta">Nothing else does this job with your equipment.</p> : null}
         {alts.map((e) => (
           <button
             key={e.id}
@@ -478,7 +556,10 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
               props.onClose();
             }}
           >
-            <b>{e.name}</b>
+            <b>
+              {e.name}
+              {TIER_LABEL[e.tier] ? <span className="example-tag" style={{ marginLeft: 8 }}>{TIER_LABEL[e.tier]}</span> : null}
+            </b>
             {e.cue ? <span>{e.cue}</span> : null}
           </button>
         ))}

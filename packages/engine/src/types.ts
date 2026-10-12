@@ -23,6 +23,8 @@ export interface Prescription {
   targetRir: Rir;
   /** First set is "as many good reps as you can, stop with 2 left, cap 20". */
   benchmarkSet: boolean;
+  /** It hurt last time: ask how it feels before starting, and offer to skip or swap. */
+  painCheck?: boolean;
   cue?: string;
 }
 
@@ -52,8 +54,16 @@ export interface CardioSegment {
   note?: string;
 }
 
+/** What you do for cardio, separate from how (steady or intervals). Ids match the evidence catalog. */
+export type CardioActivity = "walking" | "running" | "cycling" | "elliptical" | "rowing" | "stairs" | "jump_rope" | "marching";
+
 export interface CardioPlan {
+  /** Where walking or running happens (a treadmill or outside), or a jump rope. */
   mode: "treadmill" | "outdoor" | "jump_rope";
+  /** The activity planned. Missing on plans saved before activities were separate (walking). */
+  activity?: CardioActivity;
+  /** Activities the user's equipment allows in this format, to switch to. */
+  options?: CardioActivity[];
   style: "steady" | "incline_walk" | "intervals";
   segments: CardioSegment[];
   totalMinutes: number;
@@ -82,6 +92,8 @@ export interface SessionPlan {
   comeback: boolean;
   /** Plain-language notes about compromises in this session, e.g. settings that leave little room. */
   notes?: string[];
+  /** Movements the user's equipment can't train, and the smallest step that would cover them. */
+  coverage?: string[];
 }
 
 export interface Program {
@@ -117,7 +129,14 @@ export interface GenerateInput {
   equipment: Equipment;
 }
 
+/** How an exercise is loaded, for choosing between machines, free weights, bands and bodyweight. */
+export type LoadClass = "machine" | "cable" | "barbell" | "dumbbell" | "band" | "bodyweight";
+
 export interface Pool {
+  /** Everything the user can do, including optional and advanced exercises (for swaps). */
   exercises: Exercise[];
+  /** Exercises the planner may pick, by ladder, easiest first. */
   byLadder: Map<string, Exercise[]>;
+  /** Kinds of loading to try first, most preferred first. */
+  classOrder: LoadClass[];
 }

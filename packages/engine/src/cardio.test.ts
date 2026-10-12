@@ -94,3 +94,37 @@ describe("jump rope", () => {
     expect(buildCardioSession(input({ week: 2 })).cardio!.mode).not.toBe("jump_rope");
   });
 });
+
+describe("cardio activities are separate from the format", () => {
+  const gymish = { ...referenceEquipment, bike: true, rower: true, elliptical: true, stairClimber: true, jumpRope: true };
+
+  it("offers what the equipment allows, with a rope only for intervals", () => {
+    const steady = buildCardioSession(input({ equipment: gymish, week: 3 })).cardio!;
+    expect(steady.style).not.toBe("intervals");
+    expect(steady.options).toEqual(["walking", "running", "cycling", "elliptical", "rowing", "stairs", "marching"]);
+    const intervals = buildCardioSession(input({ equipment: gymish, week: 2 })).cardio!;
+    expect(intervals.style).toBe("intervals");
+    expect(intervals.options).toContain("jump_rope");
+    expect(buildCardioSession(input({ week: 3 })).cardio!.options).toEqual(["walking", "running", "marching"]);
+  });
+
+  it("keeps the format and effort targets when the activity changes", () => {
+    for (const week of [2, 3]) {
+      const walk = buildCardioSession(input({ equipment: gymish, week, activity: "walking" })).cardio!;
+      const bike = buildCardioSession(input({ equipment: gymish, week, activity: "cycling" })).cardio!;
+      expect(bike.activity).toBe("cycling");
+      expect(bike.segments.map((s) => [s.minutes, s.effort])).toEqual(walk.segments.map((s) => [s.minutes, s.effort]));
+      expect(bike.segments.map((s) => s.note ?? "").join(" ")).toMatch(/pedalling|resistance|spin/);
+    }
+  });
+
+  it("names the session after the activity", () => {
+    expect(buildCardioSession(input({ equipment: gymish, week: 2, activity: "rowing" })).name).toBe("Row intervals");
+    expect(buildCardioSession(input({ equipment: gymish, week: 3, activity: "cycling" })).name).toBe("Steady ride");
+  });
+
+  it("ignores a preference the equipment or format can't serve", () => {
+    expect(buildCardioSession(input({ week: 3, activity: "rowing" })).cardio!.activity).toBe("walking");
+    expect(buildCardioSession(input({ equipment: gymish, week: 3, activity: "jump_rope" })).cardio!.activity).toBe("walking");
+  });
+});
