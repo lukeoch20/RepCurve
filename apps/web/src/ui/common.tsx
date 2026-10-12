@@ -153,6 +153,12 @@ export const ICONS = {
   anchor: "M4 4h6v16H4zM10 12h4c2 0 3 2 6 2M18 12l2 2-2 2",
   slider: "M4 15a4 2 0 0 0 7 0 4 2 0 0 0-7 0M13 15a4 2 0 0 0 7 0 4 2 0 0 0-7 0M7 13V9M17 13V9",
   suspension: "M12 3v5M12 8l-5 9M12 8l5 9M5 17h4M15 17h4",
+  // Day emblems: press up into a bar, pull a bar down, a star jump, head and shoulders, hips and legs
+  push: "M5 3v4M19 3v4M5 5h14M12 21V8M8 12l4-4 4 4",
+  pull: "M4 4h16M8 4v6M16 4v6M12 8v12M8.5 16.5 12 20l3.5-3.5",
+  fullBody: "M14 4.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 7.5v7M4 7l8 4 8-4M7 21l5-6.5 5 6.5",
+  upper: "M14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM4 20v-5a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v5M9 20v-4M15 20v-4",
+  lower: "M6 4h12M7 4 6 12l1.5 7M17 4l1 8-1.5 7M11 4l-.5 8 .5 7M13 4l.5 8-.5 7M4 20h7M13 20h7",
   pause: "M8 5v14M16 5v14",
   play: "M7 5v14l11-7z",
 } as const;
