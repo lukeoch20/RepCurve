@@ -405,6 +405,17 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
     } else if (p.benchmarkSet && !progress.calibrated) {
       result = calibrate(progress, sets, ctx);
       action = result.action;
+    } else if (p.caution && !progress.painCheck) {
+      // A recently painful area this exercise loads: judged like an exercise that hurt itself, so
+      // nothing gets heavier, but it isn't marked as having hurt unless it did.
+      result = progressExercise({ ...progress, painCheck: true }, sets, ctx);
+      if (!pain) {
+        result = { ...result, next: { ...result.next, painCheck: false }, performed: { ...result.performed, painCheck: false } };
+        if (result.action === "hold" && result.reason.startsWith("Pain-free")) {
+          result.reason = `Felt fine. Held steady while your ${p.caution.toLowerCase()} settles.`;
+        }
+      }
+      action = result.action;
     } else {
       result = progressExercise(progress, sets, ctx);
       action = result.action;

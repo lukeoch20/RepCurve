@@ -10,6 +10,7 @@ import {
   type SessionPlan,
 } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
+import { withProfile } from "./profile";
 import { DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -127,7 +128,8 @@ export function planWork(plan: SessionPlan): number {
 export function todayPlan(core: Core, history: SessionRecord[], now: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
   const days = daysSinceLastStrength(history, now);
-  return applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
+  const plan = applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
+  return withProfile(plan, core, history, now);
 }
 
 export interface WeekSlot {

@@ -1,3 +1,4 @@
+import type { SwapReason } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { addActivity, removeActivity } from "../model/activity";
 import { atLocation } from "../model/equipment";
@@ -50,7 +51,7 @@ export type Action =
   | { type: "painArea"; slot: string; setIndex: number; area: string | null }
   | { type: "skipSlot"; slot: string }
   | { type: "unskipSlot"; slot: string }
-  | { type: "swap"; slot: string; exerciseId: string; permanent: boolean }
+  | { type: "swap"; slot: string; exerciseId: string; permanent: boolean; reason?: SwapReason }
   | { type: "warmup"; name: string }
   | { type: "timerAdjust"; deltaSec: number; now: number }
   | { type: "timerLength"; seconds: number }
@@ -125,7 +126,7 @@ export function reducer(s: AppState, a: Action): AppState {
     case "unskipSlot":
       return withActive(unskipSlot(active, a.slot));
     case "swap": {
-      const r = swapExercise(active, core, a.slot, a.exerciseId, a.permanent);
+      const r = swapExercise(active, core, a.slot, a.exerciseId, a.permanent, a.reason);
       return { ...s, data: { ...s.data, active: r.active, core: r.core } };
     }
     case "warmup":

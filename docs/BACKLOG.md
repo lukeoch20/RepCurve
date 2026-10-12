@@ -19,9 +19,9 @@ place and shapes future workouts**, and the user can see what the app has learne
 | Reps and reps in reserve on each set | Yes | Yes: weight, reps and rep range per exercise; strain → deloads | None |
 | Benchmark sets | Yes | Yes: starting weights | None |
 | "It hurt" | Yes | Yes: that exercise held a step lighter with a check-in next time | Doesn't carry to other exercises that load the same area |
-| Where it hurt (knee, shoulder…) | Yes, on the set | **No** | Stored but never read |
+| Where it hurt (knee, shoulder…) | Yes, on the set | **Yes (B1 groundwork):** other exercises that load that area get the check-in, skip benchmarks and hold steady until two pain-free sessions or six weeks | Areas no exercise is marked for (hip, elbow, neck) are kept for the profile screen only |
 | Swap "don't like it" | Yes | Yes: permanent swap | Not visible anywhere as a preference |
-| Swap "it's taken", "too hard", "couldn't balance" | Chosen in the sheet | **No** | Not remembered: "too hard" twice should move that slot down a level; "couldn't balance" should prefer two-sided options |
+| Swap "it's taken", "too hard", "couldn't balance" | Chosen in the sheet | **Yes (B1 groundwork):** every swap and its reason is saved; a second "too hard" or "couldn't balance" for the same exercise makes the swap stick by default | "It's taken" is deliberately not learned (it's about the gym, not you) |
 | Still sore from last time | **No** | No | See B2 |
 | Cardio effort (1–10) | Yes | Yes: next cardio session | None |
 | Progress vs projection | Yes | Yes: personal factor on the projection | None |
@@ -79,9 +79,53 @@ stress could join the same check-in later.
 
 ---
 
+## B3. "Stronger than X% of people like you"
+
+**The idea.** Show where the user stands: "You're stronger than about 38% of women aged 30–39", for
+their whole body and per lift, and let them set a goal ("reach the 50th percentile"). A clear, self-chosen
+endpoint gives a reason to keep showing up, alongside the curve and lift levels (which only compare you
+with your own start).
+
+**Sanity check: worth doing, with care on four things.**
+
+1. **"Population" or "people who lift"?** These give very different answers. Most adults don't strength
+   train, so a few months of training can put someone above the general-population median while they
+   are still near the bottom among gym-goers. Say which one every time, and default to the general
+   population, which is the encouraging and honest comparison for this app's audience.
+2. **Data exists for some lifts, not all.** Usable reference data, to confirm in a research pass:
+   - push-up test norms by age and sex (fitness-testing guidelines, e.g. ACSM and the Canadian norms);
+   - 1-rep max bench press and leg press relative to body weight by age and sex (ACSM tables from Cooper
+     Institute data);
+   - grip strength by age and sex (large national samples);
+   - crowd-sourced lifter data for the barbell lifts (only for "among lifters").
+
+   There's little population data for curls, rows or most dumbbell lifts. Per-lift percentiles should
+   appear only where a defensible reference exists; other lifts keep their lift level.
+3. **Our lifts aren't the tested lifts.** Most home users press dumbbells, not a barbell, and the
+   conversion adds uncertainty. Show a range ("about the 35th–45th percentile"), never a falsely precise
+   number, and widen it when the lift is converted.
+4. **Make it motivating, not discouraging.** Compare within age and sex by default (kinder and fairer),
+   show progress toward the next band ("6 more push-ups to the 50th"), and let users hide it.
+
+**Shape.**
+- Per-lift percentiles where data exists: push-ups first (direct, everyone can do them), then the barbell
+  lifts and leg press for gym users, then dumbbell presses as converted estimates.
+- An overall strength score: the average of the push, pull and leg percentiles available, labelled as an
+  estimate. If pulling has no reference data, show the overall score from what there is and say so.
+- A goal: "Reach the 50th percentile" on Progress, with an estimated date from the projection model.
+- Filters: everyone / my sex / my age group / both.
+
+**Before building:** a research pass to collect and cite the reference tables (age bands, sex, the test
+each one used), the same way the exercise evidence review was done, plus a decision on converting
+dumbbell lifts.
+
+---
+
 ## Build order
 
-1. **B1 groundwork:** add the derived profile and route existing feedback through it, starting with the two
-   gaps that are already collected but ignored: pain area, and the "too hard" and "couldn't balance" swap reasons.
+1. ~~**B1 groundwork:** add the derived profile and route existing feedback through it, starting with the two
+   gaps that are already collected but ignored: pain area, and the "too hard" and "couldn't balance" swap reasons.~~
+   Done: `buildProfile` / `applyProfile` in the engine, `profileFor` in the app.
 2. **B2:** the soreness check-in as the first new input to the profile.
 3. **B1 screen:** "What RepCurve knows about you", with corrections.
+4. **B3:** research pass for reference tables, then push-up percentiles, then the rest.

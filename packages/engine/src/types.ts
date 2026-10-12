@@ -25,6 +25,8 @@ export interface Prescription {
   benchmarkSet: boolean;
   /** It hurt last time: ask how it feels before starting, and offer to skip or swap. */
   painCheck?: boolean;
+  /** The recently painful area this exercise loads (e.g. "Shoulder"), when the check-in is for that. */
+  caution?: string;
   cue?: string;
 }
 
