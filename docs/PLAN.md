@@ -149,6 +149,7 @@ See §4.
 
 ### 3.8 Readiness (post-MVP)
 Two taps before a session (slept badly? sore?) → scale today's loads −5% or drop a round.
+Soreness is now specified as backlog item B2, feeding a single training profile (B1): see [BACKLOG.md](BACKLOG.md).
 
 ---
 
