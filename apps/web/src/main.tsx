@@ -6,6 +6,7 @@ import { setUpdateReady } from "./platform/update";
 import "./styles.css";
 import "./bluebird.css";
 import "./forge.css";
+import "./pixel.css";
 
 declare const __RUNTIME__: "pwa" | "artifact";
 
