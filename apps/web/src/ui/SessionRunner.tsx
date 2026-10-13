@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
+import { alternativesFor, cautionAreasFor, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
 import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
@@ -365,7 +365,7 @@ function ExerciseBlock(props: {
       })}
       {infoOpen ? <ExerciseInfo exerciseId={p.exerciseId} onClose={() => setInfoOpen(false)} /> : null}
       {swapOpen ? <SwapSheet core={core} active={active} p={p} onClose={() => setSwapOpen(false)} /> : null}
-      {gentleSwap ? <SwapSheet core={core} active={active} p={p} reason="hard" onClose={() => setGentleSwap(false)} /> : null}
+      {gentleSwap ? <SwapSheet core={core} active={active} p={p} reason="hard" fromPain onClose={() => setGentleSwap(false)} /> : null}
       {painSet !== null ? <PainSheet active={active} slot={p.slot} setIndex={painSet} onClose={() => setPainSet(null)} /> : null}
     </article>
   );
@@ -520,7 +520,7 @@ function PainSheet(props: { active: ActiveSession; slot: string; setIndex: numbe
   );
 }
 
-function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; reason?: SwapReason; onClose: () => void }): React.ReactElement {
+function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; reason?: SwapReason; fromPain?: boolean; onClose: () => void }): React.ReactElement {
   const { dispatch, data } = useStore();
   const [reason, setReason] = useState<SwapReason | undefined>(props.reason);
   // A reason the user picked is remembered; the gentler options offered after pain are not "too hard".
@@ -533,7 +533,10 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
     () => [...props.active.plan.supersets.flatMap((ss) => ss.items), ...(props.active.plan.finisher ? [props.active.plan.finisher] : [])].map((x) => x.exerciseId),
     [props.active.plan],
   );
-  const alts = alternativesFor(props.p, ctx, inSession, reason);
+  // Options that spare a recently painful area come first; the others are marked.
+  const alts = alternativesFor(props.p, ctx, inSession, reason, profile);
+  const areasOf = (id: string) => cautionAreasFor(profile, id).map((a) => a.toLowerCase());
+  const allLoadCaution = alts.length > 0 && alts.every((e) => areasOf(e.id).length > 0);
   const pickReason = (r: SwapReason) => {
     setReason(r);
     setChosen(true);
@@ -558,12 +561,30 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
       </div>
       <div className="choice">
         {alts.length === 0 ? <p className="meta">Nothing else does this job with your equipment.</p> : null}
+        {props.fromPain && allLoadCaution ? (
+          <div className="banner adjust" role="status">
+            <b>Every option here works your {areasOf(alts[0]!.id).join(" and ")} too</b>
+            Each comes with the same check-in and stays at a steady weight. Skipping it today is fine.
+            <div className="row-wrap" style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => {
+                  dispatch({ type: "skipSlot", slot: props.p.slot });
+                  props.onClose();
+                }}
+              >
+                Skip it today
+              </button>
+            </div>
+          </div>
+        ) : null}
         {alts.map((e) => (
           <button
             key={e.id}
             type="button"
             onClick={() => {
-              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent, ...(chosen && reason ? { reason } : {}) });
+              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent, now: Date.now(), ...(chosen && reason ? { reason } : {}) });
               props.onClose();
             }}
           >
@@ -572,6 +593,7 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
               {TIER_LABEL[e.tier] ? <span className="example-tag" style={{ marginLeft: 8 }}>{TIER_LABEL[e.tier]}</span> : null}
             </b>
             {e.cue ? <span>{e.cue}</span> : null}
+            {areasOf(e.id).length > 0 ? <span className="caution-note">Works your {areasOf(e.id).join(" and ")}: same check-in, steady weight</span> : null}
           </button>
         ))}
       </div>

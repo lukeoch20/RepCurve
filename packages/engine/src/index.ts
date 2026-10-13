@@ -8,7 +8,7 @@ export { weeklyTemplate } from "./template.js";
 export { buildPool, pickExercise, hasGymEquipment, classOf } from "./pool.js";
 export { coverageNotes } from "./session.js";
 export { cardioOptions } from "./cardio.js";
-export { buildProfile, applyProfile, cautionFor, swapSticks, CAUTION_CLEAR_SESSIONS, CAUTION_MAX_DAYS } from "./profile.js";
+export { buildProfile, applyProfile, markCaution, cautionAreasFor, cautionFor, swapSticks, CAUTION_CLEAR_SESSIONS, CAUTION_MAX_DAYS } from "./profile.js";
 export type { TrainingProfile, Caution, SwapEvent, FeedbackSession } from "./profile.js";
 export {
   progressExercise,

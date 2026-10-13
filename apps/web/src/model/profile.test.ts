@@ -52,4 +52,31 @@ describe("the training profile in the app", () => {
     const later = prescriptionsOf(todayPlan({ ...core, nextIndex: 1 }, [hurt], T0 + 43 * DAY));
     expect(later.every((p) => p.caution === undefined)).toBe(true);
   });
+
+  it("keeps the caution when an exercise is swapped for one that loads the same area", () => {
+    const core = newCore(profile, equipment, T0);
+    const hurt: SessionRecord = {
+      id: "s1", index: 0, kind: "strength", name: "Full body A", week: 1, startedAt: T0, finishedAt: T0, activeMinutes: 20,
+      plan: {} as SessionRecord["plan"], changes: [], cardio: null, deload: false, comeback: false, skipped: false,
+      sets: [{ exerciseId: "db_rdl", slot: "A.hinge", setIndex: 0, loadKg: 9, reps: 8, rir: 2, painFlag: true, painArea: "Lower back", at: T0 }],
+    };
+    const history = [hurt];
+    const prof = profileFor(core, history, T0 + DAY);
+    // Find a planned row that spares the lower back, then swap it for the bent-over row, which doesn't.
+    for (let i = 1; i < 8; i++) {
+      const active = startSession({ ...core, nextIndex: i }, history, T0 + DAY, null);
+      const row = prescriptionsOf(active.plan).find((p) => p.pattern === "row" && !getExercise(p.exerciseId).avoidWith.includes("low_back"));
+      if (!row) continue;
+      expect(row.caution).toBeUndefined();
+      const swapped = swapExercise(active, { ...core, nextIndex: i }, row.slot, "db_bent_over_row", false, "busy", prof);
+      const np = prescriptionsOf(swapped.active.plan).find((p) => p.slot === row.slot)!;
+      expect(np.exerciseId).toBe("db_bent_over_row");
+      expect(np).toMatchObject({ painCheck: true, caution: "Lower back", benchmarkSet: false });
+      // Swapping back to an exercise that spares the area drops the check-in.
+      const back = swapExercise(swapped.active, { ...core, nextIndex: i }, row.slot, row.exerciseId, false, "busy", prof);
+      expect(prescriptionsOf(back.active.plan).find((p) => p.slot === row.slot)!.caution).toBeUndefined();
+      return;
+    }
+    throw new Error("no planned row that spares the lower back");
+  });
 });

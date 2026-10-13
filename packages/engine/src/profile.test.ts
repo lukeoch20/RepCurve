@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyProfile, buildProfile, swapSticks, type FeedbackSession } from "./profile.js";
-import { initialTrainingState, prescriptionsOf, recordSession } from "./state.js";
+import { applyProfile, buildProfile, cautionAreasFor, swapSticks, type FeedbackSession } from "./profile.js";
+import { alternativesFor, initialTrainingState, prescriptionsOf, recordSession, swapPrescription } from "./state.js";
 import type { SessionPlan } from "./types.js";
 import { referenceContext, sets } from "./testkit.js";
 import { planSessionWith } from "./generate.js";
@@ -82,5 +82,21 @@ describe("cautions in progression", () => {
     expect(change.action).toBe("hold");
     expect(change.next.loadKg).toBe(p.loadKg);
     expect(held.state.exercises[p.exerciseId]!.painCheck).toBe(false);
+  });
+});
+
+describe("cautions in swaps", () => {
+  const ctx = referenceContext();
+  const hurtBack = buildProfile(initialTrainingState(), [hurt(T0, "db_rdl", "Lower back")], T0 + DAY);
+
+  it("lists options that spare a painful area first, and marks the swap-in if it loads it", () => {
+    const row = prescriptionsOf(planSessionWith(ctx, ctx.template.length)).find((p) => p.pattern === "row")!;
+    const alts = alternativesFor(row, ctx, [], undefined, hurtBack);
+    const loads = alts.map((e) => e.avoidWith.includes("low_back"));
+    // Every option that spares the lower back comes before every one that loads it.
+    expect(loads.indexOf(true) === -1 || loads.lastIndexOf(false) < loads.indexOf(true)).toBe(true);
+    const swapped = swapPrescription({ ...row, benchmarkSet: true }, "db_bent_over_row", initialTrainingState(), ctx, hurtBack);
+    expect(swapped).toMatchObject({ painCheck: true, caution: "Lower back", benchmarkSet: false });
+    expect(cautionAreasFor(hurtBack, "db_bent_over_row")).toEqual(["Lower back"]);
   });
 });
