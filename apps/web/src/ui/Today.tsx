@@ -4,6 +4,8 @@ import { ACTIVITY_NAME, cardioLabel, dayLabel, plural } from "../model/format";
 import { exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
+import { BackupButton } from "./Backup";
+import { canSuggestInstall, isIOS } from "../platform/install";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
 import { Icon, Seg, Stepper } from "./common";
@@ -39,7 +41,9 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const splitTip = useTip("today.split", plan.kind === "strength" && (core.profile.split ?? "full_body") !== "full_body");
   const benchmarkTip = useTip("today.benchmark");
   const timeTip = useTip("today.time");
-  const remindBackup = backupDue(storage, history[0]?.finishedAt ?? null, now);
+  // Safari can clear a website's data after a week without a visit; a Home Screen app keeps it.
+  const remindInstall = storage === "device" && isIOS() && canSuggestInstall() && history.some((r) => !r.skipped);
+  const remindBackup = backupDue(storage, history.filter((r) => !r.skipped).map((r) => r.finishedAt), now);
   const { week, slots } = useMemo(() => weekSlots(core, history), [core, history]);
   const last = [...history].reverse().find((r) => !r.skipped);
   const streak = weekStreak(history, now);
@@ -89,8 +93,22 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {plan.comeback ? (
         <div className="banner info"><b>Welcome back</b>It's been a couple of weeks, so today eases you back in.</div>
       ) : null}
+      {remindInstall ? (
+        <div className="banner adjust">
+          <b>Add RepCurve to your Home Screen</b>
+          In a Safari tab, your training can be cleared after a week without a visit. Installed, it stays. Tap Share, then Add to Home Screen (Settings shows how).
+        </div>
+      ) : null}
       {remindBackup ? (
-        <div className="banner adjust"><b>Time for a backup</b>Your training is saved only on this device, and it's been a month since the last backup. Export one in Settings.</div>
+        <div className="banner adjust">
+          <b>{remindBackup === "first" ? "Keep your progress safe" : "Time for a backup"}</b>
+          {remindBackup === "first"
+            ? "Your training is saved only on this phone. A backup takes one tap: save it to Files or iCloud Drive, and you can restore it on any device."
+            : "Your training is saved only on this device, and there's been a lot of it since the last backup."}
+          <div className="row-wrap" style={{ marginTop: 10 }}>
+            <BackupButton />
+          </div>
+        </div>
       ) : null}
       {plan.coverage?.map((n) => (
         <div key={n} className="banner adjust"><b>Missing a movement</b>{n}</div>
