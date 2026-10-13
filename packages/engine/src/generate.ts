@@ -1,12 +1,12 @@
 import { buildCardioSession } from "./cardio.js";
 import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
-import { volumeTarget } from "./level.js";
+import { volumeCeiling, volumeTarget } from "./level.js";
 import { buildStrengthSession, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
-import type { Pattern } from "@repcurve/shared";
+import type { Muscle, Pattern } from "@repcurve/shared";
 import type { CardioActivity, GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
-import { hardSets, weeklyVolume } from "./volume.js";
+import { MUSCLES, hardSets, weeklyVolume } from "./volume.js";
 
 export const BASE_ROUNDS = 3;
 
@@ -22,6 +22,49 @@ export interface PlanOptions {
   lastCardioEffort?: number;
   /** The cardio activity the user prefers, used whenever the equipment and format allow it. */
   cardioActivity?: CardioActivity;
+  /** Plan without the weekly volume ceiling (used to work out each session's share of it). */
+  uncapped?: boolean;
+  /** Plan the steady structure even in a ramp week, so a ramp week is capped like the weeks after it. */
+  steady?: boolean;
+}
+
+const allowanceCache = new WeakMap<EngineContext, Map<string, Partial<Record<Muscle, number>>[]>>();
+
+/**
+ * Each strength session's allowance of hard sets per muscle, so that the week stays within the
+ * ceiling for the person's level. A muscle the full plan already keeps under the ceiling gets its
+ * planned sets plus an even share of the room left; one it takes over gets the ceiling, split in
+ * proportion to where the full plan put those sets. Core work isn't capped.
+ *
+ * On a long day (more time than usual today), that session may use all of the room left under the
+ * ceiling rather than an even share: the person asked for more today, and the usual sessions
+ * around it leave that room unused.
+ */
+function weekAllowances(ctx: EngineContext, week: number, opts: PlanOptions, longDay?: number): Partial<Record<Muscle, number>>[] {
+  const { minutes: _today, ...rest } = opts;
+  const key = `${week}|${longDay ?? ""}|${JSON.stringify(rest)}`;
+  let byCtx = allowanceCache.get(ctx);
+  if (!byCtx) allowanceCache.set(ctx, (byCtx = new Map()));
+  const hit = byCtx.get(key);
+  if (hit) return hit;
+  const days = ctx.template.length;
+  const sessions = ctx.template.map((kind, d) => (kind === "strength" ? planSessionWith(ctx, (week - 1) * days + d, { ...rest, uncapped: true, steady: true }) : null));
+  const strength = sessions.filter((s): s is SessionPlan => s !== null);
+  const total = weeklyVolume(strength);
+  const ceiling = volumeCeiling(ctx.level);
+  const allowances = sessions.map((s, d) => {
+    const a: Partial<Record<Muscle, number>> = {};
+    if (!s) return a;
+    const mine = weeklyVolume([s]);
+    const shareOfRoom = d === longDay ? 1 : 1 / strength.length;
+    for (const m of MUSCLES) {
+      if (m === "core") continue;
+      a[m] = total[m] <= ceiling ? mine[m] + (ceiling - total[m]) * shareOfRoom : (ceiling * mine[m]) / total[m];
+    }
+    return a;
+  });
+  byCtx.set(key, allowances);
+  return allowances;
 }
 
 /** Week and day for a position in the session sequence. */
@@ -76,11 +119,14 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     // The first time each day type comes round, its first sets are benchmarks.
     benchmark: split === "full_body" ? week === 1 : rotation < variantsFor(split).length,
     e1rmByExercise: opts.e1rmByExercise ?? {},
+    ...(opts.uncapped
+      ? {}
+      : { allowance: weekAllowances(ctx, week, opts, opts.minutes !== undefined && opts.minutes > ctx.profile.minutesPerSession ? dayIndex : undefined)[dayIndex]! }),
     ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
     ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),
   };
   const steady = buildStrengthSession(base);
-  const rampWeek = week === 1 && profile.trainingHistory === "never";
+  const rampWeek = week === 1 && profile.trainingHistory === "never" && !opts.steady;
   if (!rampWeek) return steady;
   // Same exercises and superset count as the steady weeks, one round lighter.
   return buildStrengthSession({
@@ -88,6 +134,7 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     rounds: BASE_ROUNDS - 1,
     maxRounds: BASE_ROUNDS - 1,
     maxSupersets: steady.supersets.length,
+    ramp: true,
   });
 }
 

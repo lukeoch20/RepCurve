@@ -1,6 +1,7 @@
 import type { Equipment, Profile } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
-import { migrateCore } from "./migrate";
+import { migrateCore, savedByNewerVersion } from "./migrate";
+import { DATA_VERSION } from "./types";
 import { newCore } from "./plan";
 
 const profile: Profile = {
@@ -52,5 +53,51 @@ describe("equipment from before the evidence review", () => {
     const c = migrateCore(JSON.parse(JSON.stringify(raw)))!;
     expect(c.activities).toEqual([{ at: 5, name: "Walk", minutes: 30, vigorous: false }]);
     expect(c.settings.cardioActivity).toBe("cycling");
+  });
+});
+
+describe("data from another version of the app", () => {
+  const T = Date.UTC(2026, 9, 13);
+
+  it("keeps fields it doesn't know, so an older copy can't strip a newer one's data", () => {
+    const core = newCore(profile, equipment, T);
+    const newer = {
+      ...core,
+      version: 3,
+      soreness: [{ group: "quads", at: T }],
+      settings: { ...core.settings, reminders: { days: [1, 3, 5], time: "07:00" } },
+      state: { ...core.state, profileOverrides: { forget: ["Shoulder"] } },
+    };
+    const back = migrateCore(JSON.parse(JSON.stringify(newer)))!;
+    expect(back).toMatchObject({ version: 3, soreness: [{ group: "quads", at: T }] });
+    expect((back.settings as unknown as Record<string, unknown>)["reminders"]).toEqual({ days: [1, 3, 5], time: "07:00" });
+    expect((back.state as unknown as Record<string, unknown>)["profileOverrides"]).toEqual({ forget: ["Shoulder"] });
+    expect(savedByNewerVersion(back)).toBe(true);
+    expect(savedByNewerVersion(newCore(profile, equipment, T))).toBe(false);
+  });
+
+  it("brings older data up to this version", () => {
+    const core = { ...newCore(profile, equipment, T), version: 1 };
+    expect(migrateCore(JSON.parse(JSON.stringify(core)))!.version).toBe(DATA_VERSION);
+  });
+
+  it("refuses a profile with an unknown goal or training history, and a dumbbell step that makes thousands of weights", () => {
+    const core = newCore(profile, equipment, T);
+    expect(migrateCore({ ...core, profile: { ...core.profile, goal: "muscle" } })).toBeNull();
+    expect(migrateCore({ ...core, profile: { ...core.profile, trainingHistory: "lots" } })).toBeNull();
+    expect(migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 100, step: 0.0001, unit: "lb" } } })).toBeNull();
+    expect(migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" } } })).not.toBeNull();
+  });
+});
+
+describe("reminder settings", () => {
+  const T = Date.UTC(2026, 9, 13);
+  it("keeps valid reminder days and drops broken ones", () => {
+    const core = newCore(profile, equipment, T);
+    const ok = migrateCore({ ...core, settings: { ...core.settings, reminders: { days: [1, 3, 5], time: "07:00" } } })!;
+    expect(ok.settings.reminders).toEqual({ days: [1, 3, 5], time: "07:00" });
+    const bad = migrateCore({ ...core, settings: { ...core.settings, reminders: { days: [9], time: "7am" }, cardioActivity: "flying" } })!;
+    expect(bad.settings.reminders).toBeUndefined();
+    expect(bad.settings.cardioActivity).toBeUndefined();
   });
 });

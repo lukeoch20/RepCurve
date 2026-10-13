@@ -1,5 +1,6 @@
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Exercise, Muscle, Pattern, Profile, Split, TrainingLevel } from "@repcurve/shared";
+import { emptyVolume } from "./volume.js";
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
 import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
@@ -68,7 +69,7 @@ const LOWER_FALLBACK: Pattern[] = ["squat", "hinge", "core"];
 
 const LOWER: Omit<Variant, "key" | "name"> = {
   pairs: [["squat", "hinge"], [lunge, iso("knee_flexion")], [iso("knee_extension"), iso("calf")]],
-  extra: [[bridge, iso("hip_abduction")], ["squat", "hinge"]],
+  extra: [[bridge, iso("hip_abduction")]],
   offsets: {},
   fallback: LOWER_FALLBACK,
   allowShared: true,
@@ -81,9 +82,10 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "push",
       name: "Push day",
-      // Mostly upper body: one squat pair, then presses with triceps and lateral raises.
-      pairs: [["horizontal_push", "squat"], ["vertical_push", iso("triceps")], ["horizontal_push", iso("lateral_raise")]],
-      extra: [["vertical_push", lunge], [iso("knee_extension"), iso("calf")]],
+      // Mostly upper body: one squat pair, then two presses (chest gets as much as back does on pull
+      // day, which rows and pulls down in its first two pairs), then triceps and lateral raises.
+      pairs: [["horizontal_push", "squat"], ["vertical_push", "horizontal_push"], [iso("triceps"), iso("lateral_raise")]],
+      extra: [[iso("knee_extension"), iso("calf")], [lunge, "horizontal_push"]],
       offsets: {},
       fallback: PUSH_FALLBACK,
       allowShared: true,
@@ -91,9 +93,10 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
     {
       key: "pull",
       name: "Pull day",
-      // Mostly upper body: one hinge pair, pulls with biceps, and a hamstring curl.
-      pairs: [["row", "hinge"], ["vertical_pull", iso("biceps")], ["row", iso("knee_flexion")]],
-      extra: [[iso("rear_delt"), iso("calf")], ["vertical_pull", "row"]],
+      // Rows and pull-downs come first, so back gets what chest gets on push day; the hamstring curl
+      // pairs with calves rather than a third back exercise (shoulders get plenty on push day).
+      pairs: [["row", "hinge"], ["vertical_pull", iso("biceps")], [iso("knee_flexion"), iso("calf")]],
+      extra: [[iso("rear_delt"), bridge]],
       offsets: {},
       fallback: PULL_FALLBACK,
       allowShared: true,
@@ -162,6 +165,13 @@ export interface StrengthSessionInput {
   transitionSec?: number;
   benchmark: boolean;
   e1rmByExercise: Record<string, number>;
+  /** A brand-new lifter's first week: one round lighter on purpose, and the session says so. */
+  ramp?: boolean;
+  /**
+   * Hard sets each muscle may get in this session, so the week stays under its ceiling. Pairs and
+   * rounds that would go over are left out, and the session finishes early instead.
+   */
+  allowance?: Partial<Record<Muscle, number>>;
 }
 
 interface Chosen {
@@ -209,6 +219,14 @@ const FALLBACK_PATTERNS: Pattern[] = ["row", "horizontal_push", "squat", "hinge"
 
 /** The core finisher rotates through the trunk's jobs: resisting extension, flexing, resisting side-bending and rotation. */
 const CORE_FAMILIES = ["anti_extension", "trunk_flexion", "anti_lateral", "anti_rotation"];
+
+/** Adds `sets` sets of each exercise to a per-muscle tally: 1 for a prime mover, 0.5 for an assisting muscle. */
+function addVolume(volume: Record<Muscle, number>, exercises: Exercise[], sets: number): void {
+  for (const e of exercises) {
+    for (const m of e.primary) volume[m] += sets;
+    for (const m of e.secondary) volume[m] += sets * 0.5;
+  }
+}
 
 const sharesPrimeMover = (a: Exercise, b: Exercise) => a.primary.some((m) => b.primary.includes(m));
 
@@ -323,12 +341,14 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
 
   // The core finisher is planned first so its real length, not a flat reservation, comes off the budget.
   let finisher: Prescription | null = null;
+  let finisherExercise: Exercise | null = null;
   let finisherSec = 0;
   if (finisherMinutes(budget) > 0) {
     const family = CORE_FAMILIES[input.strengthIndex % CORE_FAMILIES.length];
     const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input), () => true, family);
     if (core) {
       used.add(core.id);
+      finisherExercise = core;
       const c = choose(core, `${variant.key}.core`, input);
       const sets = finisherSets(core, c.repRange, budget, c.targetReps);
       finisher = prescribe(c, input, sets, false);
@@ -345,16 +365,36 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const minRounds = Math.min(2, input.rounds);
   const taken = new Set<Pattern>();
 
+  // Hard sets per muscle so far (a set counts 1 for a prime mover, 0.5 for an assisting muscle).
+  const volume = emptyVolume();
+  if (finisher && finisherExercise) addVolume(volume, [finisherExercise], finisher.sets);
+  /** Set when an allowance, not the clock, kept something out. */
+  let capped = false;
+  /** Whether `rounds` more rounds of these exercises keep every muscle within today's allowance. */
+  const withinAllowance = (exercises: Exercise[], rounds: number): boolean => {
+    if (!input.allowance) return true;
+    const after = { ...volume };
+    addVolume(after, exercises, rounds);
+    return Object.entries(input.allowance).every(([m, cap]) => after[m as Muscle] <= cap + 1e-9);
+  };
+  // Long days add exercises; none of them repeats a family already in the session (a third squat).
+  const familiesInSession = (): Set<string> => new Set(pairsChosen.flat().map((c) => `${c.exercise.pattern}:${c.exercise.family}`));
+
   const slots = new Set<string>();
-  const tryAdd = (pair: Pair, rounds: number, force = false, slotKey?: string): boolean => {
+  const tryAdd = (pair: Pair, rounds: number, force = false, slotKey?: string, newFamiliesOnly = false): boolean => {
     if (input.maxSupersets !== undefined && supersets.length >= input.maxSupersets) return false;
+    const families = familiesInSession();
     const chosen = choosePair(pair, variant, input, used, taken, slotKey);
     if (!chosen) return false;
     const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec) + setupSeconds(chosen.map((c) => c.exercise));
-    if (secs > remainingSec && !force) {
+    const repeats = newFamiliesOnly && chosen.some((c) => families.has(`${c.exercise.pattern}:${c.exercise.family}`));
+    const exercises = chosen.map((c) => c.exercise);
+    if (!force && (secs > remainingSec || repeats || !withinAllowance(exercises, rounds))) {
       for (const c of chosen) used.delete(c.exercise.id);
+      if (secs <= remainingSec && !repeats) capped = true;
       return false;
     }
+    addVolume(volume, exercises, rounds);
     for (const c of chosen) {
       taken.add(c.exercise.pattern);
       // A split day can use a movement in two pairs (two squats on push day): slot names stay unique.
@@ -384,13 +424,18 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       supersets.forEach((ss, i) => {
         if (ss.rounds >= cap) return;
         const extra = supersetSeconds(pairsChosen[i]!.map(timed), 1, transitionSec, restSec);
-        if (extra <= remainingSec) {
-          ss.rounds += 1;
-          ss.estimatedSec += extra;
-          for (const p of ss.items) p.sets = ss.rounds;
-          remainingSec -= extra;
-          added = true;
+        if (extra > remainingSec) return;
+        const exercises = pairsChosen[i]!.map((c) => c.exercise);
+        if (!withinAllowance(exercises, 1)) {
+          capped = true;
+          return;
         }
+        addVolume(volume, exercises, 1);
+        ss.rounds += 1;
+        ss.estimatedSec += extra;
+        for (const p of ss.items) p.sets = ss.rounds;
+        remainingSec -= extra;
+        added = true;
       });
     }
   };
@@ -420,8 +465,8 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   // These come after everything above, so sessions that fit the usual budget never change.
   variant.extra.forEach((pair, i) => {
     const slotKey = `${variant.key}.extra${i + 1}`;
-    if (tryAdd(pair, input.rounds, false, slotKey)) return;
-    if (input.rounds > minRounds && tryAdd(pair, minRounds, false, slotKey)) return;
+    if (tryAdd(pair, input.rounds, false, slotKey, true)) return;
+    if (input.rounds > minRounds && tryAdd(pair, minRounds, false, slotKey, true)) return;
     // Every pair at its most rounds and a little time left: a last round of the latest pair
     // makes way for another exercise, rather than leaving the time unused.
     if (!supersets.every((ss) => ss.rounds >= maxRounds)) return;
@@ -430,18 +475,33 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     const at = supersets.indexOf(last);
     const round = supersetSeconds(pairsChosen[at]!.map(timed), 1, transitionSec, restSec);
     const setRounds = (n: number, sec: number) => {
+      addVolume(volume, pairsChosen[at]!.map((c) => c.exercise), n - last.rounds);
       last.rounds = n;
       last.estimatedSec += sec;
       for (const p of last.items) p.sets = n;
       remainingSec -= sec;
     };
     setRounds(last.rounds - 1, -round);
-    if (!tryAdd(pair, minRounds, false, slotKey)) setRounds(last.rounds + 1, round);
+    if (!tryAdd(pair, minRounds, false, slotKey, true)) setRounds(last.rounds + 1, round);
   });
   grow(maxRounds);
 
   const supersetMin = supersets.reduce((s, ss) => s + ss.estimatedSec, 0) / 60;
   const estimatedMinutes = Math.round((warmupMin + supersetMin + finisherSec / 60) * 10) / 10;
+  if (estimatedMinutes <= budget - 3) {
+    const spare = "A walk or easy cardio is a good use of the spare minutes.";
+    if (input.ramp) {
+      notes.push(
+        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: week 1 is a round lighter while you learn the moves and find your weights. From week 2, sessions fill your time.`,
+      );
+    } else if (capped) {
+      notes.push(
+        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: the muscles this session trains already get plenty of hard sets this week, and more would add soreness rather than strength. ${spare}`,
+      );
+    } else if (supersets.every((ss) => ss.rounds >= maxRounds)) {
+      notes.push(`About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: every exercise today is at its most sets. ${spare}`);
+    }
+  }
 
   return {
     id: `w${input.week}d${input.dayIndex + 1}`,

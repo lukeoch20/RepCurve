@@ -14,7 +14,7 @@ Last reviewed: 2026-10-04
 **Sources:** Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains. *Sports Med* 56:481–505. https://doi.org/10.1007/s40279-025-02344-w · Schoenfeld BJ, Ogborn D, Krieger JW (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass. *J Sports Sci* 35:1073–1082. https://doi.org/10.1080/02640414.2016.1210197
 **Engine:** hypertrophy relative effect = (S/10)^0.4 and strength = (S/10)^0.25 [est]. Novice default is 6–10 fractional sets; about 12 is the practical ceiling in 3×20 min.
 
-**Built:** the dose exponents are implemented (packages/engine/src/projection.ts). Weekly targets are 8–10 sets for novices and 12–16 for intermediates (level.ts); the plan explanation reports muscles under target with their numbers.
+**Built:** the dose exponents are implemented (packages/engine/src/projection.ts). Weekly targets are 8–10 sets for novices and 12–16 for intermediates (level.ts); the plan explanation reports muscles under target with their numbers. Each week is also capped at half again the top of the target (15 sets for novices, 24 for intermediates, 30 for advanced; `volumeCeiling` in level.ts) [est]: past it the curve is nearly flat for strength and flattening for size, so the planner leaves pairs and rounds out and the session finishes early with a note, rather than piling on sets. Push days press twice in their first two pairs, as pull days row and pull down, so chest and back get the same sets.
 
 ## 2. Proximity to failure (RIR)
 **Claim:** sets at ~0–3 RIR count fully for hypertrophy; strength is less sensitive.

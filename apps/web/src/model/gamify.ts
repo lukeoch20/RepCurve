@@ -172,6 +172,9 @@ interface Def {
   counter: keyof Counters;
 }
 
+/** Days without a session after which the next one counts as coming back. */
+export const RETURN_GAP_DAYS = 7;
+
 interface Counters {
   workouts: number;
   fullWeeks: number;
@@ -183,6 +186,8 @@ interface Counters {
   cardio: number;
   challenges: number;
   comebacks: number;
+  /** Sessions done after a week or more without one. */
+  returns: number;
 }
 
 const DEFS: Def[] = [
@@ -215,12 +220,15 @@ const DEFS: Def[] = [
   { id: "challenge-1", name: "Challenge met", how: "Complete a monthly challenge", mark: "M", tier: "silver", need: 1, counter: "challenges" },
   { id: "challenge-6", name: "Six months strong", how: "Complete 6 monthly challenges", mark: "6M", tier: "gold", need: 6, counter: "challenges" },
   { id: "comeback-1", name: "Welcome back", how: "Come back after a break of two weeks or more", mark: "↺", tier: "bronze", need: 1, counter: "comebacks" },
+  // Rewarding a return after missed sessions was the most effective of 54 nudges in a megastudy of gym members (Milkman 2021).
+  { id: "return-1", name: "Back on track", how: "Train again after a week or more off", mark: "↩", tier: "bronze", need: 1, counter: "returns" },
+  { id: "return-5", name: "Bounce back", how: "Come back after a week off five times", mark: "5↩", tier: "silver", need: 5, counter: "returns" },
 ];
 
 /** Every badge, earned or not, walking the history in order to find when each was earned. */
 export function badges(history: SessionRecord[], core: Pick<Core, "profile" | "startedAt">): Badge[] {
   const sessions = done(history);
-  const c: Counters = { workouts: 0, fullWeeks: 0, streak: 0, records: 0, movedLb: 0, topLevel: 1, harder: 0, cardio: 0, challenges: 0, comebacks: 0 };
+  const c: Counters = { workouts: 0, fullWeeks: 0, streak: 0, records: 0, movedLb: 0, topLevel: 1, harder: 0, cardio: 0, challenges: 0, comebacks: 0, returns: 0 };
   const earned = new Map<string, { at: number; sessionId: string }>();
   const perWeek = new Map<number, number>();
   const perMonth = new Map<string, number>();
@@ -233,6 +241,7 @@ export function badges(history: SessionRecord[], core: Pick<Core, "profile" | "s
     c.workouts++;
     if (r.kind === "cardio") c.cardio++;
     if (lastAt !== null && r.finishedAt - lastAt >= 14 * DAY_MS) c.comebacks++;
+    if (lastAt !== null && r.finishedAt - lastAt >= RETURN_GAP_DAYS * DAY_MS) c.returns++;
 
     const w = localWeek(r.finishedAt);
     perWeek.set(w, (perWeek.get(w) ?? 0) + 1);

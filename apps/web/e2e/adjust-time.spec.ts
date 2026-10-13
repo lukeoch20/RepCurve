@@ -5,27 +5,27 @@ const time = (page: import("@playwright/test").Page) => page.getByRole("group", 
 const exercisesInHeader = async (page: import("@playwright/test").Page) =>
   Number((await page.getByText(/min · \d+ exercises/).textContent())!.match(/(\d+) exercises/)![1]);
 
-test("today's time goes from 10 to 40 minutes: more time adds exercises, less takes them away", async ({ page }) => {
+test("today's time goes from 10 minutes up: more time adds exercises, less takes them away", async ({ page }) => {
   await onboard(page);
   await expect(time(page)).toContainText("20");
   await expect(page.getByText("Your usual length")).toBeVisible();
   const usual = await exercisesInHeader(page);
-  await expect(page.getByText("Dumbbell lateral raise")).toHaveCount(0);
 
-  // Up to 40, stepping only through lengths that change the session (in this benchmark week,
-  // 35 plans the same as 30, so it's skipped). Each step adds work; then "+" stops.
-  for (const m of ["25", "30", "40"]) {
+  // Up to the longest length that still adds work (at most 40, and less once the week's volume
+  // ceiling is reached), stepping only through lengths that change the session; then "+" stops.
+  const more = time(page).getByRole("button", { name: "More time" });
+  for (let i = 0; i < 6 && (await more.isEnabled()); i++) {
     const before = await exercisesInHeader(page);
-    await time(page).getByRole("button", { name: "More time" }).click();
-    await expect(time(page)).toContainText(m);
+    await more.click();
     expect(await exercisesInHeader(page)).toBeGreaterThan(before);
   }
-  await expect(time(page).getByRole("button", { name: "More time" })).toBeDisabled();
-  expect(await exercisesInHeader(page)).toBeGreaterThan(usual);
-  await expect(page.getByText("Dumbbell lateral raise")).toBeVisible();
+  await expect(more).toBeDisabled();
+  expect(await exercisesInHeader(page)).toBeGreaterThanOrEqual(usual);
 
   // Back to usual, then down to 10: fewer exercises, and "−" stops.
-  await page.getByRole("button", { name: "Back to usual (20 min)" }).click();
+  // (When the week's ceiling leaves no room for more today, the length never left the usual.)
+  const back = page.getByRole("button", { name: "Back to usual (20 min)" });
+  if (await back.isVisible()) await back.click();
   await expect(time(page)).toContainText("20");
   expect(await exercisesInHeader(page)).toBe(usual);
   // Down to 10, skipping lengths that plan the same session.
@@ -38,8 +38,9 @@ test("today's time goes from 10 to 40 minutes: more time adds exercises, less ta
 
 test("a session started on a long day runs the longer plan", async ({ page }) => {
   await onboard(page);
-  for (let i = 0; i < 3; i++) await time(page).getByRole("button", { name: "More time" }).click();
-  await expect(time(page)).toContainText("40");
+  const more = time(page).getByRole("button", { name: "More time" });
+  for (let i = 0; i < 6 && (await more.isEnabled()); i++) await more.click();
+  const planned = await exercisesInHeader(page);
   await page.getByRole("button", { name: "Start session" }).click();
-  await expect(page.getByText("Dumbbell lateral raise").first()).toBeVisible();
+  await expect(page.locator("article.block")).toHaveCount(planned);
 });

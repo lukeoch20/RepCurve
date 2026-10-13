@@ -1,6 +1,8 @@
 import type { CardioActivity, ExerciseChange, SessionPlan, SwapEvent, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
+import type { Reminders } from "./calendar";
+
 export interface Settings {
   /** Rest after each superset round, seconds. */
   restSec: number;
@@ -12,7 +14,15 @@ export interface Settings {
   haptics: boolean;
   /** The cardio activity the user picked last; used whenever the day's equipment and format allow. */
   cardioActivity?: CardioActivity;
+  /** Training days and time last added to the phone's calendar as reminders. */
+  reminders?: Reminders;
 }
+
+/**
+ * Version of the stored data's shape. 2: fields this version doesn't know are kept on load, and the
+ * number tells an older app that newer data is in front of it.
+ */
+export const DATA_VERSION = 2;
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
@@ -40,7 +50,8 @@ export interface Locations {
 
 /** Everything about the user and their training that isn't a session log. */
 export interface Core {
-  version: 1;
+  /** The data's shape version (DATA_VERSION when this app saved it; higher if a newer app did). */
+  version: number;
   profile: Profile;
   /** Equipment where the user is training now: what plans are built from. */
   equipment: Equipment;

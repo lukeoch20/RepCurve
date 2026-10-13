@@ -1,6 +1,6 @@
 import { storageKey } from "./channel";
 
-/** Monthly backup nudge for data kept only on this device. Per-device, best effort. */
+/** Backup nudges for data kept only on this device. Per-device, best effort. */
 const KEY = storageKey("lastBackup");
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -21,8 +21,17 @@ export function lastBackup(): number | null {
   }
 }
 
-/** True when device-only data has gone a month without a backup. */
-export function backupDue(storage: string | null, firstSessionAt: number | null, now: number, last = lastBackup()): boolean {
-  if (storage !== "device" || firstSessionAt === null) return false;
-  return now - (last ?? firstSessionAt) >= MONTH_MS;
+/** Sessions in before the first nudge, and between nudges however recent the last backup. */
+export const FIRST_BACKUP_AFTER = 3;
+export const BACKUP_EVERY_SESSIONS = 12;
+
+/**
+ * Why device-only data needs a backup now, or null: after the third session (there's real
+ * progress to lose), then after a month or twelve more sessions since the last one.
+ */
+export function backupDue(storage: string | null, finishedAt: number[], now: number, last = lastBackup()): "first" | "due" | null {
+  if (storage !== "device" || finishedAt.length < FIRST_BACKUP_AFTER) return null;
+  if (last === null) return "first";
+  const since = finishedAt.filter((t) => t > last).length;
+  return now - last >= MONTH_MS || since >= BACKUP_EVERY_SESSIONS ? "due" : null;
 }

@@ -10,6 +10,7 @@ import {
   type SessionPlan,
   type SwapEvent,
   type SwapReason,
+  type TrainingProfile,
 } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
@@ -183,7 +184,10 @@ export function unskipSlot(active: ActiveSession, slot: string): ActiveSession {
   return { ...active, skippedSlots: active.skippedSlots.filter((s) => s !== slot) };
 }
 
-/** Swap an exercise before any of its sets are logged. A permanent swap also updates the training state. */
+/**
+ * Swap an exercise before any of its sets are logged. A permanent swap also updates the training state.
+ * The new exercise gets the pain check-in when it loads a recently painful area, as a planned one would.
+ */
 export function swapExercise(
   active: ActiveSession,
   core: Core,
@@ -191,12 +195,14 @@ export function swapExercise(
   exerciseId: string,
   permanent: boolean,
   reason?: SwapReason,
+  /** The training profile, so an exercise swapped in keeps any caution on the area it loads. */
+  profile?: TrainingProfile,
 ): { active: ActiveSession; core: Core } {
   const p = prescriptionAt(active.plan, slot);
   if (!p || setsForSlot(active, slot).length > 0) return { active, core };
   const ctx = contextFor(core);
   const state = permanent ? preferExercise(core.state, p.exerciseId, exerciseId) : core.state;
-  const np = swapPrescription(p, exerciseId, state, ctx);
+  const np = swapPrescription(p, exerciseId, state, ctx, profile);
   const replace = (x: Prescription) => (x.slot === slot ? np : x);
   const plan: SessionPlan = {
     ...active.plan,

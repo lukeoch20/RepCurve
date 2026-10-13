@@ -24,10 +24,17 @@ const noBar = makeContext(
   { ...referenceEquipment, treadmill: false, dumbbells: { kind: "fixed", weights: [10, 15, 20, 25, 30, 35, 40], unit: "lb", pairs: true } },
 );
 const ids = (s: SessionPlan) => prescriptionsOf(s).map((p) => p.exerciseId);
+/** A session with two rows: the one-arm row it plans, and a bent-over row in the lateral raise's place. */
+const withTwoRows = (): SessionPlan => {
+  const plan = planSessionWith(noBar, 3);
+  const slot = prescriptionsOf(plan).find((p) => p.exerciseId === "db_lateral_raise")!.slot;
+  const swap = (p: Prescription) => (p.slot === slot ? swapPrescription(p, "db_bent_over_row", initialTrainingState(), noBar) : p);
+  return { ...plan, supersets: plan.supersets.map((ss) => ({ ...ss, items: ss.items.map(swap) })) };
+};
 
 describe("RC-02: one exercise per session, progressed once", () => {
   it("keeps exercises unique when a ladder move lands on an exercise already in the session", () => {
-    const plan = planSessionWith(noBar, 3);
+    const plan = withTwoRows();
     expect(ids(plan)).toContain("one_arm_db_row");
     expect(ids(plan)).toContain("db_bent_over_row");
     const state = preferExercise(initialTrainingState(), "one_arm_db_row", "db_bent_over_row");
@@ -37,7 +44,7 @@ describe("RC-02: one exercise per session, progressed once", () => {
   });
 
   it("progresses an exercise once even if it appears in two slots", () => {
-    const plan = applyState(planSessionWith(noBar, 3), initialTrainingState(), noBar);
+    const plan = applyState(withTwoRows(), initialTrainingState(), noBar);
     const row = prescriptionsOf(plan).find((p) => p.exerciseId === "db_bent_over_row")!;
     const dupe: Prescription = { ...row, slot: "A.row" };
     const doubled: SessionPlan = { ...plan, supersets: [...plan.supersets, { ...plan.supersets[0]!, items: [dupe] }] };

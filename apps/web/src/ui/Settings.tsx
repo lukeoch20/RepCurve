@@ -1,14 +1,16 @@
-import React, { useRef, useState } from "react";
-import { exportBackup, parseBackup } from "../model/backup";
+import React, { useEffect, useRef, useState } from "react";
+import { parseBackup } from "../model/backup";
 import { clock } from "../model/format";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
-import { backupFilename, saveTextFile } from "../platform/download";
+import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
 import { applyStyle, loadStyle, saveStyle, STYLES, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
 import { useTips } from "./tips";
 import { InstallCard } from "./Install";
+import { backUp } from "./Backup";
+import { ReminderSettings } from "./Reminders";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -29,12 +31,22 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
   };
 
   const exportNow = async () => {
-    const text = exportBackup(data, Date.now());
-    const result = await saveTextFile(backupFilename(), text);
-    if (result === "saved") {
-      markBackedUp(Date.now());
-      setMsg({ tone: "good", text: "Backup saved." });
-    } else if (result === "failed") setBackupText(text);
+    const result = await backUp(data);
+    if (!result) return;
+    if (result.fallback) setBackupText(result.fallback);
+    else setMsg({ tone: result.tone, text: result.text });
+  };
+
+  // The data as it was before the last restore, so the restore can be undone.
+  const [undo, setUndo] = useState<{ savedAt: number; data: AppData } | null>(null);
+  useEffect(() => {
+    void safetyCopy().then(setUndo);
+  }, []);
+  const restore = async (d: AppData) => {
+    // Keep what's here first: a restore replaces everything.
+    const kept = await keepSafetyCopy(data, Date.now());
+    await replaceWith(d, kept ? "Backup restored. What was here before is kept on this device: Undo restore brings it back." : "Backup restored.");
+    setUndo(kept ? await safetyCopy() : null);
   };
 
   /** Restore or reset, reporting failures; the store reloads from storage either way. */
@@ -134,6 +146,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       <InstallCard />
 
+      <ReminderSettings core={core} />
+
       <section className="card stack">
         <h2 className="h3">Your data</h2>
         <p className="meta">{where}</p>
@@ -158,17 +172,41 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
           <textarea id="paste" className="input" value={importText} onChange={(e) => setImportText(e.target.value)} placeholder='{"format":"repcurve-backup", …}' />
           <button type="button" className="btn" disabled={!importText.trim()} onClick={() => readImport(importText)}>Check backup</button>
         </div>
+        {undo ? (
+          <div className="banner info">
+            <b>Undo the last restore</b>
+            Your data from before the restore on {new Date(undo.savedAt).toLocaleDateString()} is kept on this device ({undo.data.history.length} sessions).
+            <div className="row-wrap" style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => {
+                  const before = undo.data;
+                  void replaceWith(before, "Restore undone: your data is back as it was.").then(async () => {
+                    await dropSafetyCopy();
+                    setUndo(null);
+                  });
+                }}
+              >
+                Undo restore
+              </button>
+              <button type="button" className="btn small ghost" onClick={() => void dropSafetyCopy().then(() => setUndo(null))}>
+                Forget it
+              </button>
+            </div>
+          </div>
+        ) : null}
         {pendingImport ? (
           <div className="banner adjust">
             <b>Replace everything with this backup?</b>
-            It has {pendingImport.history.length} sessions. What's here now will be replaced.
+            It has {pendingImport.history.length} sessions. What's here now will be replaced, and kept on this device so you can undo it.
             <div className="row" style={{ marginTop: 10 }}>
               <button type="button" className="btn" onClick={() => setPendingImport(null)}>Cancel</button>
               <button type="button" className="btn danger solid" onClick={() => {
                 const d = pendingImport;
                 setPendingImport(null);
                 setImportText("");
-                void replaceWith(d, "Backup restored.");
+                void restore(d);
               }}>Replace</button>
             </div>
           </div>

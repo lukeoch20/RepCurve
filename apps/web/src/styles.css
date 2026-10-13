@@ -364,6 +364,8 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .footer-actions .btn { flex: 1; }
 .hero-curve { width: 100%; height: auto; display: block; }
 .example-tag { display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+.choice .caution-note { display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 600; color: var(--warn); }
+.meta.warn { color: var(--warn); }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.5rem; }
 
 .toast { position: fixed; left: 16px; right: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 60; max-width: 32rem; margin: 0 auto; box-shadow: 0 8px 30px rgb(22 26 23 / 0.14); }

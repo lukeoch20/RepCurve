@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { migrateData } from "../model/migrate";
+import { migrateData, savedByNewerVersion } from "../model/migrate";
 import { EMPTY_DATA, type AppData } from "../model/types";
 import { memoryPersistence, openPersistence, type Persistence, type StorageKind } from "./persistence";
 import { INITIAL, reducer, type Action, type AppState } from "./reducer";
@@ -54,12 +54,21 @@ export function useAppStore(): AppStore {
       if (cancelled) return;
       p.onError(setSaveError);
       p.onConflict(() => {
-        void reload("Your training was updated on another device, so the latest version is loaded here.").catch(() => {});
+        void reload(
+          p.kind === "device"
+            ? "RepCurve is open in another tab or window too, and that copy saved first, so its latest version is loaded here."
+            : "Your training was updated on another device, so the latest version is loaded here.",
+        ).catch(() => {});
       });
       persistence.current = p;
       saved.current = data;
       setStorage(p.kind);
-      setStorageWarning(p.warning);
+      setStorageWarning(
+        p.warning ??
+          (savedByNewerVersion(data.core)
+            ? "Your data was saved by a newer version of RepCurve. Update in Settings when you can: this version keeps everything, but can't use the newest parts."
+            : null),
+      );
       dispatch({ type: "loaded", data });
     })();
     return () => {
@@ -95,7 +104,9 @@ export function useAppStore(): AppStore {
       if (current.current.active) return;
       void p
         .changedElsewhere()
-        .then((changed) => (changed && !current.current.active ? reload("Loaded the latest from your other device.") : undefined))
+        .then((changed) =>
+          changed && !current.current.active ? reload(p.kind === "device" ? "Loaded the latest from RepCurve's other open window." : "Loaded the latest from your other device.") : undefined,
+        )
         .catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisibility);

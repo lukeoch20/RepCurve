@@ -116,3 +116,16 @@ describe("badges", () => {
     expect(earnedIds([skipped])).toEqual([]);
   });
 });
+
+describe("coming back after a week off", () => {
+  it("earns Back on track the first time, and Bounce back the fifth", () => {
+    const steady = [rec(0, 0, [squat(20)]), rec(1, 2, [squat(20)])];
+    expect(earnedIds(steady)).not.toContain("return-1");
+    const once = [...steady, rec(2, 10, [squat(20)])];
+    expect(earnedIds(once)).toContain("return-1");
+    expect(earnedIds(once)).not.toContain("comeback-1");
+    const fives = Array.from({ length: 6 }, (_, i) => rec(i, i * 8, [squat(20)]));
+    expect(earnedIds(fives)).toContain("return-5");
+  });
+});
+

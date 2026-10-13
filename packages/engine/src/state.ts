@@ -2,6 +2,7 @@ import { getExercise } from "@repcurve/exercises";
 import { prevOwnedLoad, roundDownToOwned } from "@repcurve/shared";
 import type { Exercise, SetLog } from "@repcurve/shared";
 import type { EngineContext } from "./context.js";
+import { cautionAreasFor, markCaution, type TrainingProfile } from "./profile.js";
 import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
 import {
   calibrate,
@@ -286,13 +287,16 @@ const TIER_RANK = { default: 0, optional: 1, advanced: 2, retired: 3 } as const;
  * The reason reorders them: equipment busy or missing puts different equipment first; too hard puts
  * easier and more stable options first (no advanced skills); balance puts two-sided options first.
  */
-export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = [], reason?: SwapReason): Exercise[] {
+export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = [], reason?: SwapReason, profile?: TrainingProfile): Exercise[] {
   const current = getExercise(p.exerciseId);
   const exclude = new Set([p.exerciseId, ...excludeIds]);
   const isolationFamily = (e: Exercise) => current.pattern !== "isolation" || e.family === current.family;
   let options = ctx.pool.exercises.filter((e) => e.pattern === p.pattern && !exclude.has(e.id) && isolationFamily(e));
   if (reason === "hard" || reason === "balance") options = options.filter((e) => e.tier !== "advanced");
-  const key = (e: Exercise): number[] => {
+  // Options that spare a recently painful area come first, whatever the reason.
+  const cautioned = (e: Exercise) => (profile && cautionAreasFor(profile, e.id).length > 0 ? 1 : 0);
+  const key = (e: Exercise): number[] => [cautioned(e), ...byReason(e)];
+  const byReason = (e: Exercise): number[] => {
     const family = e.family === current.family ? 0 : 1;
     // Entry regressions (wall push-ups, sit-to-stands) are for when it's too hard, not a first offer.
     const tier = TIER_RANK[e.tier] + (e.ladderLevel === 0 && reason !== "hard" ? 0.5 : 0);
@@ -321,12 +325,14 @@ export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds:
 
 /**
  * Swap an exercise for this session only, keeping the slot and the number of sets. A benchmark
- * set carries over when the new exercise hasn't been calibrated yet.
+ * set carries over when the new exercise hasn't been calibrated yet. With the training profile, the
+ * new exercise gets the same caution as any planned exercise that loads a recently painful area.
  */
-export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext): Prescription {
+export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext, profile?: TrainingProfile): Prescription {
   const np = prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
   np.benchmarkSet = p.benchmarkSet && np.loadType !== "time" && !(state.exercises[newExerciseId]?.calibrated ?? false);
-  return np;
+  // A recently painful area keeps its check-in whichever exercise loads it.
+  return profile ? markCaution(np, profile) : np;
 }
 
 export interface ExerciseChange {

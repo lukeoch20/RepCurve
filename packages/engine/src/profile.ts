@@ -1,6 +1,6 @@
 import { getExercise } from "@repcurve/exercises";
 import type { Injury, SetLog } from "@repcurve/shared";
-import type { SessionPlan } from "./types.js";
+import type { Prescription, SessionPlan } from "./types.js";
 import type { SwapReason, TrainingState } from "./state.js";
 
 /**
@@ -128,17 +128,28 @@ export function cautionFor(profile: TrainingProfile, exerciseId: string): Cautio
  */
 export function applyProfile(session: SessionPlan, profile: TrainingProfile): SessionPlan {
   if (session.kind !== "strength" || !profile.cautions.some((c) => c.active && c.injury)) return session;
-  // No all-out benchmark set on a recently painful area either.
-  const mark = <T extends { exerciseId: string; painCheck?: boolean; caution?: string; benchmarkSet: boolean }>(p: T): T => {
-    // An exercise that hurt itself already has its own check-in.
-    const c = p.painCheck ? undefined : cautionFor(profile, p.exerciseId);
-    return c ? { ...p, painCheck: true, caution: c.area, benchmarkSet: false } : p;
-  };
+  const mark = (p: Prescription) => markCaution(p, profile);
   return {
     ...session,
     supersets: session.supersets.map((ss) => ({ ...ss, items: ss.items.map(mark) })),
     finisher: session.finisher ? mark(session.finisher) : null,
   };
+}
+
+/**
+ * One exercise with the profile's caution on it: if it loads a recently painful area it gets the
+ * check-in, no max-reps benchmark set, and is held steady. Used for planned exercises and for
+ * anything swapped in, so a swap can't step around a caution.
+ */
+export function markCaution(p: Prescription, profile: TrainingProfile): Prescription {
+  // An exercise that hurt itself already has its own check-in.
+  const c = p.painCheck ? undefined : cautionFor(profile, p.exerciseId);
+  return c ? { ...p, painCheck: true, caution: c.area, benchmarkSet: false } : p;
+}
+
+/** The recently painful areas an exercise loads, e.g. ["Shoulder"]. */
+export function cautionAreasFor(profile: TrainingProfile, exerciseId: string): string[] {
+  return profile.cautions.filter((c) => c.active && c.injury !== null && loadsArea(exerciseId, c.injury)).map((c) => c.area);
 }
 
 /** Swaps for a reason that's come up before stick by default: twice too hard means it's too hard for now. */
