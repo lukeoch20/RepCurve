@@ -119,6 +119,83 @@ with your own start).
 each one used), the same way the exercise evidence review was done, plus a decision on converting
 dumbbell lifts.
 
+## B4. Style previews in Settings
+
+**The problem.** Every option in Settings → Style is drawn in the style that's active now, so with Pixel
+Press on, "Classic" shows up in pixel lettering on lavender and tells you nothing about Classic.
+
+**What the user sees.** Each option is a small preview in that style's own look:
+- a header band in the style's header colour, with the name in its heading font (pixel lettering for Pixel
+  Press, the serif for Classic);
+- a sample card on the style's page colour, with a line of body text in its font;
+- a sample button in its main button colour and shape (Bluebird's bevelled green, Fired Forge's ember);
+- the chosen style keeps an outline in the current style, so it's clear which one is active.
+
+Classic follows the phone's light or dark mode, so its preview shows light and dark side by side.
+
+**How.** All fonts are already loaded, so there's nothing new to download. Each style's handful of
+preview colours lives in one small table rather than re-running its whole stylesheet inside the card,
+which would clash with the active style's rules. A test checks those colours against the real
+stylesheets, so a preview can't drift from the look it shows.
+
+**Effort.** Small: about half a day. It's also the first slice of B5.
+
+---
+
+## B5. Looks as rewards
+
+**The idea.** Some looks are earned. Each one unlocks through whichever comes first of three routes:
+showing up, getting stronger, or staying consistent. Every route is a badge, so there's one system:
+badges are worked out from the history, which means unlocks survive a backup and restore and nothing new
+is stored.
+
+**Principles.**
+- **More than one way in.** Someone who trains steadily but gets stronger slowly isn't stuck behind a
+  strength wall, and the reverse.
+- **Strength against yourself.** Strength routes use lift levels (each about 5% stronger than your own
+  start) and personal records, never absolute numbers like "bench your body weight", which would lock
+  out home trainees with light dumbbells.
+- **Early rewards.** Most people drift off in the first month, and a gym habit takes months to form. At
+  three workouts a week, 10 workouts is about weeks 3–4, 25 about month 2, 50 about month 4, 100 about
+  month 8.
+- **Unlocked for good.** Light and dark unlock together (dark mode is a comfort setting, not a prize), a
+  look never locks again, and whatever style someone uses today stays unlocked for them.
+- **Coming back counts.** Rewarding a return after missed workouts was the most effective of 54 nudges
+  in a megastudy of gym members, so a comeback route is on the ladder.
+
+**The ladder (first sketch).** Each look unlocks with whichever route comes first.
+
+| Look | Showing up | Getting stronger | Staying consistent |
+| --- | --- | --- | --- |
+| Bluebird light and dark, Classic | Free | | |
+| Fired Forge | 10 workouts | First personal record and first harder version of a move | 4-week streak |
+| Pixel Press | 25 workouts | Level 5 on any lift (about 25% stronger) | Every planned session in a week, 3 times |
+| New look 3 | 50 workouts | Level 10 on any lift | 12-week streak, or a monthly challenge met |
+| New look 4 | 100 workouts | 50 personal records | Half a year of weekly training |
+| New look 5 | 250 workouts | Level 15 on any lift | A whole year, or coming back after a break 5 times |
+
+The first workout gets an immediate small win that isn't a look (a curve colour or a finish-screen
+celebration), so the looks stay meaningful.
+
+**What the user sees.**
+- **Settings → Style:** B4's previews; locked looks are dimmed with a lock and their routes and progress,
+  e.g. "Unlocks with: 10 workouts (3 to go) or a 4-week streak (2 weeks to go)".
+- **Finish screen:** "New look unlocked: Fired Forge", with a Try it button.
+- **Progress:** the next unlock and how close it is, beside the badges.
+
+**Data.** None new. Each look lists the badge ids that unlock it; a look is unlocked when any of its badges
+is earned, or it's the style in use when this ships (kept in the per-device style setting).
+
+**Open decisions.**
+1. Is the free set right: Bluebird light and dark, and Classic? (Suggested: yes.)
+2. Any one route unlocks a look, or do some looks need all three? (Suggested: any one.)
+3. Only two looks can be locked today (Fired Forge, Pixel Press). Commission three more from the artist
+   (the theme kit already covers what they'd need), or fill the top rungs with smaller cosmetics for now
+   (curve colours, celebration effects, a title on Progress)?
+
+**Build.** First slice: B4's previews plus locks on Fired Forge and Pixel Press, with the new badges the
+first two rungs need. Higher rungs as new looks arrive.
+
 ---
 
 ## Build order
@@ -129,3 +206,5 @@ dumbbell lifts.
 2. **B2:** the soreness check-in as the first new input to the profile.
 3. **B1 screen:** "What RepCurve knows about you", with corrections.
 4. **B3:** research pass for reference tables, then push-up percentiles, then the rest.
+5. **B4:** style previews in Settings.
+6. **B5:** looks as rewards, first two rungs (Fired Forge and Pixel Press), once the open decisions are made.
