@@ -10,6 +10,7 @@ import { Seg, Toggle } from "./common";
 import { useTips } from "./tips";
 import { InstallCard } from "./Install";
 import { backUp } from "./Backup";
+import { ReminderSettings } from "./Reminders";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -144,6 +145,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
       </section>
 
       <InstallCard />
+
+      <ReminderSettings core={core} />
 
       <section className="card stack">
         <h2 className="h3">Your data</h2>

@@ -165,6 +165,8 @@ export interface StrengthSessionInput {
   transitionSec?: number;
   benchmark: boolean;
   e1rmByExercise: Record<string, number>;
+  /** A brand-new lifter's first week: one round lighter on purpose, and the session says so. */
+  ramp?: boolean;
   /**
    * Hard sets each muscle may get in this session, so the week stays under its ceiling. Pairs and
    * rounds that would go over are left out, and the session finishes early instead.
@@ -488,7 +490,11 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const estimatedMinutes = Math.round((warmupMin + supersetMin + finisherSec / 60) * 10) / 10;
   if (estimatedMinutes <= budget - 3) {
     const spare = "A walk or easy cardio is a good use of the spare minutes.";
-    if (capped) {
+    if (input.ramp) {
+      notes.push(
+        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: week 1 is a round lighter while you learn the moves and find your weights. From week 2, sessions fill your time.`,
+      );
+    } else if (capped) {
       notes.push(
         `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: the muscles this session trains already get plenty of hard sets this week, and more would add soreness rather than strength. ${spare}`,
       );

@@ -5,6 +5,7 @@ import { exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "..
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
 import { BackupButton } from "./Backup";
+import { ReminderPrompt } from "./Reminders";
 import { canSuggestInstall, isIOS } from "../platform/install";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
@@ -13,8 +14,10 @@ import { placesOf } from "../model/equipment";
 import { CardioLineup, Lineup } from "./Lineup";
 import { useTip } from "./tips";
 import { ChallengeCard } from "./Trophies";
-import { monthChallenge } from "../model/gamify";
+import { badges, monthChallenge, RETURN_GAP_DAYS } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
+
+const DAY_MS = 86_400_000;
 
 export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
   const { core, history } = props;
@@ -46,6 +49,13 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const remindBackup = backupDue(storage, history.filter((r) => !r.skipped).map((r) => r.finishedAt), now);
   const { week, slots } = useMemo(() => weekSlots(core, history), [core, history]);
   const last = [...history].reverse().find((r) => !r.skipped);
+  // Days since the last session, once it's been a week or more: coming back gets a warm welcome and a badge.
+  const away = last && now - last.finishedAt >= RETURN_GAP_DAYS * DAY_MS ? Math.floor((now - last.finishedAt) / DAY_MS) : null;
+  const returnBadge = useMemo(() => {
+    if (away === null) return null;
+    const next = badges(history, core).find((b) => b.id.startsWith("return-") && !b.earned);
+    return next && next.progress && next.progress.have + 1 >= next.progress.need ? next.name : null;
+  }, [away, history, core]);
   const streak = weekStreak(history, now);
   const benchmarks = plan.kind === "strength" && [...plan.supersets.flatMap((s) => s.items)].some((p) => p.benchmarkSet);
 
@@ -90,9 +100,14 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {plan.deload ? (
         <div className="banner info"><b>Deload week</b>Recent sessions were grinders. This week is lighter so you come back stronger.</div>
       ) : null}
-      {plan.comeback ? (
-        <div className="banner info"><b>Welcome back</b>It's been a couple of weeks, so today eases you back in.</div>
+      {away !== null ? (
+        <div className="banner good">
+          <b>Welcome back</b>
+          {plan.comeback ? "It's been a couple of weeks, so today eases you back in. " : `It's been ${away} days. `}
+          Coming back after a break is the habit that matters most{returnBadge ? `, and finishing today earns the ${returnBadge} badge` : ""}.
+        </div>
       ) : null}
+      {history.some((r) => !r.skipped) ? <ReminderPrompt core={core} /> : null}
       {remindInstall ? (
         <div className="banner adjust">
           <b>Add RepCurve to your Home Screen</b>
@@ -114,7 +129,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         <div key={n} className="banner adjust"><b>Missing a movement</b>{n}</div>
       ))}
       {plan.notes?.map((n) => (
-        <div key={n} className="banner info"><b>Short on room</b>{n}</div>
+        <div key={n} className="banner info"><b>{n.includes("on purpose") ? "Shorter on purpose" : "Short on room"}</b>{n}</div>
       ))}
       {benchmarks ? (
         <div className="banner info" ref={benchmarkTip}><b>Benchmark session</b>The first set of each new exercise is a test set: as many good reps as you can, stopping with about two left. It sets your working weights.</div>

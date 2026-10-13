@@ -3,6 +3,7 @@ import { initialTrainingState, type CardioActivity, type TrainingState } from "@
 import { findExercise } from "@repcurve/exercises";
 import { MACHINES } from "@repcurve/shared";
 import type { Equipment, Goal, Profile, TrainingHistory } from "@repcurve/shared";
+import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
 import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
 
@@ -69,8 +70,19 @@ function migrateLocations(l: unknown): Locations | undefined {
 
 const ACTIVITIES: CardioActivity[] = ["walking", "running", "cycling", "elliptical", "rowing", "stairs", "jump_rope", "marching"];
 
+function validReminders(r: unknown): r is Reminders {
+  return (
+    isObj(r) &&
+    Array.isArray(r["days"]) &&
+    r["days"].length > 0 &&
+    (r["days"] as unknown[]).every((d) => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6) &&
+    validTime(r["time"])
+  );
+}
+
 function migrateSettings(s: unknown): Settings {
-  const o = isObj(s) ? s : {};
+  // Fields from a newer version are kept; the ones this version knows are checked.
+  const { cardioActivity, reminders, ...o } = isObj(s) ? s : ({} as Obj);
   return {
     ...o,
     restSec: isNum(o["restSec"]) && o["restSec"] > 0 ? o["restSec"] : DEFAULT_SETTINGS.restSec,
@@ -78,7 +90,8 @@ function migrateSettings(s: unknown): Settings {
     sound: typeof o["sound"] === "boolean" ? o["sound"] : DEFAULT_SETTINGS.sound,
     keepAwake: typeof o["keepAwake"] === "boolean" ? o["keepAwake"] : DEFAULT_SETTINGS.keepAwake,
     haptics: typeof o["haptics"] === "boolean" ? o["haptics"] : DEFAULT_SETTINGS.haptics,
-    ...(typeof o["cardioActivity"] === "string" && ACTIVITIES.includes(o["cardioActivity"] as CardioActivity) ? { cardioActivity: o["cardioActivity"] as CardioActivity } : {}),
+    ...(typeof cardioActivity === "string" && ACTIVITIES.includes(cardioActivity as CardioActivity) ? { cardioActivity: cardioActivity as CardioActivity } : {}),
+    ...(validReminders(reminders) ? { reminders } : {}),
   };
 }
 

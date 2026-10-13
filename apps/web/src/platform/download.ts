@@ -1,4 +1,5 @@
 import { insideClaude, useCapability } from "./runtime";
+import { isIOS } from "./install";
 
 /**
  * Give the user a text file: through claude.ai's downloads inside claude.ai; on a phone, through
@@ -47,5 +48,37 @@ async function shareFile(filename: string, text: string): Promise<"saved" | "dec
     return "saved";
   } catch (e) {
     return (e as { name?: string })?.name === "AbortError" ? "declined" : "unavailable";
+  }
+}
+
+/**
+ * Hand a calendar file to the phone's calendar. iPhone Safari shows its "Add to Calendar" preview
+ * for a calendar file it opens; elsewhere it downloads, and opening it adds the events.
+ */
+export async function openCalendarFile(filename: string, ics: string): Promise<"opened" | "downloaded" | "failed"> {
+  if (insideClaude()) {
+    const dl = await useCapability<{ save(r: { filename: string; data: string }): Promise<void> }>("downloads", 4000);
+    if (!dl) return "failed";
+    try {
+      await dl.save({ filename, data: ics });
+      return "downloaded";
+    } catch {
+      return "failed";
+    }
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (isIOS()) {
+      window.location.assign(url);
+      return "opened";
+    }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    return "downloaded";
+  } catch {
+    return "failed";
   }
 }

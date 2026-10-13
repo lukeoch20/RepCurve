@@ -89,3 +89,15 @@ describe("data from another version of the app", () => {
     expect(migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" } } })).not.toBeNull();
   });
 });
+
+describe("reminder settings", () => {
+  const T = Date.UTC(2026, 9, 13);
+  it("keeps valid reminder days and drops broken ones", () => {
+    const core = newCore(profile, equipment, T);
+    const ok = migrateCore({ ...core, settings: { ...core.settings, reminders: { days: [1, 3, 5], time: "07:00" } } })!;
+    expect(ok.settings.reminders).toEqual({ days: [1, 3, 5], time: "07:00" });
+    const bad = migrateCore({ ...core, settings: { ...core.settings, reminders: { days: [9], time: "7am" }, cardioActivity: "flying" } })!;
+    expect(bad.settings.reminders).toBeUndefined();
+    expect(bad.settings.cardioActivity).toBeUndefined();
+  });
+});

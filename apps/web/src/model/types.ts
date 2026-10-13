@@ -1,6 +1,8 @@
 import type { CardioActivity, ExerciseChange, SessionPlan, SwapEvent, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
+import type { Reminders } from "./calendar";
+
 export interface Settings {
   /** Rest after each superset round, seconds. */
   restSec: number;
@@ -12,6 +14,8 @@ export interface Settings {
   haptics: boolean;
   /** The cardio activity the user picked last; used whenever the day's equipment and format allow. */
   cardioActivity?: CardioActivity;
+  /** Training days and time last added to the phone's calendar as reminders. */
+  reminders?: Reminders;
 }
 
 /**

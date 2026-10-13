@@ -35,10 +35,14 @@ const allowanceCache = new WeakMap<EngineContext, Map<string, Partial<Record<Mus
  * ceiling for the person's level. A muscle the full plan already keeps under the ceiling gets its
  * planned sets plus an even share of the room left; one it takes over gets the ceiling, split in
  * proportion to where the full plan put those sets. Core work isn't capped.
+ *
+ * On a long day (more time than usual today), that session may use all of the room left under the
+ * ceiling rather than an even share: the person asked for more today, and the usual sessions
+ * around it leave that room unused.
  */
-function weekAllowances(ctx: EngineContext, week: number, opts: PlanOptions): Partial<Record<Muscle, number>>[] {
+function weekAllowances(ctx: EngineContext, week: number, opts: PlanOptions, longDay?: number): Partial<Record<Muscle, number>>[] {
   const { minutes: _today, ...rest } = opts;
-  const key = `${week}|${JSON.stringify(rest)}`;
+  const key = `${week}|${longDay ?? ""}|${JSON.stringify(rest)}`;
   let byCtx = allowanceCache.get(ctx);
   if (!byCtx) allowanceCache.set(ctx, (byCtx = new Map()));
   const hit = byCtx.get(key);
@@ -48,13 +52,14 @@ function weekAllowances(ctx: EngineContext, week: number, opts: PlanOptions): Pa
   const strength = sessions.filter((s): s is SessionPlan => s !== null);
   const total = weeklyVolume(strength);
   const ceiling = volumeCeiling(ctx.level);
-  const allowances = sessions.map((s) => {
+  const allowances = sessions.map((s, d) => {
     const a: Partial<Record<Muscle, number>> = {};
     if (!s) return a;
     const mine = weeklyVolume([s]);
+    const shareOfRoom = d === longDay ? 1 : 1 / strength.length;
     for (const m of MUSCLES) {
       if (m === "core") continue;
-      a[m] = total[m] <= ceiling ? mine[m] + (ceiling - total[m]) / strength.length : (ceiling * mine[m]) / total[m];
+      a[m] = total[m] <= ceiling ? mine[m] + (ceiling - total[m]) * shareOfRoom : (ceiling * mine[m]) / total[m];
     }
     return a;
   });
@@ -114,7 +119,9 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     // The first time each day type comes round, its first sets are benchmarks.
     benchmark: split === "full_body" ? week === 1 : rotation < variantsFor(split).length,
     e1rmByExercise: opts.e1rmByExercise ?? {},
-    ...(opts.uncapped ? {} : { allowance: weekAllowances(ctx, week, opts)[dayIndex]! }),
+    ...(opts.uncapped
+      ? {}
+      : { allowance: weekAllowances(ctx, week, opts, opts.minutes !== undefined && opts.minutes > ctx.profile.minutesPerSession ? dayIndex : undefined)[dayIndex]! }),
     ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
     ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),
   };
@@ -127,6 +134,7 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     rounds: BASE_ROUNDS - 1,
     maxRounds: BASE_ROUNDS - 1,
     maxSupersets: steady.supersets.length,
+    ramp: true,
   });
 }
 
