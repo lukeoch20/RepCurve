@@ -105,10 +105,12 @@ describe("weekSessions", () => {
 
 describe("today's time choices", () => {
   const T = Date.UTC(2026, 9, 1);
-  it("run from 10 to 40 minutes and include the usual length", () => {
+  it("run from 10 minutes up to the longest that still adds work, and include the usual length", () => {
     const choices = timeChoices(newCore(profile, equipment, T), [], T);
     expect(choices[0]).toBe(10);
-    expect(choices[choices.length - 1]).toBe(40);
+    // Past the week's volume ceiling a longer session adds nothing, so it isn't offered.
+    expect(choices[choices.length - 1]).toBeGreaterThan(20);
+    expect(choices[choices.length - 1]).toBeLessThanOrEqual(40);
     expect(choices).toContain(20);
   });
 

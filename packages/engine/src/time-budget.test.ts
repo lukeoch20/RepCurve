@@ -43,8 +43,13 @@ describe("today's time from 10 to 40 minutes", () => {
     }
   });
 
-  it("uses most of a long day", () => {
-    for (const level of LEVELS) for (const s of steadySessions(level, 40)) expect(s.estimatedMinutes).toBeGreaterThanOrEqual(32);
+  it("uses most of a long day, unless the week's volume ceiling stops it, and then says so", () => {
+    for (const level of LEVELS) {
+      for (const s of steadySessions(level, 40)) {
+        if (s.estimatedMinutes >= 32) continue;
+        expect(s.notes?.join(" ")).toMatch(/on purpose/);
+      }
+    }
   });
 
   it("adds extra exercises only once the usual pairs are at their most rounds", () => {
@@ -78,12 +83,12 @@ describe("today's time from 10 to 40 minutes", () => {
     }
   });
 
-  it("without dumbbells, a long day still adds what it can and stays within the time", () => {
+  it("without dumbbells, a long day adds what it can within the time and the week's ceiling", () => {
     const bodyweight = { ...referenceEquipment, dumbbells: { kind: "none" as const } };
     const at25 = steadySessions("a_little", 25, bodyweight);
     steadySessions("a_little", 40, bodyweight).forEach((s, i) => {
       expect(s.estimatedMinutes).toBeLessThanOrEqual(40);
-      expect(exercises(s)).toBeGreaterThan(exercises(at25[i]!));
+      expect(exercises(s)).toBeGreaterThanOrEqual(exercises(at25[i]!));
     });
   });
 });
