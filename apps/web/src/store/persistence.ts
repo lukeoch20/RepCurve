@@ -344,9 +344,40 @@ function inOneTransaction(store: UseStore, fn: (os: IDBObjectStore) => void): Pr
   });
 }
 
+/** Key of the core's revision number on the device. */
+const REV = "rev";
+
+const readRev = (store: UseStore): Promise<number> => get(REV, store).then((v) => Number(v ?? 0) || 0);
+
 export function devicePersistence(store: UseStore): Persistence {
   let report: (m: string | null) => void = () => {};
-  const writer = new Writer((m) => report(m));
+  let conflict: () => void = () => {};
+  const writer = new Writer((m) => report(m), () => conflict());
+  /**
+   * Revision of core this page last loaded or wrote. A second copy of the app on this device (another
+   * tab, or the installed app beside a browser tab) shares the storage; a write from a copy that
+   * didn't see the other's latest save is refused rather than rolling the training state back.
+   */
+  let rev = 0;
+  const writeCore = (core: Core | null) => () =>
+    store("readwrite", (os) => {
+      let stale = false;
+      const req = os.get(REV);
+      req.onsuccess = () => {
+        const current = Number(req.result ?? 0) || 0;
+        if (current !== rev) {
+          stale = true;
+          return;
+        }
+        if (core) os.put(plain(core), "core");
+        else os.delete("core");
+        os.put(current + 1, REV);
+      };
+      return promisifyRequest(os.transaction).then(() => {
+        if (stale) throw new ConflictError();
+        rev += 1;
+      });
+    });
   return {
     kind: "device",
     warning: null,
@@ -365,6 +396,7 @@ export function devicePersistence(store: UseStore): Persistence {
         });
         records.splice(0, records.length, ...merged.values());
       }
+      rev = Number(byKey.get(REV) ?? 0) || 0;
       return {
         core: (byKey.get("core") as Core | undefined) ?? null,
         active: (byKey.get("active") as ActiveSession | undefined) ?? null,
@@ -372,7 +404,7 @@ export function devicePersistence(store: UseStore): Persistence {
       };
     },
     saveCore(core) {
-      writer.schedule("core", () => (core ? set("core", plain(core), store) : del("core", store)));
+      writer.schedule("core", writeCore(core));
     },
     saveActive(active) {
       writer.schedule("active", () => (active ? set("active", plain(active), store) : del("active", store)));
@@ -382,19 +414,27 @@ export function devicePersistence(store: UseStore): Persistence {
     },
     async replaceAll(data) {
       await writer.flush();
+      const next = (await readRev(store)) + 1;
       await inOneTransaction(store, (os) => {
         os.clear();
         if (data.core) os.put(plain(data.core), "core");
         if (data.active) os.put(plain(data.active), "active");
         for (const r of data.history) os.put(plain(r), RECORD + r.id);
+        os.put(next, REV);
       });
+      rev = next;
     },
     flush: () => writer.flush(),
     onError(fn) {
       report = fn;
     },
-    onConflict() {},
-    changedElsewhere: async () => false,
+    onConflict(fn) {
+      conflict = fn;
+    },
+    async changedElsewhere() {
+      await writer.flush();
+      return (await readRev(store)) !== rev;
+    },
   };
 }
 

@@ -236,3 +236,49 @@ describe("RC-29: device storage keeps one key per session", () => {
     expect(data.history.map((r) => r.id)).toEqual(["s7"]);
   });
 });
+
+// ------------------------------------------------------------------ two copies on one device
+
+describe("two copies of the app on one device", () => {
+  it("refuses a save from a copy that missed the other's latest, instead of rolling progress back", async () => {
+    const store = createStore(`t-${Math.random()}`, "data");
+    const first = devicePersistence(store);
+    await first.load();
+    first.saveCore(baseCore());
+    await first.flush();
+    // Two copies open with the same data.
+    const tabA = devicePersistence(store);
+    const tabB = devicePersistence(store);
+    await tabA.load();
+    await tabB.load();
+    let conflicts = 0;
+    tabA.onConflict(() => (conflicts += 1));
+    // B finishes a session; A, still showing the old state, changes a setting.
+    tabB.saveCore({ ...baseCore(), nextIndex: 1 });
+    await tabB.flush();
+    expect(await tabA.changedElsewhere()).toBe(true);
+    tabA.saveCore({ ...baseCore(), settings: { ...baseCore().settings, restSec: 90 } });
+    await tabA.flush();
+    expect(conflicts).toBe(1);
+    expect((await devicePersistence(store).load()).core!.nextIndex).toBe(1);
+    // After reloading, A saves normally.
+    const reloaded = await tabA.load();
+    tabA.saveCore({ ...reloaded.core!, settings: { ...reloaded.core!.settings, restSec: 90 } });
+    await tabA.flush();
+    const final = (await devicePersistence(store).load()).core!;
+    expect(final.nextIndex).toBe(1);
+    expect(final.settings.restSec).toBe(90);
+    expect(conflicts).toBe(1);
+  });
+
+  it("keeps saving as usual for data saved before revisions existed", async () => {
+    const store = createStore(`t-${Math.random()}`, "data");
+    await set("core", baseCore(), store);
+    const p = devicePersistence(store);
+    await p.load();
+    p.saveCore({ ...baseCore(), nextIndex: 4 });
+    await p.flush();
+    expect((await devicePersistence(store).load()).core!.nextIndex).toBe(4);
+    expect(await p.changedElsewhere()).toBe(false);
+  });
+});

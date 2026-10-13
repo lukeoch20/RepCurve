@@ -14,6 +14,12 @@ export interface Settings {
   cardioActivity?: CardioActivity;
 }
 
+/**
+ * Version of the stored data's shape. 2: fields this version doesn't know are kept on load, and the
+ * number tells an older app that newer data is in front of it.
+ */
+export const DATA_VERSION = 2;
+
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
 export const REST_CHOICES = [30, 45, 60, 75, 90, 120, 150, 180];
@@ -40,7 +46,8 @@ export interface Locations {
 
 /** Everything about the user and their training that isn't a session log. */
 export interface Core {
-  version: 1;
+  /** The data's shape version (DATA_VERSION when this app saved it; higher if a newer app did). */
+  version: number;
   profile: Profile;
   /** Equipment where the user is training now: what plans are built from. */
   equipment: Equipment;

@@ -11,7 +11,7 @@ import {
 } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { withProfile } from "./profile";
-import { DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
+import { DATA_VERSION, DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -26,7 +26,7 @@ export function contextFor(core: Pick<Core, "profile" | "equipment">): EngineCon
 
 export function newCore(profile: Profile, equipment: Equipment, now: number, settings: Settings = DEFAULT_SETTINGS): Core {
   return {
-    version: 1,
+    version: DATA_VERSION,
     profile,
     equipment,
     settings,

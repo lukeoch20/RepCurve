@@ -2,20 +2,24 @@ import type { Split } from "@repcurve/shared";
 import { initialTrainingState, type CardioActivity, type TrainingState } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import { MACHINES } from "@repcurve/shared";
-import type { Equipment, Profile } from "@repcurve/shared";
+import type { Equipment, Goal, Profile, TrainingHistory } from "@repcurve/shared";
 import { upgradeEquipment } from "./equipment";
-import { DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
+import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
 
 /**
  * Bring stored or imported data up to the current shape: fill defaults that older versions
  * lacked, and drop anything the app can no longer use (malformed records, exercises the
- * library no longer has) instead of crashing on it later.
+ * library no longer has) instead of crashing on it later. Fields this version doesn't know are
+ * kept as they are, so data saved by a newer version survives a visit from an older one.
  */
 
 type Obj = Record<string, unknown>;
 const isObj = (x: unknown): x is Obj => typeof x === "object" && x !== null && !Array.isArray(x);
 const isNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
 const known = (id: unknown): id is string => typeof id === "string" && findExercise(id) !== undefined;
+
+const HISTORIES: TrainingHistory[] = ["never", "a_little", "lapsed", "regular"];
+const GOALS: Goal[] = ["strength_muscle", "fitness", "both"];
 
 export function validProfile(p: unknown): p is Profile {
   return (
@@ -24,8 +28,8 @@ export function validProfile(p: unknown): p is Profile {
     isNum(p["age"]) &&
     isNum(p["heightCm"]) &&
     isNum(p["bodyweightKg"]) &&
-    typeof p["trainingHistory"] === "string" &&
-    typeof p["goal"] === "string" &&
+    HISTORIES.includes(p["trainingHistory"] as TrainingHistory) &&
+    GOALS.includes(p["goal"] as Goal) &&
     isNum(p["daysPerWeek"]) &&
     p["daysPerWeek"] >= 1 &&
     p["daysPerWeek"] <= 7 &&
@@ -41,7 +45,10 @@ export function validEquipment(e: unknown): e is Equipment {
   const d = e["dumbbells"];
   if (d["kind"] === "none") return true;
   if (d["kind"] === "fixed") return Array.isArray(d["weights"]) && (d["weights"] as unknown[]).every(isNum);
-  if (d["kind"] === "adjustable") return isNum(d["min"]) && isNum(d["max"]) && isNum(d["step"]) && (d["step"] as number) > 0;
+  // At most 200 settings between the lightest and heaviest, as the equipment editor allows.
+  if (d["kind"] === "adjustable") {
+    return isNum(d["min"]) && isNum(d["max"]) && isNum(d["step"]) && (d["step"] as number) > 0 && ((d["max"] as number) - (d["min"] as number)) / (d["step"] as number) <= 200;
+  }
   return false;
 }
 
@@ -65,6 +72,7 @@ const ACTIVITIES: CardioActivity[] = ["walking", "running", "cycling", "elliptic
 function migrateSettings(s: unknown): Settings {
   const o = isObj(s) ? s : {};
   return {
+    ...o,
     restSec: isNum(o["restSec"]) && o["restSec"] > 0 ? o["restSec"] : DEFAULT_SETTINGS.restSec,
     transitionSec: isNum(o["transitionSec"]) && o["transitionSec"] >= 0 ? o["transitionSec"] : DEFAULT_SETTINGS.transitionSec,
     sound: typeof o["sound"] === "boolean" ? o["sound"] : DEFAULT_SETTINGS.sound,
@@ -90,6 +98,7 @@ function migrateState(s: unknown): TrainingState {
   }
   return {
     ...base,
+    ...s,
     substitutions,
     exercises,
     deloadRemaining: isNum(s["deloadRemaining"]) ? Math.max(0, s["deloadRemaining"]) : 0,
@@ -108,7 +117,9 @@ export function migrateCore(c: unknown): Core | null {
   if (!isObj(c) || !validProfile(c["profile"]) || !validEquipment(c["equipment"])) return null;
   const startedAt = typeof c["startedAt"] === "string" && !Number.isNaN(Date.parse(c["startedAt"])) ? c["startedAt"] : new Date().toISOString();
   const core: Core = {
-    version: 1,
+    ...(c as unknown as Core),
+    // A newer version's number is kept, so it still knows the data is its own.
+    version: isNum(c["version"]) && c["version"] > DATA_VERSION ? c["version"] : DATA_VERSION,
     // Setups from before splits existed move to push/pull, the default.
     profile: { ...c["profile"], split: splitOf(c["profile"]) },
     equipment: migrateEquipment(c["equipment"]),
@@ -117,6 +128,9 @@ export function migrateCore(c: unknown): Core | null {
     startedAt,
     nextIndex: isNum(c["nextIndex"]) ? Math.max(0, Math.floor(c["nextIndex"])) : 0,
   };
+  delete core.activities;
+  delete core.locations;
+  delete core.positionOffset;
   if (Array.isArray(c["activities"])) {
     core.activities = (c["activities"] as unknown[]).filter(
       (a): a is NonNullable<Core["activities"]>[number] => isObj(a) && isNum(a["at"]) && isNum(a["minutes"]) && a["minutes"] > 0 && typeof a["name"] === "string",
@@ -195,4 +209,9 @@ export function migrateData(raw: unknown): AppData {
     .filter((r): r is SessionRecord => r !== null)
     .sort((a, b) => a.index - b.index || a.finishedAt - b.finishedAt);
   return { core, active: core ? migrateActive(raw["active"]) : null, history };
+}
+
+/** True when the data was saved by a newer version of RepCurve than this one. */
+export function savedByNewerVersion(core: Core | null): boolean {
+  return core !== null && core.version > DATA_VERSION;
 }
