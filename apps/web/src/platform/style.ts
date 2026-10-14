@@ -3,11 +3,12 @@ import { storageKey } from "./channel";
 /**
  * The app's look. Bluebird (cobalt header bands, ivory cards, bevelled green buttons) is the
  * default; Fired Forge (charcoal plates, warm ash panels, ember buttons) and Pixel Press
- * (game-sprite pixels, violet blocks, grid lettering) are the other artist styles, each in light
+ * (game-sprite pixels, violet blocks, grid lettering) and Gold Plated (ivory or black enamel, gold
+ * plating, faceted frames, Art Deco headings) are the other artist styles, each in light
  * or dark. Classic is the original forest-green look, which follows the
  * phone's light or dark mode. Per device, like the tips, so it applies before anything loads.
  */
-export type StyleId = "bluebird-light" | "bluebird-dark" | "forge-light" | "forge-dark" | "pixel-light" | "pixel-dark" | "classic";
+export type StyleId = "bluebird-light" | "bluebird-dark" | "forge-light" | "forge-dark" | "pixel-light" | "pixel-dark" | "gold-light" | "gold-dark" | "classic";
 
 export const DEFAULT_STYLE: StyleId = "bluebird-light";
 
@@ -18,6 +19,8 @@ export const STYLES: readonly { id: StyleId; name: string; hint: string }[] = [
   { id: "forge-dark", name: "Fired Forge dark", hint: "Banked embers on charcoal." },
   { id: "pixel-light", name: "Pixel Press light", hint: "Game-sprite pixels: violet blocks and grid lettering on lavender paper." },
   { id: "pixel-dark", name: "Pixel Press dark", hint: "Night sprites: soft violet and mint on deep indigo." },
+  { id: "gold-light", name: "Gold Plated light", hint: "Ivory and champagne gold, faceted frames and Art Deco headings." },
+  { id: "gold-dark", name: "Gold Plated dark", hint: "Gold plating on black enamel." },
   { id: "classic", name: "Classic", hint: "The original forest green and serif headings. Follows your phone's light or dark mode." },
 ];
 
@@ -51,6 +54,8 @@ const LOOKS: Record<Exclude<StyleId, "classic">, { style: string; theme: "light"
   "forge-dark": { style: "forge", theme: "dark", bg: "#12100f" },
   "pixel-light": { style: "pixel", theme: "light", bg: "#f2f0ff" },
   "pixel-dark": { style: "pixel", theme: "dark", bg: "#121226" },
+  "gold-light": { style: "gold", theme: "light", bg: "#f5f1e8" },
+  "gold-dark": { style: "gold", theme: "dark", bg: "#10110f" },
 };
 /** Classic follows the phone. */
 const CLASSIC_BG = { light: "#f4f5f2", dark: "#0e1210" } as const;
