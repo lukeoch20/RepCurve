@@ -1,0 +1,265 @@
+/* Gold Plated (RepCurve Style 004): an earned-gold look. Ivory or black enamel, restrained gold
+   plating, faceted frames with fine inset rules, gold ingot actions and pill controls, Cinzel
+   headings over Manrope text. Gold is a fill and a trim: gold words use --accent-text, a darker
+   shade that reads on ivory. Paint only: layout, spacing, tap sizes, wording and icons are unchanged. */
+:root[data-style="gold"] {
+  --bg: #f5f1e8;
+  --card: #fffdf6;
+  --sunk: #eae3d4;
+  --ink: #242218;
+  --muted: #68604e;
+  --line: #d8ceb8;
+  --accent: #d7b85e;
+  --accent-strong: #c4a048;
+  --accent-ink: #251e0b;
+  --accent-wash: #f4e8c6;
+  --accent-line: #97772a;
+  --chart: #82601b;
+  --warn: #825013;
+  --warn-wash: #fff0d0;
+  --stop: #a73840;
+  --stop-wash: #fce5e5;
+  --shadow: 0 6px 18px rgb(57 45 13 / 0.08);
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --radius: 0px;
+  --radius-sm: 999px;
+  --tap: 48px;
+  /* Gold Plated's own: header surface, control edges, focus, the gold finish and gold text */
+  --chrome: #fffdf6;
+  --chrome-top: #f9f2df;
+  --chrome-ink: #242218;
+  --control-line: #8a7a56;
+  --focus: #765611;
+  --button-top: #f5e5ad;
+  --bevel-hi: #f5e5ad;
+  --bevel-lo: #97772a;
+  --accent-text: #765611;
+  --gold-low: #c5a24a;
+  color-scheme: light;
+}
+:root[data-style="gold"][data-theme="dark"] {
+  --bg: #10110f;
+  --card: #1b1d19;
+  --sunk: #12150f;
+  --ink: #f5f0df;
+  --muted: #beb8a4;
+  --line: #3c3d30;
+  --accent: #e8cb79;
+  --accent-strong: #f7e3a8;
+  --accent-ink: #251e0b;
+  --accent-wash: #36311f;
+  --accent-line: #b3984e;
+  --chart: #e6c875;
+  --warn: #ffd092;
+  --warn-wash: #3f2d19;
+  --stop: #ffa5a8;
+  --stop-wash: #402427;
+  --shadow: 0 8px 20px rgb(0 0 0 / 0.28);
+  --chrome: #1b1d19;
+  --chrome-top: #24261f;
+  --chrome-ink: #f5f0df;
+  --control-line: #9d947b;
+  --focus: #f7e3a8;
+  --button-top: #fff0bf;
+  --bevel-hi: #f7e3a8;
+  --bevel-lo: #8e7639;
+  --accent-text: #e8cb79;
+  --gold-low: #d5b45f;
+  color-scheme: dark;
+}
+
+/* type: Cinzel headings (600; 700 for page titles), Manrope everywhere else, tabular figures for numbers */
+[data-style="gold"] .title { font-weight: 700; letter-spacing: 0.01em; }
+[data-style="gold"] :is(.h2, .h3, .block-name, .session-row .name, .brand) { font-weight: 600; letter-spacing: 0.01em; }
+[data-style="gold"] :is(.stat b, .hero-num, .runner-clock, .ring .t, .stepper .value b, .week-day .k, .num) { font-family: var(--font-body); font-weight: 700; font-variant-numeric: tabular-nums; }
+[data-style="gold"] .eyebrow { font-weight: 600; letter-spacing: 0.06em; }
+[data-style="gold"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* gold words use the darker gold text shade, which reads on ivory */
+[data-style="gold"] :is(.eyebrow.accent, .link-btn, .session-row.current .when, .glyph, .set.current .set-row .n, .suggestion .icon, .dock-label, .segment.hard .m, .change.up .arrow, .change.cal .arrow, .tile[aria-checked="true"] svg, .howto .eyebrow, .sources a, .streak, .level-chip, .lineup-tag, .block-tag) { color: var(--accent-text); }
+[data-style="gold"] :is(.howto-steps li, .howto-list li)::marker { color: var(--accent-text); }
+[data-style="gold"] .exercise-link { text-decoration-color: color-mix(in srgb, var(--accent) 80%, transparent); }
+[data-style="gold"] .exercise-link:hover { text-decoration-color: var(--accent-text); }
+
+/* faceted frames: corners cut on the paint layer only (the box, padding and tap area are unchanged),
+   a 1px edge that follows the cuts, and the fill inside it. --fill-image, --edge and --cut set each one. */
+/* the defaults sit at low specificity, so each kind of frame below can set its own */
+[data-style="gold"] :where(.card:not(.flat), .block, .banner, .suggestion, .choice button, .tile, .dock-inner, .btn.primary, .btn.go, .dock-actions button.go, .chip[aria-pressed="true"], .seg button[aria-pressed="true"], .tabbar button[aria-current="page"]) {
+  --cut: 12px;
+  --edge: var(--control-line);
+  --fill: var(--card);
+  --fill-image: linear-gradient(var(--fill), var(--fill));
+  --trim: linear-gradient(transparent, transparent);
+}
+[data-style="gold"] :is(.card:not(.flat), .block, .banner, .suggestion, .choice button, .tile, .dock-inner, .btn.primary, .btn.go, .dock-actions button.go, .chip[aria-pressed="true"], .seg button[aria-pressed="true"], .tabbar button[aria-current="page"]) {
+  --corner: transparent 50%, var(--edge) 50% calc(50% + 1px), transparent calc(50% + 1px);
+  border-color: transparent;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, var(--corner)) top left / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(225deg, var(--corner)) top right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(315deg, var(--corner)) bottom right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(45deg, var(--corner)) bottom left / var(--cut) var(--cut) no-repeat border-box,
+    var(--trim) padding-box,
+    var(--fill-image) padding-box,
+    linear-gradient(var(--edge), var(--edge)) border-box;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+/* a focused faceted control shows its whole focus ring rather than clipping it at the cuts */
+[data-style="gold"] :is(.choice button, .tile, .btn.primary, .btn.go, .dock-actions button.go, .chip, .seg button, .tabbar button):focus-visible { clip-path: none; }
+
+/* cards: an ivory (or enamel) panel with fine gold rules inset at two corners */
+[data-style="gold"] :is(.card:not(.flat, .tint), .block) {
+  --edge: var(--line);
+  /* each rule echoes the cut: a short diagonal parallel to it, then a line along the edge */
+  --rule: transparent calc(50% - 0.5px), var(--accent-line) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px);
+  --trim:
+    linear-gradient(135deg, var(--rule)) top 3px left 3px / 10px 10px no-repeat,
+    linear-gradient(var(--accent-line), var(--accent-line)) top 3px left 13px / 20px 1px no-repeat,
+    linear-gradient(315deg, var(--rule)) bottom 3px right 3px / 10px 10px no-repeat,
+    linear-gradient(var(--accent-line), var(--accent-line)) bottom 3px right 13px / 20px 1px no-repeat;
+}
+[data-style="gold"] .card.tint { --fill: var(--accent-wash); --edge: var(--accent-line); }
+/* a card's heading is engraved: Cinzel over a quiet rule */
+[data-style="gold"] .card:not(.tint, .flat) > :is(.eyebrow, .h3):first-child,
+[data-style="gold"] .card:not(.tint, .flat) > :is(.card-head, .spread:has(> .h3, > .eyebrow)):first-child {
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  background: linear-gradient(var(--line), var(--line)) bottom / 100% 1px no-repeat;
+}
+[data-style="gold"] .card:not(.tint, .flat) > .eyebrow:first-child,
+[data-style="gold"] .card:not(.tint, .flat) > :first-child > .eyebrow { font-family: var(--font-display); font-size: 1rem; font-weight: 600; letter-spacing: 0.04em; color: var(--ink); }
+[data-style="gold"] .stat { border-top: 1px solid var(--accent-line); }
+
+/* buttons: pill controls with a visible edge; primary actions are gold ingots with 8px facets */
+[data-style="gold"] .btn,
+[data-style="gold"] .icon-btn,
+[data-style="gold"] .chip,
+[data-style="gold"] .dock-actions button {
+  border-radius: var(--radius-sm);
+  border-color: var(--control-line);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: none;
+}
+[data-style="gold"] :is(.btn, .chip) { font-weight: 600; }
+[data-style="gold"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { transform: none; background: var(--sunk); }
+[data-style="gold"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
+  --cut: 8px;
+  --edge: var(--accent-line);
+  --fill-image: linear-gradient(90deg, var(--gold-low), var(--button-top) 50%, var(--accent));
+  --trim: linear-gradient(var(--bevel-lo), var(--bevel-lo)) bottom 4px center / calc(100% - 24px) 1px no-repeat;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+[data-style="gold"] :is(.btn.primary, .btn.go, .dock-actions button.go):active {
+  --fill-image: linear-gradient(var(--accent-strong), var(--accent-strong));
+  --trim: linear-gradient(var(--bevel-lo), var(--bevel-lo)) top 3px center / calc(100% - 24px) 1px no-repeat;
+  padding-top: 1px;
+}
+/* a chosen chip or segment: a small gold ingot with a jewel point, so the choice never rests on colour */
+[data-style="gold"] :is(.chip[aria-pressed="true"], .seg button[aria-pressed="true"]) {
+  --cut: 8px;
+  --edge: var(--accent-line);
+  --fill-image: linear-gradient(90deg, var(--gold-low), var(--button-top) 50%, var(--accent));
+  --trim:
+    radial-gradient(circle, var(--accent-ink) 1.6px, transparent 2px) bottom 2px center / 6px 6px no-repeat,
+    linear-gradient(var(--bevel-lo), var(--bevel-lo)) bottom 4px center / calc(100% - 20px) 1px no-repeat;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+[data-style="gold"] :is(.btn.outline, .btn.ghost) { background: transparent; box-shadow: none; color: var(--accent-text); }
+[data-style="gold"] .btn.outline { border-color: var(--accent-line); }
+[data-style="gold"] .btn.ghost { border-color: transparent; }
+[data-style="gold"] .btn.danger { color: var(--stop); }
+[data-style="gold"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: #fff; }
+/* disabled: flat, no metal (the [disabled] outranks the faceted frame) */
+[data-style="gold"] :is(.btn, .chip, .icon-btn)[disabled]:disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--control-line); border-radius: var(--radius-sm); box-shadow: none; clip-path: none; }
+[data-style="gold"] .btn.ghost[disabled]:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
+
+/* segmented control: a recessed pill track */
+[data-style="gold"] .seg { background: var(--sunk); border: 1px solid var(--control-line); border-radius: var(--radius-sm); padding: 2px; }
+[data-style="gold"] .seg button { border-radius: var(--radius-sm); color: var(--muted); }
+[data-style="gold"] .seg.quiet button[aria-pressed="true"] { --fill: var(--card); --fill-image: linear-gradient(var(--card), var(--card)); --trim: none; color: var(--ink); }
+
+/* choices and tiles: faceted, with a clear edge; chosen ones get the gold wash, edge and a 3px stripe */
+[data-style="gold"] .choice button[aria-pressed="true"] { --fill: var(--accent-wash); --edge: var(--accent-line); box-shadow: inset 4px 0 0 var(--accent-line); }
+[data-style="gold"] .tile { --cut: 10px; }
+[data-style="gold"] .tile[aria-checked="true"] { --fill: var(--accent-wash); --edge: var(--accent-line); box-shadow: none; }
+[data-style="gold"] .tile .badge { background: var(--accent); color: var(--accent-ink); }
+
+/* fields, steppers, switches: pills with a visible edge; the switch thumb is a jewel */
+[data-style="gold"] .input { border-color: var(--control-line); }
+[data-style="gold"] .stepper { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="gold"] .stepper button { border: 1px solid var(--control-line); border-radius: 50%; background: var(--card); color: var(--ink); font-weight: 700; }
+[data-style="gold"] .stepper button:active { background: var(--sunk); }
+[data-style="gold"] .stepper button:disabled { opacity: 1; color: var(--muted); background: var(--sunk); }
+[data-style="gold"] .switch { background: var(--sunk); border: 1px solid var(--control-line); }
+[data-style="gold"] .switch::after { top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 2px; background: var(--card); border: 1.5px solid var(--control-line); box-sizing: border-box; box-shadow: none; transform: rotate(45deg); }
+[data-style="gold"] .switch:checked { background: var(--accent-wash); border-color: var(--accent-line); }
+[data-style="gold"] .switch:checked::after { background: var(--accent); border-color: var(--accent-line); transform: translateX(20px) rotate(45deg); }
+/* a check on the "on" side, a dash on the "off" side */
+[data-style="gold"] .switch::before { content: ""; position: absolute; box-sizing: border-box; left: 32px; top: 13px; width: 9px; height: 2px; background: var(--muted); }
+[data-style="gold"] .switch:checked::before { left: 7px; top: 9px; width: 10px; height: 6px; background: none; border-left: 2px solid var(--accent-text); border-bottom: 2px solid var(--accent-text); transform: rotate(-45deg); }
+
+/* tab bar: the card surface under a fine gold rule; the current tab is a faceted gold-washed plate */
+[data-style="gold"] .tabbar { background: var(--card); border-top: 1px solid var(--accent-line); backdrop-filter: none; }
+[data-style="gold"] .tabbar button { color: var(--muted); margin: 4px; min-height: 54px; border: 1px solid transparent; }
+[data-style="gold"] .tabbar button[aria-current="page"] {
+  --cut: 8px;
+  --fill: var(--accent-wash);
+  --edge: var(--accent-line);
+  --trim: radial-gradient(circle, var(--accent-text) 1.6px, transparent 2px) bottom 3px center / 6px 6px no-repeat;
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+/* the workout header: the card surface under a double gold rule */
+[data-style="gold"] .runner-head { background: var(--card); color: var(--ink); border-bottom-color: var(--line); box-shadow: inset 0 3px 0 var(--card), inset 0 4px 0 var(--accent-line), inset 0 6px 0 var(--card), inset 0 7px 0 var(--accent-line); backdrop-filter: none; }
+[data-style="gold"] .runner-head .progress-track { background: var(--sunk); }
+
+/* the rest timer: a faceted plate; the ring is a dial, with the arc in the chart gold */
+[data-style="gold"] .dock-inner { --edge: var(--accent-line); box-shadow: none; }
+[data-style="gold"] .ring circle + circle { stroke: var(--chart); }
+[data-style="gold"] .dock.go .dock-inner { --fill: var(--accent); --edge: var(--accent-line); color: var(--accent-ink); }
+[data-style="gold"] .dock.go :is(.dock-label, .dock-next, .ring, .ring .l) { color: var(--accent-ink); }
+[data-style="gold"] .dock.go .ring circle { stroke: color-mix(in srgb, var(--accent-ink) 30%, transparent); }
+[data-style="gold"] .dock.go .ring circle + circle { stroke: var(--accent-ink); }
+
+/* banners: faceted, edged in their own colour */
+[data-style="gold"] :is(.banner.info, .banner.good) { --fill: var(--accent-wash); --edge: var(--accent-line); }
+[data-style="gold"] :is(.banner.info, .banner.good) b { color: var(--accent-text); }
+[data-style="gold"] .banner.adjust { --fill: var(--warn-wash); --edge: var(--warn); }
+[data-style="gold"] .banner.adjust b { color: var(--warn); }
+[data-style="gold"] .banner.stop { --fill: var(--stop-wash); --edge: var(--stop); }
+[data-style="gold"] .banner.stop b { color: var(--stop); }
+[data-style="gold"] .suggestion { --fill: var(--accent-wash); --edge: var(--accent-line); }
+[data-style="gold"] .suggestion.adjust { --fill: var(--warn-wash); --edge: var(--warn); }
+[data-style="gold"] .suggestion.stop { --fill: var(--stop-wash); --edge: var(--stop); }
+
+/* small shapes: pills and fine gold edges */
+[data-style="gold"] :is(.challenge-bar, .trophy-bar) { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
+[data-style="gold"] :is(.streak, .level-chip) { border: 1px solid var(--accent-line); }
+[data-style="gold"] .example-tag { border-color: var(--control-line); }
+[data-style="gold"] .glyph { border-radius: 14px; border: 1px solid var(--control-line); background: var(--sunk); }
+[data-style="gold"] :is(.lineup-tag, .block-tag) { border-color: var(--accent-line); }
+[data-style="gold"] .week-day.done .k { color: var(--accent-text); }
+[data-style="gold"] .week-day.upcoming .k { border-color: var(--control-line); }
+[data-style="gold"] .sheet { border-radius: 0; border-top: 2px solid var(--accent-line); }
+[data-style="gold"] .scrim { background: rgb(0 0 0 / 0.5); }
+[data-style="gold"] .tip-spot { border-radius: 0; outline-color: var(--focus); box-shadow: 0 0 0 200vmax rgb(0 0 0 / 0.62); }
+[data-style="gold"] .chart-tip { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-weight: 700; }
+
+/* medals: gold ribbons and the kit's metal tiers, with dark labels on unlocked metal */
+[data-style="gold"] .medal .ribbon { fill: var(--gold-low); }
+[data-style="gold"] .medal.bronze { --tier: #bc8a52; }
+[data-style="gold"] .medal.silver { --tier: #c7c5b9; }
+[data-style="gold"] .medal.gold { --tier: #dfc36a; }
+[data-style="gold"] .medal.platinum { --tier: #bad7ca; }
+[data-style="gold"] .medal text { fill: #242218; }
+[data-style="gold"] .medal.locked .ribbon { fill: var(--control-line); }
+[data-style="gold"] .medal.locked text { fill: var(--muted); }
+
+/* confetti: gold, chart gold, ivory and ink */
+[data-style="gold"] .confetti i.c2 { background: #fffdf6; box-shadow: 0 0 0 1px var(--accent-line); }
