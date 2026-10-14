@@ -4,7 +4,7 @@ import { clock } from "../model/format";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
 import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
-import { applyStyle, loadStyle, saveStyle, STYLES, type StyleId } from "../platform/style";
+import { applyStyle, FAMILIES, familyOf, loadStyle, saveStyle, type StyleFamily, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
 import { Seg, Toggle } from "./common";
 import { useTips } from "./tips";
@@ -237,21 +237,42 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 /** The app's look, per device: Bluebird light (the default), Bluebird dark or Classic. */
 function StyleSettings(): React.ReactElement {
   const [style, setStyle] = useState<StyleId>(loadStyle);
+  const current = familyOf(style);
+  // The look whose light and dark versions are showing, if any.
+  const [open, setOpen] = useState<StyleFamily["id"] | null>(null);
   const choose = (id: StyleId) => {
     setStyle(id);
     saveStyle(id);
     applyStyle(id);
   };
+  const versions = (f: StyleFamily) => [
+    { value: f.light, label: "Light" },
+    { value: f.dark, label: "Dark" },
+    ...(f.auto ? [{ value: f.auto, label: "Match phone" }] : []),
+  ];
   return (
     <section className="card stack">
       <h2 className="h3">Style</h2>
-      <div className="choice" role="group" aria-label="Style">
-        {STYLES.map((o) => (
-          <button key={o.id} type="button" aria-pressed={style === o.id} onClick={() => choose(o.id)}>
-            <b>{o.name}</b>
-            <span>{o.hint}</span>
-          </button>
-        ))}
+      {/* Each look is its own one-item list, so its versions row below it isn't styled as a list item. */}
+      <div className="style-list" role="group" aria-label="Style">
+        {FAMILIES.map((f) => {
+          const expanded = open === f.id;
+          return (
+            <React.Fragment key={f.id}>
+              <div className="choice">
+                <button type="button" aria-pressed={current.id === f.id} aria-expanded={expanded} onClick={() => setOpen(expanded ? null : f.id)}>
+                  <b>{f.name}</b>
+                  <span>{current.id === f.id ? `${f.hint} In use: ${versions(f).find((v) => v.value === style)!.label.toLowerCase()}.` : f.hint}</span>
+                </button>
+              </div>
+              {expanded ? (
+                <div className="style-versions">
+                  <Seg label={`${f.name} version`} value={current.id === f.id ? style : undefined} options={versions(f)} onChange={choose} />
+                </div>
+              ) : null}
+            </React.Fragment>
+          );
+        })}
       </div>
     </section>
   );
