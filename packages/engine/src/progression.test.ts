@@ -1,7 +1,7 @@
 import { getExercise } from "@repcurve/exercises";
 import { lbToKg } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
-import { calibrate, freshProgress, ladderNeighbour, progressExercise, type ExerciseProgress } from "./progression.js";
+import { FAST_START_SESSIONS, calibrate, freshProgress, ladderNeighbour, progressExercise, type ExerciseProgress } from "./progression.js";
 import { adjustableEquipment, referenceContext, sets } from "./testkit.js";
 
 const ctx = referenceContext();
@@ -29,9 +29,10 @@ describe("progression: loaded exercises", () => {
     expect(r.next.targetReps).toBe(13);
   });
 
-  it("waits for a second session at the top of the range before adding weight", () => {
+  it("waits for a second session at the top of the range before adding weight (past a new lifter's first sessions)", () => {
     const adj = referenceContext({ equipment: adjustableEquipment });
-    const first = progressExercise(goblet, sets("goblet_squat", lb(20), [15, 15, 15], 2), adj);
+    const seasoned = { ...goblet, timesPerformed: FAST_START_SESSIONS };
+    const first = progressExercise(seasoned, sets("goblet_squat", lb(20), [15, 15, 15], 2), adj);
     expect(first.action).toBe("hold");
     expect(first.next.loadKg).toBeCloseTo(lb(20));
     expect(first.next.topStreak).toBe(1);
@@ -42,6 +43,12 @@ describe("progression: loaded exercises", () => {
     // A good session that falls short of the top starts the count again.
     const reset = progressExercise(first.next, sets("goblet_squat", lb(20), [15, 14, 13], 2), adj);
     expect(reset.next.topStreak).toBe(0);
+  });
+
+  it("moves a new lifter on after one session at the top during their first sessions on an exercise", () => {
+    const adj = referenceContext({ equipment: adjustableEquipment });
+    const r = progressExercise({ ...goblet, timesPerformed: 2 }, sets("goblet_squat", lb(20), [15, 15, 15], 2), adj);
+    expect(r.action).toBe("load_up");
   });
 
   it("steps up a dumbbell when the e1RM says the bottom of the range is reachable", () => {

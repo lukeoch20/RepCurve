@@ -38,9 +38,10 @@ export function setOrder(plan: SessionPlan): SetRef[] {
   const out: SetRef[] = [];
   plan.supersets.forEach((ss, g) => {
     for (let r = 0; r < ss.rounds; r++) {
-      ss.items.forEach((p, i) =>
-        out.push({ slot: p.slot, exerciseId: p.exerciseId, setIndex: r, group: g, round: r, position: i, label: `${ss.label}${i + 1}` }),
-      );
+      // An exercise with fewer sets than the superset has rounds sits out the last round.
+      ss.items.forEach((p, i) => {
+        if (r < p.sets) out.push({ slot: p.slot, exerciseId: p.exerciseId, setIndex: r, group: g, round: r, position: i, label: `${ss.label}${i + 1}` });
+      });
     }
   });
   const f = plan.finisher;
@@ -88,7 +89,7 @@ export function prefill(active: ActiveSession, slot: string, setIndex: number): 
 export function describeRef(plan: SessionPlan, ref: SetRef): string {
   const p = prescriptionAt(plan, ref.slot);
   const name = p?.name ?? findExercise(ref.exerciseId)?.name ?? ref.exerciseId;
-  const total = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (plan.supersets[ref.group]?.rounds ?? 1);
+  const total = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (p?.sets ?? plan.supersets[ref.group]?.rounds ?? 1);
   return `${ref.label} ${name} · set ${ref.setIndex + 1} of ${total}`;
 }
 

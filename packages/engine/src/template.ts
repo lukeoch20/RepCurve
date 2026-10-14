@@ -1,4 +1,4 @@
-import type { Equipment, Goal } from "@repcurve/shared";
+import type { Equipment, Goal, Profile, Split } from "@repcurve/shared";
 import type { SessionKind } from "./types.js";
 
 /** Strength and cardio session counts for a given days/week and goal. */
@@ -38,4 +38,21 @@ export function weeklyTemplate(days: number, goal: Goal, equipment: Equipment): 
     out[idx] = "cardio";
   }
   return out;
+}
+
+/** Lifting days in the week for a schedule (cardio days excluded). */
+export function strengthDaysPerWeek(days: number, goal: Goal, equipment: Equipment): number {
+  return weeklyTemplate(days, goal, equipment).filter((k) => k === "strength").length;
+}
+
+/** Lifting days a week each split needs to train every muscle every week. */
+export const SPLIT_MIN_STRENGTH_DAYS: Record<Split, number> = { full_body: 1, push_pull: 1, upper_lower: 1, ppl: 3 };
+
+/**
+ * The split the plan actually uses. Push/pull/legs with fewer than three lifting days leaves
+ * most muscles untrained in some weeks, so those weeks run full body instead.
+ */
+export function effectiveSplit(profile: Pick<Profile, "split">, strengthDays: number): Split {
+  const split = profile.split ?? "full_body";
+  return strengthDays < SPLIT_MIN_STRENGTH_DAYS[split] ? "full_body" : split;
 }

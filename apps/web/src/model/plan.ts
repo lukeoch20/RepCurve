@@ -17,10 +17,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 let cached: { key: string; ctx: EngineContext } | null = null;
 
-/** Engine context for the user's current profile and equipment (memoised). */
-export function contextFor(core: Pick<Core, "profile" | "equipment">): EngineContext {
-  const key = JSON.stringify([core.profile, core.equipment]);
-  if (!cached || cached.key !== key) cached = { key, ctx: makeContext(core.profile, core.equipment) };
+/**
+ * Engine context for the user's current profile and equipment (memoised). Sessions logged so far
+ * step the plan's volume up as the person moves past the novice stage.
+ */
+export function contextFor(core: Pick<Core, "profile" | "equipment"> & { state?: Pick<Core["state"], "strengthSessionsLogged"> }): EngineContext {
+  const logged = core.state?.strengthSessionsLogged ?? 0;
+  const key = JSON.stringify([core.profile, core.equipment, logged]);
+  if (!cached || cached.key !== key) cached = { key, ctx: makeContext(core.profile, core.equipment, { strengthSessionsLogged: logged }) };
   return cached.ctx;
 }
 

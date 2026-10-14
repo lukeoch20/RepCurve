@@ -27,7 +27,7 @@ export function weeklyVolume(sessions: SessionPlan[]): Record<Muscle, number> {
 
 export function hardSets(session: SessionPlan): number {
   let n = 0;
-  for (const ss of session.supersets) n += ss.rounds * ss.items.length;
+  for (const ss of session.supersets) for (const p of ss.items) n += p.sets;
   if (session.finisher) n += session.finisher.sets;
   return n;
 }

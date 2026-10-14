@@ -1,10 +1,22 @@
+import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Exercise, Muscle, Pattern, Profile, Split, TrainingLevel } from "@repcurve/shared";
-import { emptyVolume } from "./volume.js";
+import { volumeCeiling, volumeTarget } from "./level.js";
+import { MUSCLES, emptyVolume } from "./volume.js";
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
 import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
-import { TRANSITION_SEC, finisherMinutes, finisherSeconds, finisherSets, restSecondsForBudget, setupSeconds, supersetSeconds, warmupMinutes } from "./timing.js";
+import {
+  RAMP_SET_SEC,
+  TRANSITION_SEC,
+  finisherMinutes,
+  finisherSeconds,
+  finisherSets,
+  restSecondsForBudget,
+  setupSeconds,
+  supersetSeconds,
+  warmupMinutes,
+} from "./timing.js";
 import type { Pool, Prescription, SessionPlan, Superset, WarmupItem } from "./types.js";
 
 /**
@@ -26,11 +38,41 @@ interface Variant {
   fallback?: Pattern[];
   /** Pairs may share a prime mover (a leg day pairs squats with hinges). */
   allowShared?: boolean;
+  /**
+   * Muscles this day may add pairs for when the week is short on them, and the slots that train
+   * them. Split days keep to their own muscles (no hinges on push day); full body takes any.
+   */
+  fills?: Partial<Record<Muscle, SlotSpec[]>>;
 }
 
 const iso = (family: string): SlotSpec => ({ pattern: "isolation", family });
 const lunge: SlotSpec = { pattern: "squat", family: "lunge" };
 const bridge: SlotSpec = { pattern: "hinge", family: "bridge" };
+
+/** Slots that train each muscle, best first, for pairs added because the week is short on it. */
+const FILL_SLOTS: Partial<Record<Muscle, SlotSpec[]>> = {
+  chest: ["horizontal_push"],
+  back: ["row", "vertical_pull"],
+  quads: [lunge, iso("knee_extension"), "squat"],
+  hamstrings: [iso("knee_flexion"), { pattern: "hinge", family: "rdl" }],
+  glutes: [bridge, iso("hip_abduction"), lunge],
+  shoulders: [iso("lateral_raise"), iso("rear_delt"), "vertical_push"],
+  triceps: [iso("triceps")],
+  biceps: [iso("biceps")],
+  calves: [iso("calf")],
+};
+const PUSH_FILLS: Partial<Record<Muscle, SlotSpec[]>> = {
+  chest: FILL_SLOTS.chest!, shoulders: [iso("lateral_raise"), "vertical_push"], triceps: FILL_SLOTS.triceps!, quads: [iso("knee_extension"), lunge, "squat"], calves: FILL_SLOTS.calves!,
+};
+const PULL_FILLS: Partial<Record<Muscle, SlotSpec[]>> = {
+  back: FILL_SLOTS.back!, biceps: FILL_SLOTS.biceps!, shoulders: [iso("rear_delt")], hamstrings: FILL_SLOTS.hamstrings!, glutes: [bridge, iso("hip_abduction")], calves: FILL_SLOTS.calves!,
+};
+const UPPER_FILLS: Partial<Record<Muscle, SlotSpec[]>> = {
+  chest: FILL_SLOTS.chest!, back: FILL_SLOTS.back!, shoulders: FILL_SLOTS.shoulders!, triceps: FILL_SLOTS.triceps!, biceps: FILL_SLOTS.biceps!,
+};
+const LOWER_FILLS: Partial<Record<Muscle, SlotSpec[]>> = {
+  quads: FILL_SLOTS.quads!, hamstrings: FILL_SLOTS.hamstrings!, glutes: FILL_SLOTS.glutes!, calves: FILL_SLOTS.calves!,
+};
 
 /**
  * Pattern pairs per session variant, in priority order. Hamstrings get a knee-flexion exercise
@@ -48,7 +90,9 @@ export const VARIANTS: Variant[] = [
   {
     key: "B",
     name: "Full body B",
-    pairs: [[lunge, "vertical_push"], [iso("knee_flexion"), "row"], ["horizontal_push", "vertical_pull"]],
+    // The press comes before the overhead press: in a short session only the first two pairs fit,
+    // and every full-body day already has overhead pressing or presses that work the shoulders.
+    pairs: [[lunge, "horizontal_push"], [iso("knee_flexion"), "row"], ["vertical_push", "vertical_pull"]],
     extra: [[iso("triceps"), iso("calf")], [bridge, iso("rear_delt")]],
     offsets: {},
   },
@@ -73,6 +117,7 @@ const LOWER: Omit<Variant, "key" | "name"> = {
   offsets: {},
   fallback: LOWER_FALLBACK,
   allowShared: true,
+  fills: LOWER_FILLS,
 };
 
 /** The session variants each split rotates through. */
@@ -89,6 +134,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       offsets: {},
       fallback: PUSH_FALLBACK,
       allowShared: true,
+      fills: PUSH_FILLS,
     },
     {
       key: "pull",
@@ -100,6 +146,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       offsets: {},
       fallback: PULL_FALLBACK,
       allowShared: true,
+      fills: PULL_FILLS,
     },
   ],
   upper_lower: [
@@ -107,9 +154,12 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       key: "upper",
       name: "Upper body",
       pairs: [["horizontal_push", "row"], ["vertical_push", "vertical_pull"], [iso("biceps"), iso("triceps")]],
-      extra: [[iso("lateral_raise"), iso("rear_delt")], ["row", "vertical_push"]],
+      // A longer upper day adds a second press (incline or another kind) before more pulling: the
+      // usual upper day already has two pulls to one press.
+      extra: [["horizontal_push", iso("lateral_raise")], [iso("rear_delt"), "vertical_pull"]],
       offsets: {},
       fallback: UPPER_FALLBACK,
+      fills: UPPER_FILLS,
     },
     { key: "lower", name: "Lower body", ...LOWER },
   ],
@@ -122,6 +172,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       offsets: {},
       fallback: ["horizontal_push", "vertical_push", "core"],
       allowShared: true,
+      fills: { chest: FILL_SLOTS.chest!, shoulders: [iso("lateral_raise"), "vertical_push"], triceps: FILL_SLOTS.triceps! },
     },
     {
       key: "ppl-pull",
@@ -132,6 +183,7 @@ export const SPLIT_VARIANTS: Record<Split, Variant[]> = {
       // Deadlift-style hinges belong on pull day when there's little to pull with.
       fallback: PULL_FALLBACK,
       allowShared: true,
+      fills: { back: FILL_SLOTS.back!, biceps: FILL_SLOTS.biceps!, shoulders: [iso("rear_delt")] },
     },
     { key: "legs", name: "Leg day", ...LOWER },
   ],
@@ -144,7 +196,12 @@ export function variantsFor(split: Split | undefined): Variant[] {
 export interface StrengthSessionInput {
   profile: Profile;
   equipment: Equipment;
+  /** Onboarding level: exercise choice, rep ranges, starting loads. */
   level: TrainingLevel;
+  /** Level the session's volume is set for (weekly target and ceiling, most rounds). Defaults to `level`. */
+  volumeLevel?: TrainingLevel;
+  /** The split in use (push/pull/legs needs three lifting days). Defaults to the profile's. */
+  split?: Split;
   pool: Pool;
   /** 0-based position in the session sequence. */
   index: number;
@@ -157,21 +214,26 @@ export interface StrengthSessionInput {
   rotation?: number;
   /** Cap on rounds when spending leftover time. Defaults by level. */
   maxRounds?: number;
-  /** Cap on supersets, used to make a ramp week mirror the steady structure. */
-  maxSupersets?: number;
   /** Rest after each round, seconds. Defaults by time budget. */
   restSec?: number;
   /** Seconds between exercises within a round. Defaults to TRANSITION_SEC. */
   transitionSec?: number;
   benchmark: boolean;
   e1rmByExercise: Record<string, number>;
-  /** A brand-new lifter's first week: one round lighter on purpose, and the session says so. */
-  ramp?: boolean;
   /**
-   * Hard sets each muscle may get in this session, so the week stays under its ceiling. Pairs and
-   * rounds that would go over are left out, and the session finishes early instead.
+   * Hard sets per muscle the rest of the week already has. The session fills toward the muscles
+   * furthest below the weekly target, and keeps each muscle's week within the ceiling.
    */
-  allowance?: Partial<Record<Muscle, number>>;
+  weekOthers?: Record<Muscle, number>;
+  /**
+   * Only the session's main structure: its opening pairs at the planned rounds, time allowing. The
+   * week keeps room for this when it plans the sessions before it.
+   */
+  baselineOnly?: boolean;
+  /** Start from this plan (the usual session) and add to it: a long day is the usual session plus more. */
+  start?: SessionPlan;
+  /** Use each slot's alternate exercise (every other training block, for people past the novice stage). */
+  alternate?: boolean;
 }
 
 interface Chosen {
@@ -230,6 +292,22 @@ function addVolume(volume: Record<Muscle, number>, exercises: Exercise[], sets: 
 
 const sharesPrimeMover = (a: Exercise, b: Exercise) => a.primary.some((m) => b.primary.includes(m));
 
+/** Barbell lifts taken from a rack (squats, bench press). */
+export const needsRack = (e: Exercise): boolean => e.requires.some((alt) => alt.includes("rack"));
+
+/**
+ * A heavy barbell lift after the first superset gets one light warm-up set first: the general
+ * warm-up only covers the opening exercises.
+ */
+export function needsRampSet(e: Pick<Exercise, "loadType" | "pattern">, supersetIndex: number): boolean {
+  return supersetIndex > 0 && e.loadType === "barbell" && e.pattern !== "isolation" && e.pattern !== "core";
+}
+
+/** Seconds of warm-up sets a superset at this position needs. */
+export function rampSeconds(exercises: Pick<Exercise, "loadType" | "pattern">[], supersetIndex: number): number {
+  return exercises.filter((e) => needsRampSet(e, supersetIndex)).length * RAMP_SET_SEC;
+}
+
 const specPattern = (s: SlotSpec): Pattern => (typeof s === "string" ? s : s.pattern);
 const specFamily = (s: SlotSpec): string | undefined => (typeof s === "string" ? undefined : s.family);
 const specName = (s: SlotSpec): string => (typeof s === "string" ? s : `${s.pattern}.${s.family}`);
@@ -243,8 +321,16 @@ function choosePair(
   taken: Set<Pattern>,
   /** Slot names start with this, e.g. "A" or "A.extra1". */
   slotKey: string = variant.key,
+  /** Ladders already in the session, which an added pair should not draw from again (an easier push-up). */
+  excludeLadders?: Set<string>,
 ): Chosen[] | null {
   const chosen: Chosen[] = [];
+  // One rack per pair: two barbell lifts that each need a rack (squats and bench press) would hold
+  // two stations at once in a busy gym.
+  const stationOk = (e: Exercise) => !(needsRack(e) && chosen.some((c) => needsRack(c.exercise)));
+  const ladderOk = (e: Exercise) => !excludeLadders?.has(e.ladder);
+  // A stand-in partner is a different kind of exercise (not a second glute bridge).
+  const kindOk = (e: Exercise) => chosen.every((c) => c.exercise.pattern !== e.pattern || c.exercise.family !== e.family);
   // A movement already in the session comes from another ladder (dumbbell press after push-ups, not an easier push-up).
   // An isolation slot must be its family (a curl is not a lateral raise); for compound movements the family is a preference.
   const pick = (pattern: Pattern, offset: number, family?: string) =>
@@ -256,8 +342,13 @@ function choosePair(
       offset,
       used,
       bodyweightBoost(input),
-      (e) => (pattern !== "isolation" || !family || e.family === family) && (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))),
+      (e) =>
+        (pattern !== "isolation" || !family || e.family === family) &&
+        (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))) &&
+        stationOk(e) &&
+        ladderOk(e),
       family,
+      input.alternate === true,
     );
   pair.forEach((spec, i) => {
     const pattern = specPattern(spec);
@@ -293,8 +384,19 @@ function choosePair(
       for (const pattern of order) {
         if (inPair.includes(pattern) && !variant.fallback) continue;
         const ex = shareOk
-          ? pickExercise(input.pool, pattern, input.level, input.strengthIndex, 0, used, bodyweightBoost(input))
-          : pick(pattern, 0);
+          ? pickExercise(input.pool, pattern, input.level, input.strengthIndex, 0, used, bodyweightBoost(input), (e) => stationOk(e) && ladderOk(e) && kindOk(e), undefined, input.alternate === true)
+          : pickExercise(
+              input.pool,
+              pattern,
+              input.level,
+              input.strengthIndex + (taken.has(pattern) ? 1 : 0),
+              0,
+              used,
+              bodyweightBoost(input),
+              (e) => (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))) && stationOk(e) && ladderOk(e) && kindOk(e),
+              undefined,
+              input.alternate === true,
+            );
         if (!ex) continue;
         used.add(ex.id);
         chosen.push(choose(ex, `${slotKey}.${pattern}.alt`, input));
@@ -330,80 +432,113 @@ export function coverageNotes(pool: Pool): string[] {
   return notes;
 }
 
+/** Most supersets in one session: past five, setup and switching eat the time. */
+export const MAX_SUPERSETS = 5;
+
+/** How much each muscle counts when deciding what to add: big movers first, calves last. Core has its finisher. */
+const MUSCLE_WEIGHT: Record<Muscle, number> = {
+  quads: 1, glutes: 1, hamstrings: 1, chest: 1, back: 1, shoulders: 1, triceps: 0.6, biceps: 0.6, calves: 0.4, core: 0,
+};
+
+/**
+ * Worth of a week's hard sets for one muscle: full value up to the bottom of the target, half to
+ * the top, a little more to the ceiling, nothing past it (the dose-response flattens).
+ */
+function setsValue(sets: number, [lo, hi]: [number, number], ceiling: number): number {
+  const clampTo = (x: number, max: number) => Math.max(0, Math.min(x, max));
+  return clampTo(sets, lo) + 0.5 * clampTo(sets - lo, hi - lo) + 0.15 * clampTo(sets - hi, ceiling - hi);
+}
+
+const familyKey = (e: Exercise) => `${e.pattern}:${e.family}`;
+
+/** Most exercises of one family (all presses, all rows) a session of this day type may have. */
+export const maxPerFamily = (variant: Pick<Variant, "fills">, pattern: Pattern): number => (variant.fills && pattern !== "isolation" ? 3 : 2);
+
 export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const budget = input.profile.minutesPerSession;
-  const variants = variantsFor(input.profile.split);
+  const budgetSec = budget * 60;
+  const variants = variantsFor(input.split ?? input.profile.split);
   const variant = variants[(input.rotation ?? input.strengthIndex) % variants.length]!;
   const used = new Set<string>();
   const restSec = input.restSec ?? restSecondsForBudget(budget);
   const transitionSec = input.transitionSec ?? TRANSITION_SEC;
   const notes: string[] = [];
+  const volumeLevel = input.volumeLevel ?? input.level;
+  const target = volumeTarget(volumeLevel);
+  const ceiling = volumeCeiling(volumeLevel);
+  const others = input.weekOthers ?? emptyVolume();
 
   // The core finisher is planned first so its real length, not a flat reservation, comes off the budget.
   let finisher: Prescription | null = null;
-  let finisherExercise: Exercise | null = null;
   let finisherSec = 0;
-  if (finisherMinutes(budget) > 0) {
+  if (input.start) {
+    finisher = input.start.finisher ? { ...input.start.finisher } : null;
+    if (finisher) {
+      used.add(finisher.exerciseId);
+      finisherSec = finisherSeconds(getExercise(finisher.exerciseId), finisher.repRange, finisher.sets, finisher.targetReps);
+    }
+  } else if (finisherMinutes(budget) > 0) {
     const family = CORE_FAMILIES[input.strengthIndex % CORE_FAMILIES.length];
     const core = pickExercise(input.pool, "core", input.level, input.strengthIndex, 0, used, bodyweightBoost(input), () => true, family);
     if (core) {
       used.add(core.id);
-      finisherExercise = core;
       const c = choose(core, `${variant.key}.core`, input);
       const sets = finisherSets(core, c.repRange, budget, c.targetReps);
       finisher = prescribe(c, input, sets, false);
       finisherSec = finisherSeconds(core, c.repRange, sets, c.targetReps);
     }
   }
-
-  const warmupMin = warmupMinutes(budget);
-  let remainingSec = (budget - warmupMin) * 60 - finisherSec;
+  const warmupMin = input.start ? input.start.warmupMinutes : warmupMinutes(budget);
 
   const supersets: Superset[] = [];
   const pairsChosen: Chosen[][] = [];
-  const maxRounds = input.maxRounds ?? (input.level === "novice" ? 3 : 4);
+  const maxRounds = input.maxRounds ?? (volumeLevel === "novice" ? 3 : 4);
   const minRounds = Math.min(2, input.rounds);
   const taken = new Set<Pattern>();
-
-  // Hard sets per muscle so far (a set counts 1 for a prime mover, 0.5 for an assisting muscle).
-  const volume = emptyVolume();
-  if (finisher && finisherExercise) addVolume(volume, [finisherExercise], finisher.sets);
-  /** Set when an allowance, not the clock, kept something out. */
-  let capped = false;
-  /** Whether `rounds` more rounds of these exercises keep every muscle within today's allowance. */
-  const withinAllowance = (exercises: Exercise[], rounds: number): boolean => {
-    if (!input.allowance) return true;
-    const after = { ...volume };
-    addVolume(after, exercises, rounds);
-    return Object.entries(input.allowance).every(([m, cap]) => after[m as Muscle] <= cap + 1e-9);
-  };
-  // Long days add exercises; none of them repeats a family already in the session (a third squat).
-  const familiesInSession = (): Set<string> => new Set(pairsChosen.flat().map((c) => `${c.exercise.pattern}:${c.exercise.family}`));
-
   const slots = new Set<string>();
-  const tryAdd = (pair: Pair, rounds: number, force = false, slotKey?: string, newFamiliesOnly = false): boolean => {
-    if (input.maxSupersets !== undefined && supersets.length >= input.maxSupersets) return false;
-    const families = familiesInSession();
-    const chosen = choosePair(pair, variant, input, used, taken, slotKey);
-    if (!chosen) return false;
-    const secs = supersetSeconds(chosen.map(timed), rounds, transitionSec, restSec) + setupSeconds(chosen.map((c) => c.exercise));
-    const repeats = newFamiliesOnly && chosen.some((c) => families.has(`${c.exercise.pattern}:${c.exercise.family}`));
-    const exercises = chosen.map((c) => c.exercise);
-    if (!force && (secs > remainingSec || repeats || !withinAllowance(exercises, rounds))) {
-      for (const c of chosen) used.delete(c.exercise.id);
-      if (secs <= remainingSec && !repeats) capped = true;
-      return false;
-    }
-    addVolume(volume, exercises, rounds);
-    for (const c of chosen) {
+
+  const timedItems = (i: number) => pairsChosen[i]!.map((c, j) => ({ ...timed(c), sets: supersets[i]!.items[j]!.sets }));
+  const supersetSec = (i: number) =>
+    supersetSeconds(timedItems(i), supersets[i]!.rounds, supersets[i]!.transitionSec, supersets[i]!.restSec) +
+    setupSeconds(pairsChosen[i]!.map((c) => c.exercise)) +
+    rampSeconds(pairsChosen[i]!.map((c) => c.exercise), i);
+  const usedSec = () => warmupMin * 60 + finisherSec + supersets.reduce((sum, _, i) => sum + supersetSec(i), 0);
+
+  /** Hard sets per muscle in the session so far (1 for a prime mover, 0.5 for an assisting muscle). */
+  const sessionVolume = (): Record<Muscle, number> => {
+    const v = emptyVolume();
+    if (finisher) addVolume(v, [getExercise(finisher.exerciseId)], finisher.sets);
+    supersets.forEach((ss, i) => ss.items.forEach((p, j) => addVolume(v, [pairsChosen[i]![j]!.exercise], p.sets)));
+    return v;
+  };
+  const weekValue = (v: Record<Muscle, number>) =>
+    MUSCLES.reduce((sum, m) => sum + MUSCLE_WEIGHT[m] * setsValue(others[m] + v[m], target, ceiling), 0);
+  /** Muscles a change would take past the week's ceiling (only muscles it adds to count). */
+  const overCeiling = (before: Record<Muscle, number>, after: Record<Muscle, number>): Muscle[] =>
+    MUSCLES.filter((m) => m !== "core" && after[m] > before[m] + 1e-9 && others[m] + after[m] > ceiling + 1e-9);
+  /** Muscles held back by the ceiling while time was left, for the note. */
+  const heldBack = new Set<Muscle>();
+
+  const setSets = (i: number, sets: number[]) => {
+    const ss = supersets[i]!;
+    ss.items.forEach((p, j) => (p.sets = sets[j]!));
+    ss.rounds = Math.max(...sets);
+  };
+  /** Accept the last superset added: its patterns count as taken and its slot names are made unique. */
+  const commitLast = () => {
+    const i = supersets.length - 1;
+    pairsChosen[i]!.forEach((c, j) => {
       taken.add(c.exercise.pattern);
       // A split day can use a movement in two pairs (two squats on push day): slot names stay unique.
       let slot = c.slot;
       for (let n = 2; slots.has(slot); n++) slot = `${c.slot}.${n}`;
       c.slot = slot;
+      supersets[i]!.items[j]!.slot = slot;
       slots.add(slot);
-    }
-    remainingSec -= secs;
+    });
+  };
+  const pushSuperset = (chosen: Chosen[], rounds: number) => {
+    for (const c of chosen) used.add(c.exercise.id);
     pairsChosen.push(chosen);
     supersets.push({
       label: String.fromCharCode("A".charCodeAt(0) + supersets.length),
@@ -411,95 +546,250 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       items: chosen.map((c) => prescribe(c, input, rounds, input.benchmark)),
       transitionSec,
       restSec,
-      estimatedSec: secs,
+      estimatedSec: 0,
     });
-    return true;
+  };
+  const popSuperset = () => {
+    const chosen = pairsChosen.pop()!;
+    supersets.pop();
+    for (const c of chosen) used.delete(c.exercise.id);
   };
 
-  /** Add one round to supersets in order, while they fit and are below `cap`. */
-  const grow = (cap: number): void => {
+  if (input.start) {
+    // The usual session, kept as it is; the extra time goes on top.
+    for (const ss of input.start.supersets) {
+      const chosen = ss.items.map((p) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, targetReps: p.targetReps, slot: p.slot }));
+      for (const c of chosen) {
+        used.add(c.exercise.id);
+        taken.add(c.exercise.pattern);
+        slots.add(c.slot);
+      }
+      pairsChosen.push(chosen);
+      supersets.push({ ...ss, items: ss.items.map((p) => ({ ...p })) });
+    }
+  } else {
+    // 1. The opening pairs (the main patterns) at the fewest rounds, so breadth wins in tiny budgets.
+    // This is the least the session does, and the week keeps room for it.
+    // An opening pair still respects the week's ceiling (a sixth short session in a week); with too
+    // little room for its usual rounds it opens with fewer.
+    let openingFound = false;
+    const tryOpening = (pair: Pair, rounds: number, force: boolean): boolean => {
+      const chosen = choosePair(pair, variant, input, used, taken);
+      if (!chosen) return false;
+      openingFound = true;
+      for (const c of chosen) used.delete(c.exercise.id);
+      for (let r = rounds; r >= 1; r--) {
+        const before = sessionVolume();
+        pushSuperset(chosen.map((c) => ({ ...c })), r);
+        const over = overCeiling(before, sessionVolume());
+        if (force || (usedSec() <= budgetSec + 1e-9 && over.length === 0)) {
+          commitLast();
+          return true;
+        }
+        popSuperset();
+        if (over.length === 0) break;
+        over.forEach((m) => heldBack.add(m));
+      }
+      return false;
+    };
+    const openingPairs = variant.pairs.slice(0, 2);
+    for (const pair of openingPairs) tryOpening(pair, minRounds, false);
+    // With nothing the day's own movements can use (bodyweight only, several injuries), any
+    // movement that can be done beats an empty session.
+    if (supersets.length === 0 && !openingFound) {
+      const anyMoves: Pattern[] = [...FALLBACK_PATTERNS, "core"];
+      const found: Chosen[] = [];
+      for (const pattern of anyMoves) {
+        for (let k = 0; k < 2 && found.length < 2; k++) {
+          const e = pickExercise(input.pool, pattern, input.level, input.strengthIndex, 0, new Set([...used, ...found.map((c) => c.exercise.id)]), bodyweightBoost(input));
+          if (!e || found.some((c) => c.exercise.family === e.family && c.exercise.pattern === e.pattern)) break;
+          found.push(choose(e, `${variant.key}.${pattern}.alt`, input));
+        }
+        if (found.length >= 2) break;
+      }
+      if (found.length > 0) {
+        for (let r = minRounds; r >= 1 && supersets.length === 0; r--) {
+          pushSuperset(found.map((c) => ({ ...c })), r);
+          if (usedSec() <= budgetSec + 1e-9) commitLast();
+          else popSuperset();
+        }
+      }
+    }
+    // A strength session always has at least one pair, even when rest and switch settings leave no room.
+    if (supersets.length === 0) {
+      for (const pair of openingPairs) if (tryOpening(pair, 1, true)) break;
+      if (supersets.length > 0) {
+        notes.push(
+          `Your rest (${restSec} s) and switch (${transitionSec} s) settings leave little room in ${budget} minutes, so this session is one superset, one round. Shorter rests in Settings fit more work.`,
+        );
+      }
+    }
+  }
+
+  /** One more set of the exercises in `which` (indexes into superset i), if time and the ceiling allow. */
+  const growOption = (i: number, which: number[]): { gain: number; secs: number; apply: () => void; over: Muscle[] } | null => {
+    const ss = supersets[i]!;
+    const before = ss.items.map((p) => p.sets);
+    const after = before.map((n, j) => (which.includes(j) ? n + 1 : n));
+    if (Math.max(...after) > maxRounds || Math.max(...after) - Math.min(...after) > 1) return null;
+    const vBefore = sessionVolume();
+    const secBefore = usedSec();
+    setSets(i, after);
+    const vAfter = sessionVolume();
+    const secs = usedSec() - secBefore;
+    const fits = usedSec() <= budgetSec + 1e-9;
+    const over = overCeiling(vBefore, vAfter);
+    const gain = weekValue(vAfter) - weekValue(vBefore);
+    setSets(i, before);
+    if (!fits) return null;
+    return { gain, secs, apply: () => setSets(i, after), over };
+  };
+
+  /** Options for one more set in superset i: a whole round, or (when the ceiling stops a whole round) one exercise's set. */
+  const growOptions = (i: number) => {
+    const sets = supersets[i]!.items.map((p) => p.sets);
+    const top = Math.max(...sets);
+    const behind = sets.map((n, j) => (n < top ? j : -1)).filter((j) => j >= 0);
+    if (behind.length > 0) return behind.map((j) => growOption(i, [j]));
+    const whole = growOption(i, sets.map((_, j) => j));
+    if (!whole || whole.over.length === 0 || sets.length === 1) return [whole];
+    // The ceiling stops the whole round: the exercise whose muscles have room can still do one more set.
+    return sets.map((_, j) => growOption(i, [j]));
+  };
+
+  /** Grow every superset round by round up to `cap`, in order, while it fits (the planned structure). */
+  const growTo = (cap: number) => {
     let added = true;
     while (added) {
       added = false;
       supersets.forEach((ss, i) => {
         if (ss.rounds >= cap) return;
-        const extra = supersetSeconds(pairsChosen[i]!.map(timed), 1, transitionSec, restSec);
-        if (extra > remainingSec) return;
-        const exercises = pairsChosen[i]!.map((c) => c.exercise);
-        if (!withinAllowance(exercises, 1)) {
-          capped = true;
+        for (const o of growOptions(i)) {
+          if (!o) continue;
+          if (o.over.length > 0) {
+            o.over.forEach((m) => heldBack.add(m));
+            continue;
+          }
+          o.apply();
+          added = true;
           return;
         }
-        addVolume(volume, exercises, 1);
-        ss.rounds += 1;
-        ss.estimatedSec += extra;
-        for (const p of ss.items) p.sets = ss.rounds;
-        remainingSec -= extra;
-        added = true;
       });
     }
   };
 
-  // 1. Core pairs (the four main patterns) at the minimum rounds, so breadth wins in tiny budgets.
-  const corePairs = variant.pairs.slice(0, 2);
-  const extraPairs = variant.pairs.slice(2);
-  for (const pair of corePairs) tryAdd(pair, minRounds);
-  // A strength session always has at least one pair, even when rest and switch settings leave no room.
-  if (supersets.length === 0) {
-    for (const pair of corePairs) if (tryAdd(pair, 1, true)) break;
-    if (supersets.length > 0) {
-      notes.push(
-        `Your rest (${restSec} s) and switch (${transitionSec} s) settings leave little room in ${budget} minutes, so this session is one superset, one round. Shorter rests in Settings fit more work.`,
-      );
-    }
-  }
-  // 2. Grow the core pairs to the planned rounds.
-  grow(input.rounds);
-  // 3. A third pair if there is still room, at planned rounds or at least two.
-  for (const pair of extraPairs) {
-    if (!tryAdd(pair, input.rounds) && input.rounds > minRounds) tryAdd(pair, minRounds);
-  }
-  // 4. Spend what is left on extra rounds, up to the cap.
-  grow(maxRounds);
-  // 5. More time than the full session needs (a long day): more exercises, then their rounds.
-  // These come after everything above, so sessions that fit the usual budget never change.
-  variant.extra.forEach((pair, i) => {
-    const slotKey = `${variant.key}.extra${i + 1}`;
-    if (tryAdd(pair, input.rounds, false, slotKey, true)) return;
-    if (input.rounds > minRounds && tryAdd(pair, minRounds, false, slotKey, true)) return;
-    // Every pair at its most rounds and a little time left: a last round of the latest pair
-    // makes way for another exercise, rather than leaving the time unused.
-    if (!supersets.every((ss) => ss.rounds >= maxRounds)) return;
-    const last = [...supersets].reverse().find((ss) => ss.rounds > input.rounds);
-    if (!last) return;
-    const at = supersets.indexOf(last);
-    const round = supersetSeconds(pairsChosen[at]!.map(timed), 1, transitionSec, restSec);
-    const setRounds = (n: number, sec: number) => {
-      addVolume(volume, pairsChosen[at]!.map((c) => c.exercise), n - last.rounds);
-      last.rounds = n;
-      last.estimatedSec += sec;
-      for (const p of last.items) p.sets = n;
-      remainingSec -= sec;
-    };
-    setRounds(last.rounds - 1, -round);
-    if (!tryAdd(pair, minRounds, false, slotKey, true)) setRounds(last.rounds + 1, round);
-  });
-  grow(maxRounds);
+  if (!input.start) growTo(input.rounds);
 
-  const supersetMin = supersets.reduce((s, ss) => s + ss.estimatedSec, 0) / 60;
-  const estimatedMinutes = Math.round((warmupMin + supersetMin + finisherSec / 60) * 10) / 10;
-  if (estimatedMinutes <= budget - 3) {
-    const spare = "A walk or easy cardio is a good use of the spare minutes.";
-    if (input.ramp) {
-      notes.push(
-        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: week 1 is a round lighter while you learn the moves and find your weights. From week 2, sessions fill your time.`,
+  // 3. Fill what is left, a step at a time, with whatever adds the most for the time it takes: another
+  // round, the day's next pair, or a pair for the muscles furthest below this week's target.
+  // The day's own pairs are preferred a little (they keep each day recognisable), and each is added once.
+  const designed = [
+    ...variant.pairs.slice(2).map((pair, i) => ({ pair, bonus: 1.2, key: variant.key, id: `pair${i}` })),
+    ...variant.extra.map((pair, i) => ({ pair, bonus: 1.1, key: `${variant.key}.extra${i + 1}`, id: `extra${i}` })),
+  ];
+  // A long day starts from the usual session: the day's pairs it already has count as added.
+  const inStart = pairsChosen.flat().map((c) => c.exercise);
+  const specIn = (spec: SlotSpec) =>
+    inStart.some((e) => e.pattern === specPattern(spec) && (specPattern(spec) !== "isolation" || !specFamily(spec) || e.family === specFamily(spec)));
+  const designedDone = new Set<string>(input.start ? designed.filter((d) => d.pair.every(specIn)).map((d) => d.id) : []);
+  let fills = 0;
+  while (!input.baselineOnly) {
+    type Option = { score: number; apply: () => void };
+    let best: Option | null = null;
+    const consider = (gain: number, secs: number, over: Muscle[], apply: () => void, bonus = 1) => {
+      if (over.length > 0) {
+        over.forEach((m) => heldBack.add(m));
+        return;
+      }
+      if (gain <= 1e-9 || secs <= 0) return;
+      const score = (gain * bonus) / secs;
+      if (!best || score > best.score + 1e-12) best = { score, apply };
+    };
+    supersets.forEach((_, i) => {
+      for (const o of growOptions(i)) if (o) consider(o.gain, o.secs, o.over, o.apply);
+    });
+    if (supersets.length < MAX_SUPERSETS) {
+      const ladders = new Set(pairsChosen.flat().map((c) => c.exercise.ladder));
+      const families = new Map<string, number>();
+      for (const c of pairsChosen.flat()) families.set(familyKey(c.exercise), (families.get(familyKey(c.exercise)) ?? 0) + 1);
+      const vNow = sessionVolume();
+      // Muscles that most need sets this week, for pairs added on their account.
+      const slope = (m: Muscle) => {
+        const x = others[m] + vNow[m];
+        const per = x < target[0] ? 1 : x < target[1] ? 0.5 : x < ceiling ? 0.15 : 0;
+        return MUSCLE_WEIGHT[m] * per;
+      };
+      const fillSlots = variant.fills ?? FILL_SLOTS;
+      const needy = MUSCLES.filter((m) => fillSlots[m] && slope(m) > 0).sort(
+        (a, b) => slope(b) - slope(a) || others[a] + vNow[a] - (others[b] + vNow[b]) || MUSCLES.indexOf(a) - MUSCLES.indexOf(b),
       );
-    } else if (capped) {
+      const candidates: { pair: Pair; bonus: number; key: string; id?: string }[] = designed.filter((d) => !designedDone.has(d.id));
+      for (const m of needy.slice(0, 3)) {
+        for (const partner of needy.filter((x) => x !== m).slice(0, 3)) {
+          for (const spec of fillSlots[m]!.slice(0, 2)) candidates.push({ pair: [spec, fillSlots[partner]![0]!], bonus: 1, key: `${variant.key}.fill` });
+        }
+      }
+      const seen = new Set<string>();
+      for (const cand of candidates) {
+        const chosen = choosePair(cand.pair, variant, input, used, taken, cand.key, ladders);
+        if (!chosen) continue;
+        for (const c of chosen) used.delete(c.exercise.id);
+        // An added pair is a real pair (a one-exercise superset is only for when nothing else fits the
+        // opening), and core work stays in the finisher.
+        if (chosen.length < 2 || chosen.some((c) => c.exercise.pattern === "core")) continue;
+        const sig = chosen.map((c) => c.exercise.id).join("+");
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        // At most two of one kind of exercise in a full-body session (no third squat); a split day,
+        // built around a few muscles, may have three of a main movement (flat, incline and machine
+        // presses on push day), never three of one isolation exercise.
+        const counts = new Map(families);
+        let repeats = false;
+        for (const c of chosen) {
+          const k = familyKey(c.exercise);
+          counts.set(k, (counts.get(k) ?? 0) + 1);
+          if (counts.get(k)! > maxPerFamily(variant, c.exercise.pattern) || used.has(c.exercise.id)) repeats = true;
+        }
+        if (repeats) continue;
+        for (const rounds of input.rounds > minRounds ? [input.rounds, minRounds] : [input.rounds]) {
+          const vBefore = sessionVolume();
+          const secBefore = usedSec();
+          pushSuperset(chosen.map((c) => ({ ...c })), Math.min(rounds, maxRounds));
+          const vAfter = sessionVolume();
+          const secs = usedSec() - secBefore;
+          const fits = usedSec() <= budgetSec + 1e-9;
+          const over = overCeiling(vBefore, vAfter);
+          const gain = weekValue(vAfter) - weekValue(vBefore);
+          popSuperset();
+          if (!fits) continue;
+          const r = Math.min(rounds, maxRounds);
+          consider(gain, secs, over, () => {
+            pushSuperset(chosen.map((c) => ({ ...c })), r);
+            commitLast();
+            if (cand.id) designedDone.add(cand.id);
+          }, cand.bonus);
+        }
+      }
+    }
+    if (!best) break;
+    (best as Option).apply();
+    if (++fills > 60) break;
+  }
+
+  supersets.forEach((ss, i) => (ss.estimatedSec = supersetSec(i)));
+  const estimatedMinutes = Math.round((usedSec() / 60) * 10) / 10;
+  if (!input.baselineOnly && estimatedMinutes <= budget - 3) {
+    const spare = "A walk or easy cardio is a good use of the spare minutes.";
+    const week = sessionVolume();
+    const full = [...heldBack].filter((m) => others[m] + week[m] >= 0.9 * ceiling - 1e-9);
+    if (full.length > 0) {
       notes.push(
-        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: the muscles this session trains already get plenty of hard sets this week, and more would add soreness rather than strength. ${spare}`,
+        `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: your ${listMuscles(full)} already get close to ${ceiling} hard sets this week, the most that helps at your stage, and more would add soreness rather than strength. ${spare}`,
       );
     } else if (supersets.every((ss) => ss.rounds >= maxRounds)) {
       notes.push(`About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: every exercise today is at its most sets. ${spare}`);
+    } else {
+      notes.push(`About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: that is all the useful work today's plan has room for this week. ${spare}`);
     }
   }
 
@@ -514,7 +804,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     budgetMinutes: budget,
     estimatedMinutes,
     warmupMinutes: warmupMin,
-    warmup: warmupFor(pairsChosen[0]),
+    warmup: input.start ? input.start.warmup : warmupFor(pairsChosen[0]),
     supersets,
     finisher,
     cardio: null,
@@ -523,4 +813,46 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     ...(notes.length > 0 ? { notes } : {}),
     ...(coverageNotes(input.pool).length > 0 ? { coverage: coverageNotes(input.pool) } : {}),
   };
+}
+
+const MUSCLE_NAMES: Record<Muscle, string> = {
+  quads: "quads", glutes: "glutes", hamstrings: "hamstrings", chest: "chest", shoulders: "shoulders",
+  triceps: "triceps", biceps: "biceps", back: "back", core: "core", calves: "calves",
+};
+
+function listMuscles(ms: Muscle[]): string {
+  const names = ms.map((m) => MUSCLE_NAMES[m]);
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * A brand-new lifter's first week: the same session with one set fewer of everything, and a note
+ * saying why it is short.
+ */
+export function rampOf(session: SessionPlan): SessionPlan {
+  const supersets = session.supersets.map((ss) => {
+    const items = ss.items.map((p) => ({ ...p, sets: Math.max(1, p.sets - 1) }));
+    const rounds = Math.max(...items.map((p) => p.sets));
+    const timedItems = items.map((p) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps, sets: p.sets }));
+    const exercises = timedItems.map((t) => t.exercise);
+    const index = session.supersets.indexOf(ss);
+    return {
+      ...ss,
+      rounds,
+      items,
+      estimatedSec: supersetSeconds(timedItems, rounds, ss.transitionSec, ss.restSec) + setupSeconds(exercises) + rampSeconds(exercises, index),
+    };
+  });
+  const finisherSec = session.finisher
+    ? finisherSeconds(getExercise(session.finisher.exerciseId), session.finisher.repRange, session.finisher.sets, session.finisher.targetReps)
+    : 0;
+  const estimatedMinutes = Math.round(((session.warmupMinutes * 60 + finisherSec + supersets.reduce((s, ss) => s + ss.estimatedSec, 0)) / 60) * 10) / 10;
+  const notes = (session.notes ?? []).filter((n) => !n.includes("on purpose"));
+  if (estimatedMinutes <= session.budgetMinutes - 3) {
+    notes.push(
+      `About ${Math.round(estimatedMinutes)} of your ${session.budgetMinutes} minutes, on purpose: week 1 is a round lighter while you learn the moves and find your weights. From week 2, sessions fill your time.`,
+    );
+  }
+  const { notes: _old, ...rest } = session;
+  return { ...rest, supersets, estimatedMinutes, ...(notes.length > 0 ? { notes } : {}) };
 }

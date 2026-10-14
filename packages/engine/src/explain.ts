@@ -17,18 +17,30 @@ export function explain(
   volume: Record<Muscle, number>,
   target: [number, number],
   hardSetsPerStrengthSession: number,
-  extras: { benchmarkWeek: boolean; missingPatterns: Pattern[] } = { benchmarkWeek: false, missingPatterns: [] },
+  extras: { benchmarkWeek: boolean; missingPatterns: Pattern[]; volumeLevel?: TrainingLevel; split?: Split } = { benchmarkWeek: false, missingPatterns: [] },
 ): string[] {
   const strength = template.filter((k) => k === "strength").length;
   const cardio = template.length - strength;
   const lines: string[] = [];
+  const split = extras.split ?? profile.split ?? "full_body";
+  const volumeLevel = extras.volumeLevel ?? level;
   lines.push(
-    `You train ${template.length} days a week for about ${profile.minutesPerSession} minutes: ${strength} ${SPLIT_WORD[profile.split ?? "full_body"]} strength session${strength === 1 ? "" : "s"}` +
+    `You train ${template.length} days a week for about ${profile.minutesPerSession} minutes: ${strength} ${SPLIT_WORD[split]} strength session${strength === 1 ? "" : "s"}` +
       (cardio > 0 ? ` and ${cardio} ${equipment.treadmill ? "treadmill" : "walk/jog"} session${cardio === 1 ? "" : "s"}.` : "."),
   );
   lines.push(
-    `${SPLIT_WHY[profile.split ?? "full_body"]} Exercises are paired so one muscle rests while the other works, which is how ${hardSetsPerStrengthSession} hard sets fit in ${profile.minutesPerSession} minutes.`,
+    `${SPLIT_WHY[split]} Exercises are paired so one muscle rests while the other works, which is how ${hardSetsPerStrengthSession} hard sets fit in ${profile.minutesPerSession} minutes.`,
   );
+  if (split !== (profile.split ?? "full_body")) {
+    lines.push(
+      `You chose ${SPLIT_WORD[profile.split ?? "full_body"]}, but with ${strength} lifting day${strength === 1 ? "" : "s"} a week most muscles would go a week or more untrained, so your plan runs full body. With 3 or more lifting days it switches to ${SPLIT_WORD[profile.split ?? "full_body"]}.`,
+    );
+  }
+  if (volumeLevel !== level) {
+    lines.push(
+      `You've trained steadily long enough that your plan now gives each muscle the weekly volume for ${volumeLevel === "advanced" ? "an advanced" : "an intermediate"} lifter, and sessions can run to four sets of an exercise.`,
+    );
+  }
   const majors: Muscle[] = ["quads", "glutes", "hamstrings", "chest", "back", "shoulders"];
   const under = majors.filter((m) => volume[m] < target[0]);
   const range = `${target[0]}–${target[1]}`;
@@ -42,7 +54,7 @@ export function explain(
       : `some muscles are well under (${list} hard sets a week against ${range}); more days or longer sessions would close the gap, and the plan still works, just more slowly`;
   }
   lines.push(
-    `That adds up to roughly ${Math.round(volume.quads)} hard sets for quads, ${Math.round(volume.chest)} for chest and ${Math.round(volume.back)} for back each week. For a ${level} the sweet spot is about ${range} per muscle, so ${verdict}.`,
+    `That adds up to roughly ${Math.round(volume.quads)} hard sets for quads, ${Math.round(volume.chest)} for chest and ${Math.round(volume.back)} for back each week. For ${volumeLevel === "intermediate" || volumeLevel === "advanced" ? "an" : "a"} ${volumeLevel} the sweet spot is about ${range} per muscle, so ${verdict}.`,
   );
   if (extras.missingPatterns.length > 0) {
     lines.push(

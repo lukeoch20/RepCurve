@@ -14,6 +14,7 @@ import {
   type ProgressionResult,
 } from "./progression.js";
 import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
+import { rampSeconds } from "./session.js";
 import { finisherSeconds, setupSeconds, supersetSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
 
@@ -158,23 +159,38 @@ const MIN_PAIR_SAVING_SEC = 60;
  */
 export function fitToBudget(session: SessionPlan): SessionPlan {
   if (session.kind !== "strength") return session;
-  const planned = session.supersets.map((ss) => ss.rounds);
+  // What was planned, per superset and per exercise: cuts can be put back, never more than this
+  // (the plan already kept each muscle's week within its ceiling).
+  const plannedSets = session.supersets.map((ss) => ss.items.map((p) => p.sets));
   let supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
   const plannedFinisher = session.finisher;
   let finisher = plannedFinisher ? { ...plannedFinisher } : null;
 
-  const timedItem = (p: Prescription) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps });
-  // Setup (machines, bars, band anchors) happens once; each round costs the same after that.
-  const roundSecs = (ss: Superset) => supersetSeconds(ss.items.map(timedItem), 1, ss.transitionSec, ss.restSec);
-  const secsFor = (ss: Superset) =>
-    supersetSeconds(ss.items.map(timedItem), ss.rounds, ss.transitionSec, ss.restSec) + setupSeconds(ss.items.map((p) => getExercise(p.exerciseId)));
+  const timedItem = (p: Prescription, sets = p.sets) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps, sets });
+  /** Sets each exercise would do with the superset at `rounds` (an exercise one set behind stays one behind). */
+  const setsAt = (ss: Superset, rounds: number, i: number) =>
+    ss.items.map((p, j) => Math.min(plannedSets[i]?.[j] ?? rounds, Math.max(1, rounds - (ss.rounds - p.sets))));
+  // Setup (machines, bars, band anchors) and warm-up sets happen once; each round costs the same after that.
+  const secsAt = (ss: Superset, rounds: number) => {
+    const i = supersets.indexOf(ss);
+    const sets = setsAt(ss, rounds, i);
+    const exercises = ss.items.map((p) => getExercise(p.exerciseId));
+    return (
+      supersetSeconds(ss.items.map((p, j) => timedItem(p, sets[j])), Math.max(...sets), ss.transitionSec, ss.restSec) +
+      setupSeconds(exercises) +
+      rampSeconds(exercises, i)
+    );
+  };
+  const secsFor = (ss: Superset) => secsAt(ss, ss.rounds);
+  const roundSecs = (ss: Superset) => secsFor(ss) - secsAt(ss, ss.rounds - 1);
   const finisherSecs = (f: Prescription | null) => (f ? finisherSeconds(getExercise(f.exerciseId), f.repRange, f.sets, f.targetReps) : 0);
   const totalSec = () => session.warmupMinutes * 60 + supersets.reduce((s, ss) => s + secsFor(ss), 0) + finisherSecs(finisher);
   const budgetSec = session.budgetMinutes * 60;
   const limitSec = budgetSec * (1 + BUDGET_TOLERANCE);
   const setRounds = (ss: Superset, rounds: number) => {
-    ss.rounds = rounds;
-    for (const p of ss.items) p.sets = rounds;
+    const sets = setsAt(ss, rounds, supersets.indexOf(ss));
+    ss.items.forEach((p, j) => (p.sets = sets[j]!));
+    ss.rounds = Math.max(...sets);
   };
   /** Of the supersets that can lose a round, the cheapest round that clears the overage, else the most expensive. */
   const roundToCut = (minRounds: number): Superset | undefined => {
@@ -196,22 +212,27 @@ export function fitToBudget(session: SessionPlan): SessionPlan {
     else break;
   }
 
-  // Put back what fits within the budget itself: rounds first (cheapest first, up to the
-  // session's largest planned superset), then the finisher.
-  const roundCap = Math.max(0, ...planned);
+  // Put back what was cut and fits within the budget itself: rounds first (cheapest first, up to
+  // each superset's planned rounds), then the finisher.
   let restored = true;
   while (restored) {
     restored = false;
     const candidates = supersets
-      .map((ss) => ({ ss, planned: roundCap }))
-      .filter((c) => c.ss.rounds < c.planned)
-      .sort((a, b) => roundSecs(a.ss) - roundSecs(b.ss));
-    for (const c of candidates) {
-      if (totalSec() + roundSecs(c.ss) <= budgetSec) {
-        setRounds(c.ss, c.ss.rounds + 1);
+      .filter((ss, i) => ss.items.some((p, j) => p.sets < (plannedSets[i]?.[j] ?? 0)))
+      .sort((a, b) => secsAt(a, a.rounds + 1) - secsFor(a) - (secsAt(b, b.rounds + 1) - secsFor(b)));
+    for (const ss of candidates) {
+      const i = supersets.indexOf(ss);
+      const target = ss.items.map((p, j) => Math.min(p.sets + 1, plannedSets[i]![j]!));
+      const before = secsFor(ss);
+      const prev = ss.items.map((p) => p.sets);
+      ss.items.forEach((p, j) => (p.sets = target[j]!));
+      ss.rounds = Math.max(...target);
+      if (totalSec() <= budgetSec + 1e-9 && secsFor(ss) > before) {
         restored = true;
         break;
       }
+      ss.items.forEach((p, j) => (p.sets = prev[j]!));
+      ss.rounds = Math.max(...prev);
     }
     if (restored || !plannedFinisher) continue;
     const next = finisher ? (finisher.sets < plannedFinisher.sets ? { ...finisher, sets: finisher.sets + 1 } : null) : { ...plannedFinisher, sets: 1 };
@@ -266,10 +287,12 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
     return np;
   };
 
+  // An easier session does one set fewer of each exercise (at least one); an exercise that sat out a
+  // superset's last round still does one fewer than its partner.
   const supersets = session.supersets
     .map((ss) => {
-      const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
-      return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)).filter((p): p is Prescription => p !== null) };
+      const items = ss.items.map((p) => remap(p, easier ? Math.max(1, p.sets - 1) : p.sets)).filter((p): p is Prescription => p !== null);
+      return { ...ss, rounds: items.length > 0 ? Math.max(...items.map((p) => p.sets)) : 0, items };
     })
     .filter((ss) => ss.items.length > 0);
   const finisher = session.finisher ? remap(session.finisher, session.finisher.sets) : null;

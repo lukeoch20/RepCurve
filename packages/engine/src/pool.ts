@@ -49,6 +49,43 @@ export function buildPool(equipment: Equipment, injuries: Injury[], profile?: Pi
   return { exercises, byLadder, classOrder: classOrder(equipment, profile) };
 }
 
+const preferenceCache = new WeakMap<Pool, Map<string, string[]>>();
+
+/** ladderPreference, remembered per pool (the planner asks the same question many times). */
+function ladderPreferenceCached(pool: Pool, pattern: Pattern, variant: number, level: TrainingLevel, family?: string): string[] {
+  let byPool = preferenceCache.get(pool);
+  if (!byPool) preferenceCache.set(pool, (byPool = new Map()));
+  // Only the parity of the variant matters (it alternates the kind of press).
+  const key = `${pattern}|${variant % 2}|${level}|${family ?? ""}`;
+  let hit = byPool.get(key);
+  if (!hit) byPool.set(key, (hit = ladderPreference(pool, pattern, variant, level, family)));
+  return hit;
+}
+
+/** Kinds of loading where another ladder of the same family is a fair swap rather than a regression. */
+const LOADED: LoadClass[] = ["dumbbell", "barbell", "machine", "cable", "band"];
+
+function alternateFor(
+  best: Exercise,
+  ladder: string,
+  ladders: string[],
+  options: (ladder: string) => Exercise[],
+  target: (candidates: Exercise[]) => number,
+): Exercise {
+  if (LOADED.includes(classOf(best))) {
+    for (const other of ladders) {
+      if (other === ladder) continue;
+      const candidates = options(other).filter((e) => e.family === best.family && classOf(e) === classOf(best));
+      const t = target(candidates);
+      let pick: Exercise | null = null;
+      for (const c of candidates) if (c.ladderLevel <= t) pick = c;
+      if (pick) return pick;
+    }
+  }
+  const sibling = options(ladder).find((e) => e.id !== best.id && e.ladderLevel === best.ladderLevel);
+  return sibling ?? best;
+}
+
 /** Exercises the planner may pick on its own. */
 export const plannable = (pool: Pool): Exercise[] => [...pool.byLadder.values()].flat();
 
@@ -131,8 +168,15 @@ export function pickExercise(
   accept: (e: Exercise) => boolean = () => true,
   /** The movement family wanted (a lunge rather than a squat); others of the pattern stand in. */
   family?: string,
+  /**
+   * Every other training block: the alternate exercise for the slot, when there is one that loads the
+   * same way (another ladder of the same family and kind of loading, else another exercise at the same
+   * rung). Main barbell lifts usually have none, so they stay put; bodyweight ladders are progressions,
+   * so they only swap within a rung.
+   */
+  alternate = false,
 ): Exercise | null {
-  const ladders = ladderPreference(pool, pattern, variant, level, family);
+  const ladders = ladderPreferenceCached(pool, pattern, variant, level, family);
   const target = (candidates: Exercise[]) =>
     Math.max(1, baseLadderLevel(level) + levelOffset + (candidates.every((e) => e.loadType === "bodyweight" || e.loadType === "time") ? bodyweightBoost : 0));
   // Entry regressions (level 0) are for moving down to, never a starting point.
@@ -143,7 +187,7 @@ export function pickExercise(
     const t = target(candidates);
     let best: Exercise | null = null;
     for (const c of candidates) if (c.ladderLevel <= t) best = c;
-    if (best) return best;
+    if (best) return alternate ? alternateFor(best, ladder, ladders, options, target) : best;
   }
   // Otherwise the easiest exercise left on the most preferred ladder.
   for (const ladder of ladders) {
@@ -151,6 +195,6 @@ export function pickExercise(
     if (candidates.length > 0) return candidates[0]!;
   }
   // No vertical pull fits the equipment: a row still trains the back.
-  if (pattern === "vertical_pull") return pickExercise(pool, "row", level, variant + 1, levelOffset, exclude, bodyweightBoost, accept);
+  if (pattern === "vertical_pull") return pickExercise(pool, "row", level, variant + 1, levelOffset, exclude, bodyweightBoost, accept, undefined, alternate);
   return null;
 }

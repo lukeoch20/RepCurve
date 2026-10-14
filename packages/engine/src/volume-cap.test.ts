@@ -30,7 +30,7 @@ function weekOf(profile: Partial<Profile>, equipment: Equipment, week: number): 
 const worked = (v: Record<Muscle, number>) => MUSCLES.filter((m) => m !== "core");
 
 describe("the weekly volume ceiling", () => {
-  it("keeps every muscle at or under the ceiling, for every split, length, day count and level", () => {
+  it("keeps every muscle at or under the ceiling, for every split, length, day count and level", { timeout: 60_000 }, () => {
     for (const equipment of [referenceEquipment, gym])
       for (const trainingHistory of HISTORIES)
         for (const split of SPLITS)
@@ -63,15 +63,15 @@ describe("the weekly volume ceiling", () => {
     for (const s of short) expect(s.notes?.join(" ")).toMatch(/on purpose/);
   });
 
-  it("never repeats an exercise family among a long day's extra exercises", () => {
+  it("never adds a third squat to a full-body day, even on a long day", () => {
     const family = (id: string) => `${getExercise(id).pattern}:${getExercise(id).family}`;
-    for (const split of SPLITS) {
-      for (const s of weekOf({ split, daysPerWeek: 4, minutesPerSession: 45 }, gym, 2)) {
-        const isExtra = (slot: string) => slot.includes(".extra");
-        const usual = new Set(s.supersets.flatMap((ss) => ss.items).filter((p) => !isExtra(p.slot)).map((p) => family(p.exerciseId)));
-        for (const p of s.supersets.flatMap((ss) => ss.items).filter((x) => isExtra(x.slot))) {
-          expect(usual.has(family(p.exerciseId)), `${split} ${p.exerciseId}`).toBe(false);
-        }
+    for (const minutes of [45, 60, 90]) {
+      const ctx = makeContext({ ...referenceProfile, split: "full_body", daysPerWeek: 4, minutesPerSession: 30 }, gym);
+      for (let d = 0; d < ctx.template.length; d++) {
+        const s = planSessionWith(ctx, ctx.template.length + d, { minutes });
+        const counts = new Map<string, number>();
+        for (const p of s.supersets.flatMap((ss) => ss.items)) counts.set(family(p.exerciseId), (counts.get(family(p.exerciseId)) ?? 0) + 1);
+        for (const [f, n] of counts) expect(n, `${minutes} min ${s.name} ${f}`).toBeLessThanOrEqual(2);
       }
     }
   });

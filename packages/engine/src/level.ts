@@ -11,6 +11,26 @@ export function trainingLevel(p: Profile): TrainingLevel {
   }
 }
 
+/** Logged strength sessions after which the plan's volume steps up a level. */
+export const PROMOTION_SESSIONS = { fromNever: 60, fromLapsed: 16, toAdvanced: 150 } as const;
+
+/**
+ * The level the plan's volume is set for: where the person started, stepped up by what they have
+ * logged here. A first-timer is past the novice stage after a few months of steady training, and
+ * someone returning after a break gets back there within weeks. Exercise choice, rep ranges and
+ * starting loads stay with the onboarding level, so a promotion never swaps exercises.
+ */
+export function progressedLevel(p: Profile, strengthSessionsLogged = 0): TrainingLevel {
+  const start = trainingLevel(p);
+  const n = Math.max(0, strengthSessionsLogged);
+  if (start === "novice") {
+    const needed = p.trainingHistory === "lapsed" ? PROMOTION_SESSIONS.fromLapsed : PROMOTION_SESSIONS.fromNever;
+    return n >= needed ? "intermediate" : "novice";
+  }
+  if (start === "intermediate" && n >= PROMOTION_SESSIONS.toAdvanced) return "advanced";
+  return start;
+}
+
 /** Hard sets per muscle group per week. [verify] */
 export function volumeTarget(level: TrainingLevel): [number, number] {
   switch (level) {

@@ -22,14 +22,14 @@ export function Seg<T extends string | number>(props: {
 
 export function Choice<T extends string>(props: {
   value: T | undefined;
-  options: { value: T; label: string; hint?: string }[];
+  options: { value: T; label: string; hint?: string; disabled?: boolean }[];
   onChange: (v: T) => void;
   label: string;
 }): React.ReactElement {
   return (
     <div className="choice" role="group" aria-label={props.label}>
       {props.options.map((o) => (
-        <button key={o.value} type="button" aria-pressed={props.value === o.value} onClick={() => props.onChange(o.value)}>
+        <button key={o.value} type="button" aria-pressed={props.value === o.value} disabled={o.disabled} onClick={() => props.onChange(o.value)}>
           <b>{o.label}</b>
           {o.hint ? <span>{o.hint}</span> : null}
         </button>

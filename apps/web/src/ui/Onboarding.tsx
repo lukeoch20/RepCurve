@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { hasGymEquipment } from "@repcurve/engine";
+import { SPLIT_MIN_STRENGTH_DAYS, effectiveSplit, hasGymEquipment, strengthDaysPerWeek } from "@repcurve/engine";
 import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Goal, Injury, Profile, Sex, Split, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Icon, Seg } from "./common";
@@ -100,7 +100,7 @@ function toProfile(d: Draft): Profile | null {
     goal: d.goal,
     daysPerWeek: d.days,
     minutesPerSession: d.minutes,
-    split: d.split,
+    split: splitFor(d.split, d.days, d.goal),
     injuries: d.injuries,
     units: d.units,
   };
@@ -123,8 +123,17 @@ const SPLIT_OPTIONS: { value: Split; label: string; hint: string }[] = [
   { value: "push_pull", label: "Push / Pull", hint: "Push day: chest, shoulders and triceps, with one leg move. Pull day: back and biceps, with one hip move. Good with 2 to 5 lifting days." },
   { value: "full_body", label: "Full body", hint: "Every session trains a bit of everything. Best with 2 or 3 lifting days; a missed day leaves nothing out." },
   { value: "upper_lower", label: "Upper / Lower", hint: "Upper day: chest, back, shoulders and arms. Lower day: legs and glutes. Best with 2 or 4 lifting days." },
-  { value: "ppl", label: "Push / Pull / Legs", hint: "Three focused days in rotation. Best with 3 or more lifting days; with fewer, each muscle waits longer between turns." },
+  { value: "ppl", label: "Push / Pull / Legs", hint: "Three focused days in rotation. Needs 3 or more lifting days a week (days you lift, not cardio days)." },
 ];
+
+/**
+ * Lifting days in a schedule. A treadmill only matters to a strength-first goal, where it can only
+ * add lifting days at 4 or more days a week, so this is exact wherever a split's minimum is decided.
+ */
+const liftingDays = (days: number, goal: Goal): number => strengthDaysPerWeek(days, goal, { treadmill: true } as Equipment);
+
+/** The draft's split, or full body when the schedule has too few lifting days for it. */
+const splitFor = (split: Split, days: number, goal: Goal): Split => (liftingDays(days, goal) < SPLIT_MIN_STRENGTH_DAYS[split] ? "full_body" : split);
 export const SPLIT_LABEL: Record<Split, string> = { push_pull: "Push / Pull", full_body: "Full body", upper_lower: "Upper / Lower", ppl: "Push / Pull / Legs" };
 
 type Step = "welcome" | "you" | "experience" | "schedule" | "where" | "equipment" | "body" | "review";
@@ -270,7 +279,7 @@ export function Onboarding(props: {
             <Choice
               label="Goal"
               value={d.goal}
-              onChange={(goal) => up({ goal })}
+              onChange={(goal) => up({ goal, split: splitFor(d.split, d.days, goal) })}
               options={[
                 { value: "strength_muscle", label: "Muscle and strength", hint: "Mostly lifting days" },
                 { value: "both", label: "Both", hint: "Lifting plus a treadmill or walking day" },
@@ -290,7 +299,7 @@ export function Onboarding(props: {
           </header>
           <div className="field">
             <span className="label">Days a week</span>
-            <Seg label="Days a week" value={d.days} onChange={(days) => up({ days })} options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))} />
+            <Seg label="Days a week" value={d.days} onChange={(days) => up({ days, split: splitFor(d.split, days, d.goal) })} options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))} />
           </div>
           <div className="field">
             <span className="label">Minutes per session</span>
@@ -305,9 +314,17 @@ export function Onboarding(props: {
             <span className="meta small">A split is how your lifting days divide up your body. Focused days let each muscle get more work at once; full body trains everything every time.</span>
             <Choice
               label="Split"
-              value={d.split}
+              value={splitFor(d.split, d.days, d.goal)}
               onChange={(split) => up({ split })}
-              options={SPLIT_OPTIONS}
+              options={SPLIT_OPTIONS.map((o) => {
+                const lifting = liftingDays(d.days, d.goal);
+                if (lifting >= SPLIT_MIN_STRENGTH_DAYS[o.value]) return o;
+                return {
+                  ...o,
+                  disabled: true,
+                  hint: `Needs ${SPLIT_MIN_STRENGTH_DAYS[o.value]} or more lifting days a week; your schedule has ${lifting} (the rest are cardio). With fewer, most muscles would go a week or more untrained.`,
+                };
+              })}
             />
           </div>
         </section>
@@ -531,7 +548,8 @@ function Review(props: { profile: Profile; equipment: Equipment }): React.ReactE
       <header className="stack">
         <p className="eyebrow">Your plan</p>
         <h1 className="title">
-          {props.profile.daysPerWeek} days · {props.profile.minutesPerSession} minutes · {SPLIT_LABEL[props.profile.split ?? "full_body"]}
+          {props.profile.daysPerWeek} days · {props.profile.minutesPerSession} minutes ·{" "}
+          {SPLIT_LABEL[effectiveSplit(props.profile, strengthDaysPerWeek(props.profile.daysPerWeek, props.profile.goal, props.equipment))]}
         </h1>
       </header>
       <ProjectionCard projection={projection} units={props.profile.units} compact />
