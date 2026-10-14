@@ -63,8 +63,15 @@ test("push/pull/legs needs three lifting days, and says so", async ({ page }) =>
   await ppl.click();
   await expect(ppl).toHaveAttribute("aria-pressed", "true");
   // Three days is two lifting days and a cardio day: it can't, the plan falls back to full body, and the reason shows.
-  await page.getByRole("group", { name: "Days a week" }).getByRole("button", { name: "3", exact: true }).click();
-  await expect(ppl).toBeDisabled();
-  await expect(ppl).toContainText("your schedule has 2");
+  const days = page.getByRole("group", { name: "Days a week" });
+  await days.getByRole("button", { name: "3", exact: true }).click();
+  await expect(ppl).toHaveAttribute("aria-disabled", "true");
+  await expect(ppl).toContainText("your schedule has 2 (the rest are cardio)");
   await expect(choice.getByRole("button", { name: /^Full body/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("status").filter({ hasText: "runs full body for now" })).toBeVisible();
+  // Tapping it does nothing; going back to four days brings the choice back.
+  await ppl.click({ force: true });
+  await expect(ppl).toHaveAttribute("aria-pressed", "false");
+  await days.getByRole("button", { name: "4", exact: true }).click();
+  await expect(ppl).toHaveAttribute("aria-pressed", "true");
 });

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
 import { ACTIVITY_NAME, cardioLabel, dayLabel, plural } from "../model/format";
-import { exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
+import { contextFor, exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
 import { BackupButton } from "./Backup";
@@ -41,7 +41,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const setTime = (m: number) => setMinutes(m === usual ? null : m);
   const welcomeTip = useTip("today.welcome");
   const weekTip = useTip("today.week");
-  const splitTip = useTip("today.split", plan.kind === "strength" && (core.profile.split ?? "full_body") !== "full_body");
+  const splitTip = useTip("today.split", plan.kind === "strength" && contextFor(core).split !== "full_body");
   const benchmarkTip = useTip("today.benchmark");
   const timeTip = useTip("today.time");
   // Safari can clear a website's data after a week without a visit; a Home Screen app keeps it.

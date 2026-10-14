@@ -1,7 +1,7 @@
 import { buildCardioSession } from "./cardio.js";
 import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
-import { volumeTarget } from "./level.js";
+import { volumeCeiling, volumeTarget } from "./level.js";
 import { buildStrengthSession, rampOf, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
 import type { Muscle, Pattern } from "@repcurve/shared";
@@ -22,14 +22,28 @@ export interface PlanOptions {
   lastCardioEffort?: number;
   /** The cardio activity the user prefers, used whenever the equipment and format allow it. */
   cardioActivity?: CardioActivity;
+  /**
+   * Strength sessions already done this week, as done (a longer day earlier in the week). The
+   * session being planned fits around them, so the week stays within its ceiling.
+   */
+  weekDone?: SessionPlan[];
 }
 
 /** Weeks in a training block. People past the novice stage get alternate exercises every other block. */
 export const BLOCK_WEEKS = 6;
 
-/** Whether this week's plan uses each slot's alternate exercise. */
+/** The volume level a week is planned at (set at its start: a promotion takes effect from the next week). */
+export function weekLevel(ctx: EngineContext, week: number) {
+  return ctx.levelAt((week - 1) * ctx.template.length);
+}
+
+/**
+ * Whether this week's plan uses each slot's alternate exercise: every other block, for someone past
+ * the novice stage when the block began (a promotion mid-block waits for the next block).
+ */
 export function alternateBlock(ctx: EngineContext, week: number): boolean {
-  return ctx.volumeLevel !== "novice" && Math.floor((week - 1) / BLOCK_WEEKS) % 2 === 1;
+  const block = Math.floor((week - 1) / BLOCK_WEEKS);
+  return block % 2 === 1 && weekLevel(ctx, block * BLOCK_WEEKS + 1) !== "novice";
 }
 
 const chainCache = new WeakMap<EngineContext, Map<string, (SessionPlan | null)[]>>();
@@ -45,15 +59,38 @@ const addInto = (into: Record<Muscle, number>, v: Record<Muscle, number>) => {
  * while every session keeps room for its opening pairs.
  */
 function weekChain(ctx: EngineContext, week: number, opts: PlanOptions): (SessionPlan | null)[] {
-  const { minutes: _today, ...rest } = opts;
-  const key = `${week}|${JSON.stringify(rest)}`;
+  // Only what changes a strength plan is in the key (cardio options and today's time are not).
+  const rest: PlanOptions = {
+    ...(opts.restSec !== undefined ? { restSec: opts.restSec } : {}),
+    ...(opts.transitionSec !== undefined ? { transitionSec: opts.transitionSec } : {}),
+    ...(opts.e1rmByExercise ? { e1rmByExercise: opts.e1rmByExercise } : {}),
+  };
+  const e1rm = Object.entries(opts.e1rmByExercise ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  const key = `${week}|${opts.restSec ?? ""}|${opts.transitionSec ?? ""}|${JSON.stringify(e1rm)}`;
   let byCtx = chainCache.get(ctx);
   if (!byCtx) chainCache.set(ctx, (byCtx = new Map()));
   const hit = byCtx.get(key);
   if (hit) return hit;
   const n = ctx.template.length;
   const input = (d: number) => strengthInput(ctx, (week - 1) * n + d, rest, ctx.profile);
-  const baselines = ctx.template.map((kind, d) => (kind === "strength" ? weeklyVolume([buildStrengthSession({ ...input(d), baselineOnly: true })]) : null));
+  // Room kept for each later day: its main pairs at their planned rounds, or, for a muscle the
+  // whole week's main pairs would already take past the ceiling, just their fewest rounds, so
+  // that every day's opening still fits.
+  const plannedPlans = ctx.template.map((kind, d) => (kind === "strength" ? buildStrengthSession({ ...input(d), baselineOnly: true }) : null));
+  const planned = plannedPlans.map((p) => (p ? weeklyVolume([p]) : null));
+  const patternsOf = (s: SessionPlan | null) => (s ? s.supersets.flatMap((ss) => ss.items.map((p) => p.pattern)) : []);
+  const fewest = ctx.template.map((kind, d) =>
+    kind === "strength" ? weeklyVolume([buildStrengthSession({ ...input(d), baselineOnly: true, rounds: Math.min(2, BASE_ROUNDS) })]) : null,
+  );
+  const plannedTotal = emptyVolume();
+  planned.forEach((v) => v && addInto(plannedTotal, v));
+  const ceiling = volumeCeiling(weekLevel(ctx, week));
+  const baselines = planned.map((v, d) => {
+    if (!v) return null;
+    const out = emptyVolume();
+    for (const m of MUSCLES) out[m] = plannedTotal[m] <= ceiling ? v[m] : fewest[d]![m];
+    return out;
+  });
   const finals: (SessionPlan | null)[] = [];
   ctx.template.forEach((kind, d) => {
     if (kind !== "strength") {
@@ -63,7 +100,8 @@ function weekChain(ctx: EngineContext, week: number, opts: PlanOptions): (Sessio
     const others = emptyVolume();
     finals.forEach((f) => f && addInto(others, weeklyVolume([f])));
     for (let j = d + 1; j < n; j++) if (baselines[j]) addInto(others, baselines[j]!);
-    finals.push(buildStrengthSession({ ...input(d), weekOthers: others }));
+    const weekPatterns = [...finals.flatMap(patternsOf), ...plannedPlans.slice(d + 1).flatMap(patternsOf)];
+    finals.push(buildStrengthSession({ ...input(d), weekOthers: others, weekPatterns }));
   });
   byCtx.set(key, finals);
   return finals;
@@ -81,12 +119,12 @@ function strengthInput(ctx: EngineContext, index: number, opts: PlanOptions, pro
   const alternate = alternateBlock(ctx, week);
   // A new block brings new exercises: the first time each day type comes round, uncalibrated ones get a benchmark.
   const weekInBlock = (week - 1) % BLOCK_WEEKS;
-  const blockStart = week > BLOCK_WEEKS && ctx.volumeLevel !== "novice" && weekInBlock < (split === "full_body" ? 1 : 2);
+  const blockStart = week > BLOCK_WEEKS && weekLevel(ctx, week - weekInBlock) !== "novice" && weekInBlock < (split === "full_body" ? 1 : 2);
   return {
     profile,
     equipment: ctx.equipment,
     level: ctx.level,
-    volumeLevel: ctx.volumeLevel,
+    volumeLevel: weekLevel(ctx, week),
     split,
     pool: ctx.pool,
     index,
@@ -138,17 +176,28 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
   }
   const chain = weekChain(ctx, week, opts);
   let steady = chain[dayIndex]!;
-  if (opts.minutes !== undefined && opts.minutes !== ctx.profile.minutesPerSession) {
-    // Today's time differs: the rest of the week stays as planned, and this session fits around it.
-    const others = emptyVolume();
-    chain.forEach((s, d) => s && d !== dayIndex && addInto(others, weeklyVolume([s])));
-    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others };
-    // A longer day is the usual session plus more; a shorter one is planned afresh for the time.
-    steady = buildStrengthSession(opts.minutes > ctx.profile.minutesPerSession ? { ...input, start: steady } : input);
+  // The rest of the week: what was done for the days already done this week, the plan for the others.
+  const done = new Map((opts.weekDone ?? []).filter((s) => s.kind === "strength" && s.week === week && s.dayIndex !== dayIndex).map((s) => [s.dayIndex, s]));
+  const others = emptyVolume();
+  chain.forEach((s, d) => s && d !== dayIndex && addInto(others, weeklyVolume([done.get(d) ?? s])));
+  const today = opts.minutes !== undefined && opts.minutes !== ctx.profile.minutesPerSession;
+  const ceiling = volumeCeiling(weekLevel(ctx, week));
+  const mine = weeklyVolume([steady]);
+  const overWeek = MUSCLES.some((m) => m !== "core" && others[m] + mine[m] > ceiling + 1e-9);
+  if (today || overWeek) {
+    // Today's time differs, or a longer day earlier in the week left less room: this session fits
+    // around the rest of the week.
+    const weekPatterns = chain.flatMap((s, d) => (s && d !== dayIndex ? (done.get(d) ?? s).supersets.flatMap((ss) => ss.items.map((p) => p.pattern)) : []));
+    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekPatterns };
+    // A longer day is the usual session plus more (when the usual session still fits the week and
+    // today's time); otherwise the session is planned afresh.
+    const extend = today && opts.minutes! > ctx.profile.minutesPerSession && !overWeek && steady.estimatedMinutes <= opts.minutes!;
+    steady = buildStrengthSession(extend ? { ...input, start: steady } : input);
   }
   const rampWeek = week === 1 && profile.trainingHistory === "never";
-  // Same exercises and supersets as the steady weeks, one set lighter.
-  return rampWeek ? rampOf(steady) : steady;
+  // Same exercises and supersets as the steady weeks, one set lighter. A copy, so changes to the
+  // returned plan never reach the week's cached plans.
+  return rampWeek ? rampOf(structuredClone(steady)) : structuredClone(steady);
 }
 
 export function planSession(input: GenerateInput, index: number, opts: PlanOptions = {}): SessionPlan {
@@ -156,7 +205,10 @@ export function planSession(input: GenerateInput, index: number, opts: PlanOptio
 }
 
 export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}): Program {
-  const ctx = makeContext(input.profile, input.equipment, { strengthSessionsLogged: opts.state?.strengthSessionsLogged ?? 0 });
+  const ctx = makeContext(input.profile, input.equipment, {
+    strengthSessionsLogged: opts.state?.strengthSessionsLogged ?? 0,
+    ...(opts.position !== undefined ? { position: opts.position } : {}),
+  });
   const weeks = opts.weeks ?? 4;
   const planOpts: PlanOptions = {
     e1rmByExercise: opts.e1rmByExercise ?? {},
@@ -166,11 +218,15 @@ export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}
   const sessions: SessionPlan[] = [];
   for (let i = 0; i < weeks * ctx.template.length; i++) sessions.push(planSessionWith(ctx, i, planOpts));
 
-  const plannedWeek = sessions.filter((s) => s.week === Math.min(2, weeks));
+  // The week described: the user's current one, or week 2 (the first steady week) for a new plan.
+  const describedWeek = opts.position !== undefined ? Math.max(2, weekAndDay(ctx, opts.position).week) : Math.min(2, weeks);
+  const n = ctx.template.length;
+  const plannedWeek = Array.from({ length: n }, (_, d) => planSessionWith(ctx, (describedWeek - 1) * n + d, planOpts));
   const steadyState = opts.state ? { ...opts.state, deloadRemaining: 0 } : null;
   const steadyWeek = steadyState ? plannedWeek.map((s) => applyState(s, steadyState, ctx)) : plannedWeek;
   const volume = weeklyVolume(steadyWeek);
-  const target = volumeTarget(ctx.volumeLevel);
+  const level = weekLevel(ctx, describedWeek);
+  const target = volumeTarget(level);
   const strengthSessions = steadyWeek.filter((s) => s.kind === "strength");
   const avgHardSets = strengthSessions.length
     ? Math.round(strengthSessions.reduce((n, s) => n + hardSets(s), 0) / strengthSessions.length)
@@ -187,7 +243,7 @@ export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}
     explanation: explain(input.profile, input.equipment, ctx.level, ctx.template, volume, target, avgHardSets, {
       benchmarkWeek: sessions.some((s) => s.week === 1 && s.supersets.some((ss) => ss.items.some((p) => p.benchmarkSet))),
       missingPatterns: missingPatterns(steadyWeek),
-      volumeLevel: ctx.volumeLevel,
+      volumeLevel: level,
       split: ctx.split,
     }),
   };

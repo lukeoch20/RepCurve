@@ -1,4 +1,5 @@
 import type { Equipment, Muscle, Pattern, Profile, Split, TrainingLevel } from "@repcurve/shared";
+import { SPLIT_MIN_STRENGTH_DAYS } from "./template.js";
 import type { SessionKind } from "./types.js";
 
 const SPLIT_WORD: Record<Split, string> = { full_body: "full-body", push_pull: "push/pull", upper_lower: "upper/lower", ppl: "push/pull/legs" };
@@ -33,12 +34,12 @@ export function explain(
   );
   if (split !== (profile.split ?? "full_body")) {
     lines.push(
-      `You chose ${SPLIT_WORD[profile.split ?? "full_body"]}, but with ${strength} lifting day${strength === 1 ? "" : "s"} a week most muscles would go a week or more untrained, so your plan runs full body. With 3 or more lifting days it switches to ${SPLIT_WORD[profile.split ?? "full_body"]}.`,
+      `You chose ${SPLIT_WORD[profile.split ?? "full_body"]}, but with ${strength} lifting day${strength === 1 ? "" : "s"} a week most muscles would go a week or more untrained, so your plan runs full body. With ${SPLIT_MIN_STRENGTH_DAYS[profile.split ?? "full_body"]} or more lifting days it switches to ${SPLIT_WORD[profile.split ?? "full_body"]}.`,
     );
   }
   if (volumeLevel !== level) {
     lines.push(
-      `You've trained steadily long enough that your plan now gives each muscle the weekly volume for ${volumeLevel === "advanced" ? "an advanced" : "an intermediate"} lifter, and sessions can run to four sets of an exercise.`,
+      `You've trained steadily long enough that your plan now gives each muscle the weekly volume for ${volumeLevel === "advanced" ? "an advanced" : "an intermediate"} lifter${level === "novice" ? ", and sessions can run to four sets of an exercise" : ""}.`,
     );
   }
   const majors: Muscle[] = ["quads", "glutes", "hamstrings", "chest", "back", "shoulders"];

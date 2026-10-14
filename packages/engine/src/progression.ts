@@ -245,14 +245,14 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
     // Two sessions at the top before anything changes, so one unusually good day doesn't move you on.
     // A new lifter's first few sessions on an exercise are the exception: early gains are real (and
     // first benchmarks lean light), so one session at the top is enough.
-    const fastStart = ctx.level === "novice" && progress.timesPerformed < FAST_START_SESSIONS;
+    const fastStart = ctx.volumeLevel === "novice" && progress.timesPerformed < FAST_START_SESSIONS;
     if (!fastStart && (progress.topStreak ?? 0) < 1) {
       const then = e.assisted ? "you'll use a little less help" : isLoaded(e) ? "the weight goes up" : "you'll move on";
       return same({ stalls: 0, topStreak: 1, targetReps: hi }, "hold", `Top of the range with reps to spare. Do that once more and ${then}.`);
     }
     if (e.assisted) {
       return same({ stalls: 0, targetReps: lo }, "load_up",
-        "Top of the range twice: use a little less help next time (a lighter band, or less assistance on the machine) and build back up from the bottom of the range.");
+        `${fastStart ? "Top of the range with reps to spare" : "Top of the range twice"}: use a little less help next time (a lighter band, or less assistance on the machine) and build back up from the bottom of the range.`);
     }
     if (isLoaded(e) && workingLoad !== null) {
       const next = nextOwnedLoad(workingLoad, ctx.loadsFor(e));

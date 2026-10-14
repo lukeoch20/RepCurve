@@ -46,11 +46,12 @@ export function strengthDaysPerWeek(days: number, goal: Goal, equipment: Equipme
 }
 
 /** Lifting days a week each split needs to train every muscle every week. */
-export const SPLIT_MIN_STRENGTH_DAYS: Record<Split, number> = { full_body: 1, push_pull: 1, upper_lower: 1, ppl: 3 };
+export const SPLIT_MIN_STRENGTH_DAYS: Record<Split, number> = { full_body: 1, push_pull: 2, upper_lower: 2, ppl: 3 };
 
 /**
- * The split the plan actually uses. Push/pull/legs with fewer than three lifting days leaves
- * most muscles untrained in some weeks, so those weeks run full body instead.
+ * The split the plan actually uses. A split with fewer lifting days than it has day types (one
+ * push/pull day, two push/pull/legs days) leaves most muscles untrained in some weeks, so those
+ * plans run full body instead.
  */
 export function effectiveSplit(profile: Pick<Profile, "split">, strengthDays: number): Split {
   const split = profile.split ?? "full_body";

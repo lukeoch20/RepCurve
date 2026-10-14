@@ -29,7 +29,16 @@ export function Choice<T extends string>(props: {
   return (
     <div className="choice" role="group" aria-label={props.label}>
       {props.options.map((o) => (
-        <button key={o.value} type="button" aria-pressed={props.value === o.value} disabled={o.disabled} onClick={() => props.onChange(o.value)}>
+        // An unavailable option stays focusable so its reason can be reached and read.
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={props.value === o.value}
+          aria-disabled={o.disabled || undefined}
+          onClick={() => {
+            if (!o.disabled) props.onChange(o.value);
+          }}
+        >
           <b>{o.label}</b>
           {o.hint ? <span>{o.hint}</span> : null}
         </button>

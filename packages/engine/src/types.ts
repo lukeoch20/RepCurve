@@ -11,7 +11,7 @@ export interface Prescription {
   pattern: Pattern;
   loadType: LoadType;
   unilateral: boolean;
-  /** Rounds in the superset this belongs to; equals sets. */
+  /** Sets of this exercise: the superset's rounds, or one fewer when it sits out the last round. */
   sets: number;
   /** Reps, or seconds for time-based exercises. */
   repRange: [number, number];
@@ -123,6 +123,11 @@ export interface GenerateOptions {
    * sessions the user actually gets now (their exercises, rep targets and fitted rounds).
    */
   state?: TrainingState;
+  /**
+   * Position of the user's next session. The weekly volume and explanation then describe the week
+   * they're in (from week 2: week 1 is the lighter benchmark week), alternate exercises included.
+   */
+  position?: number;
   createdAt?: string;
 }
 

@@ -100,7 +100,8 @@ function toProfile(d: Draft): Profile | null {
     goal: d.goal,
     daysPerWeek: d.days,
     minutesPerSession: d.minutes,
-    split: splitFor(d.split, d.days, d.goal),
+    // The choice is kept; with too few lifting days the plan runs full body until there are more.
+    split: d.split,
     injuries: d.injuries,
     units: d.units,
   };
@@ -139,7 +140,8 @@ export const SPLIT_LABEL: Record<Split, string> = { push_pull: "Push / Pull", fu
 type Step = "welcome" | "you" | "experience" | "schedule" | "where" | "equipment" | "body" | "review";
 
 export function Onboarding(props: {
-  initial?: { profile: Profile; equipment: Equipment; locations?: Locations };
+  /** An existing user's setup, and strength sessions they've logged (their plan's volume steps up with them). */
+  initial?: { profile: Profile; equipment: Equipment; locations?: Locations; logged?: number };
   onDone: (profile: Profile, equipment: Equipment, locations: Locations) => void;
   onCancel?: () => void;
 }): React.ReactElement {
@@ -279,7 +281,7 @@ export function Onboarding(props: {
             <Choice
               label="Goal"
               value={d.goal}
-              onChange={(goal) => up({ goal, split: splitFor(d.split, d.days, goal) })}
+              onChange={(goal) => up({ goal })}
               options={[
                 { value: "strength_muscle", label: "Muscle and strength", hint: "Mostly lifting days" },
                 { value: "both", label: "Both", hint: "Lifting plus a treadmill or walking day" },
@@ -299,7 +301,7 @@ export function Onboarding(props: {
           </header>
           <div className="field">
             <span className="label">Days a week</span>
-            <Seg label="Days a week" value={d.days} onChange={(days) => up({ days, split: splitFor(d.split, days, d.goal) })} options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))} />
+            <Seg label="Days a week" value={d.days} onChange={(days) => up({ days })} options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))} />
           </div>
           <div className="field">
             <span className="label">Minutes per session</span>
@@ -322,10 +324,15 @@ export function Onboarding(props: {
                 return {
                   ...o,
                   disabled: true,
-                  hint: `Needs ${SPLIT_MIN_STRENGTH_DAYS[o.value]} or more lifting days a week; your schedule has ${lifting} (the rest are cardio). With fewer, most muscles would go a week or more untrained.`,
+                  hint: `Needs ${SPLIT_MIN_STRENGTH_DAYS[o.value]} or more lifting days a week; your schedule has ${lifting}${d.days > lifting ? " (the rest are cardio)" : ""}. With fewer, most muscles would go a week or more untrained.`,
                 };
               })}
             />
+            <p className="meta small" role="status">
+              {splitFor(d.split, d.days, d.goal) !== d.split
+                ? `${SPLIT_LABEL[d.split]} needs ${SPLIT_MIN_STRENGTH_DAYS[d.split]} lifting days a week, so your plan runs full body for now. It switches back when your schedule has enough.`
+                : ""}
+            </p>
           </div>
         </section>
       ) : null}
@@ -400,7 +407,7 @@ export function Onboarding(props: {
         </section>
       ) : null}
 
-      {step === "review" && profile && equipment ? <Review profile={profile} equipment={equipment} /> : null}
+      {step === "review" && profile && equipment ? <Review profile={profile} equipment={equipment} logged={props.initial?.logged ?? 0} /> : null}
 
       {youMissing ? <p className="meta small">Fill in sex, age, height and weight to continue.</p> : null}
 
@@ -539,10 +546,10 @@ function RestoreBackup(): React.ReactElement {
   );
 }
 
-function Review(props: { profile: Profile; equipment: Equipment }): React.ReactElement {
-  const program = useMemo(() => previewProgram(props.profile, props.equipment), [props.profile, props.equipment]);
+function Review(props: { profile: Profile; equipment: Equipment; logged: number }): React.ReactElement {
+  const program = useMemo(() => previewProgram(props.profile, props.equipment, undefined, props.logged), [props.profile, props.equipment, props.logged]);
   const first = program.sessions.find((s) => s.kind === "strength");
-  const projection = useMemo(() => previewProjection(props.profile, props.equipment), [props.profile, props.equipment]);
+  const projection = useMemo(() => previewProjection(props.profile, props.equipment, undefined, props.logged), [props.profile, props.equipment, props.logged]);
   return (
     <section className="stack-lg">
       <header className="stack">

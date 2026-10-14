@@ -705,7 +705,9 @@ describe("7. split gating", () => {
           expect(strengthDaysPerWeek!(days, goal, eq), `${goal} ${days}d treadmill=${eq.treadmill}`).toBe(weeklyTemplate(days, goal, eq).filter((k) => k === "strength").length);
   });
 
-  it("effectiveSplit drops push/pull/legs below 3 lifting days, and nothing else", () => {
+  // Spec amended after code review: a split with fewer lifting days than day types leaves muscles
+  // untrained in alternate weeks, so push/pull and upper/lower also need two lifting days.
+  it("effectiveSplit drops push/pull/legs below 3 lifting days and push/pull, upper/lower below 2", () => {
     expect(typeof effectiveSplit, "effectiveSplit exported from ./template.js").toBe("function");
     const p = (split?: Split): Profile => {
       const x = { ...referenceProfile } as Profile;
@@ -714,7 +716,9 @@ describe("7. split gating", () => {
     };
     for (const n of [0, 1, 2]) expect(effectiveSplit!(p("ppl"), n)).toBe("full_body");
     for (const n of [3, 4, 5]) expect(effectiveSplit!(p("ppl"), n)).toBe("ppl");
-    for (const split of ["push_pull", "upper_lower", "full_body"] as Split[]) for (const n of [1, 2, 3]) expect(effectiveSplit!(p(split), n)).toBe(split);
+    for (const split of ["push_pull", "upper_lower", "full_body"] as Split[]) for (const n of [2, 3]) expect(effectiveSplit!(p(split), n)).toBe(split);
+    for (const split of ["push_pull", "upper_lower"] as Split[]) expect(effectiveSplit!(p(split), 1)).toBe("full_body");
+    expect(effectiveSplit!(p("full_body"), 1)).toBe("full_body");
     for (const n of [1, 4]) expect(effectiveSplit!(p(undefined), n)).toBe("full_body");
   });
 
@@ -851,10 +855,12 @@ describe("9. fast start", () => {
     expect(MOVES, r.action).toContain(r.action);
   });
 
-  it("a promoted novice (60 sessions logged) still gets the fast start on new exercises", () => {
+  // Spec amended after code review: the fast start is for the novice stage; once promoted, new
+  // exercises (a block's alternates included) follow the two-in-a-row rule.
+  it("a promoted novice (60 sessions logged) no longer gets the fast start", () => {
     const promoted = makeContext3({ ...referenceProfile, trainingHistory: "never" }, adjustableEquipment, { strengthSessionsLogged: 60 });
     const r = progressExercise(goblet(promoted, 0), topSets("goblet_squat", lbToKg(20), 15, 2), promoted);
-    expect(MOVES).toContain(r.action);
+    expect(r.action).toBe("hold");
   });
 
   it("from the 6th time, or for an intermediate, one top session is a hold (two in a row rule)", () => {
@@ -914,6 +920,9 @@ describe("10. rotation", () => {
           for (const [slot, id] of bySlot(w8[d]!)) {
             const was = before.get(slot);
             if (!was || was === id) continue;
+            // An exercise taken by another slot in the other week moves this slot along too (a knock-on
+            // of rotation elsewhere, not this slot's own alternate): only a slot's own swap is judged.
+            if (idsOf(s).includes(id) || idsOf(w8[d]!).includes(was)) continue;
             const a = getExercise(was);
             const b = getExercise(id);
             const where = `${split} day ${d + 1} ${slot}: ${was} -> ${id}`;
