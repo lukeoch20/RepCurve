@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, cautionAreasFor, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
+import { alternativesFor, cautionAreasFor, needsRampSet, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
 import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
@@ -118,6 +118,9 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
               <span className="eyebrow">Superset {ss.label}</span>
               <span className="meta small num">
                 {ss.rounds} rounds · alternate {ss.items.map((_, i) => `${ss.label}${i + 1}`).join(" and ")}
+                {ss.items.some((p) => p.sets < ss.rounds)
+                  ? ` · ${ss.items.map((p, i) => (p.sets < ss.rounds ? `${ss.label}${i + 1}` : null)).filter(Boolean).join(" and ")} sits out the last round`
+                  : ""}
               </span>
             </div>
             {ss.items.map((p, i) => (
@@ -253,6 +256,9 @@ function ExerciseBlock(props: {
             <button type="button" className="exercise-link" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>{p.name}</button>
           </div>
           <div className="block-target">{target}</div>
+          {group > 0 && needsRampSet(p, group) ? (
+            <div className="block-target">Warm up first: one easy set of 5 at about half your working weight.</div>
+          ) : null}
         </div>
       </div>
       <div className="menu" ref={menuTip}>

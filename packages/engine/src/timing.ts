@@ -14,18 +14,34 @@ export interface TimedItem {
   exercise: Exercise;
   repRange: [number, number];
   reps?: number;
+  /**
+   * Sets of this exercise, when it does fewer than the superset's rounds (it sits out the last
+   * round). Defaults to every round.
+   */
+  sets?: number;
 }
+
+/** A light warm-up set before a heavy barbell lift that comes after the session's first superset. */
+export const RAMP_SET_SEC = 60;
 
 /** One-time setup for a set of exercises: adjusting machines, loading bars, anchoring bands. */
 export function setupSeconds(exercises: Exercise[]): number {
   return exercises.reduce((sum, e) => sum + (e.setupSec ?? 0), 0);
 }
 
-/** Seconds for `rounds` rounds of a superset (setup not included: it happens once). */
+/**
+ * Seconds for `rounds` rounds of a superset (setup not included: it happens once). An exercise with
+ * fewer sets than rounds sits out the last rounds; a round still ends with the rest.
+ */
 export function supersetSeconds(items: TimedItem[], rounds: number, transitionSec: number, restSec: number): number {
-  const work = items.reduce((sum, it) => sum + setSeconds(it.exercise, it.repRange, it.reps), 0);
-  const perRound = work + transitionSec * (items.length - 1) + restSec;
-  return perRound * rounds;
+  let total = 0;
+  for (let r = 0; r < rounds; r++) {
+    const active = items.filter((it) => (it.sets ?? rounds) > r);
+    if (active.length === 0) continue;
+    const work = active.reduce((sum, it) => sum + setSeconds(it.exercise, it.repRange, it.reps), 0);
+    total += work + transitionSec * (active.length - 1) + restSec;
+  }
+  return total;
 }
 
 export function warmupMinutes(budget: number): number {

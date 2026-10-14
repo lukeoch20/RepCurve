@@ -63,13 +63,13 @@ describe("data from another version of the app", () => {
     const core = newCore(profile, equipment, T);
     const newer = {
       ...core,
-      version: 3,
+      version: DATA_VERSION + 1,
       soreness: [{ group: "quads", at: T }],
       settings: { ...core.settings, reminders: { days: [1, 3, 5], time: "07:00" } },
       state: { ...core.state, profileOverrides: { forget: ["Shoulder"] } },
     };
     const back = migrateCore(JSON.parse(JSON.stringify(newer)))!;
-    expect(back).toMatchObject({ version: 3, soreness: [{ group: "quads", at: T }] });
+    expect(back).toMatchObject({ version: DATA_VERSION + 1, soreness: [{ group: "quads", at: T }] });
     expect((back.settings as unknown as Record<string, unknown>)["reminders"]).toEqual({ days: [1, 3, 5], time: "07:00" });
     expect((back.state as unknown as Record<string, unknown>)["profileOverrides"]).toEqual({ forget: ["Shoulder"] });
     expect(savedByNewerVersion(back)).toBe(true);

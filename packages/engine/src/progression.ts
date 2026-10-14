@@ -161,6 +161,9 @@ function withinCap(p: ExerciseProgress, e: Exercise): ExerciseProgress {
  * dumbbell-aware steps). Loads follow what the user actually lifted: the last
  * set's load is the working load, so mid-session changes carry forward.
  */
+/** Sessions on an exercise during which a new lifter moves on after one session at the top of the range. */
+export const FAST_START_SESSIONS = 6;
+
 export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: EngineContext): ProgressionResult {
   const e = getExercise(saved.exerciseId);
   const progress = withinCap(saved, e);
@@ -240,13 +243,16 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
 
   if (allTop && avgRir >= rirT) {
     // Two sessions at the top before anything changes, so one unusually good day doesn't move you on.
-    if ((progress.topStreak ?? 0) < 1) {
+    // A new lifter's first few sessions on an exercise are the exception: early gains are real (and
+    // first benchmarks lean light), so one session at the top is enough.
+    const fastStart = ctx.volumeLevel === "novice" && progress.timesPerformed < FAST_START_SESSIONS;
+    if (!fastStart && (progress.topStreak ?? 0) < 1) {
       const then = e.assisted ? "you'll use a little less help" : isLoaded(e) ? "the weight goes up" : "you'll move on";
       return same({ stalls: 0, topStreak: 1, targetReps: hi }, "hold", `Top of the range with reps to spare. Do that once more and ${then}.`);
     }
     if (e.assisted) {
       return same({ stalls: 0, targetReps: lo }, "load_up",
-        "Top of the range twice: use a little less help next time (a lighter band, or less assistance on the machine) and build back up from the bottom of the range.");
+        `${fastStart ? "Top of the range with reps to spare" : "Top of the range twice"}: use a little less help next time (a lighter band, or less assistance on the machine) and build back up from the bottom of the range.`);
     }
     if (isLoaded(e) && workingLoad !== null) {
       const next = nextOwnedLoad(workingLoad, ctx.loadsFor(e));

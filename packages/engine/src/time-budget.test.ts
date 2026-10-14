@@ -52,18 +52,17 @@ describe("today's time from 10 to 40 minutes", () => {
     }
   });
 
-  it("adds extra exercises only once the usual pairs are at their most rounds", () => {
+  // Sessions now fill toward what the week is short on, so an extra or added pair may come before
+  // the usual pairs reach their most rounds; what still holds is the day's shape.
+  it("keeps the day's own pairs first, at most three of them, and never more than five supersets", () => {
     for (const level of LEVELS) {
-      const maxRounds = maxRoundsFor(level);
       for (const m of BUDGETS) {
         for (const s of steadySessions(level, m)) {
-          const extra = extraSupersets(s);
-          if (extra.length === 0) continue;
-          const usual = s.supersets.filter((x) => !extra.includes(x));
-          expect(usual.length).toBe(3);
-          // At most one round was given up to make room for the extra exercises.
-          for (const ss of usual) expect(ss.rounds).toBeGreaterThanOrEqual(maxRounds - 1);
-          expect(usual.filter((ss) => ss.rounds < maxRounds).length).toBeLessThanOrEqual(1);
+          const added = s.supersets.filter((ss) => ss.items.some((p) => p.slot.includes(".extra") || p.slot.includes(".fill")));
+          const usual = s.supersets.filter((x) => !added.includes(x));
+          expect(usual.length).toBeLessThanOrEqual(3);
+          expect(s.supersets.length).toBeLessThanOrEqual(5);
+          expect(s.supersets.slice(0, Math.min(2, usual.length)).every((ss) => usual.includes(ss))).toBe(true);
         }
       }
     }
