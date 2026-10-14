@@ -5,7 +5,7 @@ const time = (page: import("@playwright/test").Page) => page.getByRole("group", 
 const exercisesInHeader = async (page: import("@playwright/test").Page) =>
   Number((await page.getByText(/min · \d+ exercises/).textContent())!.match(/(\d+) exercises/)![1]);
 
-test("today's time goes from 10 minutes up: more time adds exercises, less takes them away", async ({ page }) => {
+test("today's time goes from 10 minutes up: more time adds work, less takes exercises away", async ({ page }) => {
   await onboard(page);
   await expect(time(page)).toContainText("20");
   await expect(page.getByText("Your usual length")).toBeVisible();
@@ -13,11 +13,12 @@ test("today's time goes from 10 minutes up: more time adds exercises, less takes
 
   // Up to the longest length that still adds work (at most 40, and less once the week's volume
   // ceiling is reached), stepping only through lengths that change the session; then "+" stops.
+  // A step adds sets, which may be another exercise or more sets of one already planned.
   const more = time(page).getByRole("button", { name: "More time" });
   for (let i = 0; i < 6 && (await more.isEnabled()); i++) {
     const before = await exercisesInHeader(page);
     await more.click();
-    expect(await exercisesInHeader(page)).toBeGreaterThan(before);
+    expect(await exercisesInHeader(page)).toBeGreaterThanOrEqual(before);
   }
   await expect(more).toBeDisabled();
   expect(await exercisesInHeader(page)).toBeGreaterThanOrEqual(usual);

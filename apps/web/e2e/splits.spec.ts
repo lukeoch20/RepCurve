@@ -45,3 +45,26 @@ test("full body and upper/lower can be chosen instead, and changed later", async
   await page.getByRole("button", { name: "Today" }).click();
   await expect(page.getByRole("heading", { name: "Upper body" })).toBeVisible();
 });
+
+test("push/pull/legs needs three lifting days, and says so", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Set up my plan" }).click();
+  await page.getByRole("group", { name: "Sex" }).getByRole("button", { name: "Female", exact: true }).click();
+  await page.getByLabel("Age").fill("29");
+  await page.getByLabel("Weight (lb)").fill("140");
+  await page.getByLabel("Height (ft)").fill("5");
+  await page.getByLabel("(in)").fill("6");
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: /New to it/ }).click();
+  await page.getByRole("button", { name: "Next" }).click();
+  const choice = page.getByRole("group", { name: "Split" });
+  const ppl = choice.getByRole("button", { name: /^Push \/ Pull \/ Legs/ });
+  // Four days with the default goal is three lifting days: push/pull/legs can be chosen.
+  await ppl.click();
+  await expect(ppl).toHaveAttribute("aria-pressed", "true");
+  // Three days is two lifting days and a cardio day: it can't, the plan falls back to full body, and the reason shows.
+  await page.getByRole("group", { name: "Days a week" }).getByRole("button", { name: "3", exact: true }).click();
+  await expect(ppl).toBeDisabled();
+  await expect(ppl).toContainText("your schedule has 2");
+  await expect(choice.getByRole("button", { name: /^Full body/ })).toHaveAttribute("aria-pressed", "true");
+});
