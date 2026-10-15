@@ -5,6 +5,7 @@ import { MACHINES } from "@repcurve/shared";
 import type { Equipment, Goal, Profile, TrainingHistory } from "@repcurve/shared";
 import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
+import { MAX_ADDED_SETS } from "./session";
 import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
 
 /**
@@ -196,11 +197,22 @@ export function migrateRecord(r: unknown): SessionRecord | null {
   };
 }
 
+/** Sets added per slot: whole numbers from 1 up to the most that can be added. */
+function migrateExtraSets(x: unknown): Record<string, number> | undefined {
+  if (!isObj(x)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [slot, n] of Object.entries(x)) if (Number.isInteger(n) && (n as number) > 0) out[slot] = Math.min(n as number, MAX_ADDED_SETS);
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function migrateActive(a: unknown): ActiveSession | null {
   if (!isObj(a) || typeof a["id"] !== "string" || !isNum(a["index"]) || !isNum(a["startedAt"]) || !planUsable(a["plan"])) return null;
   const sets = Array.isArray(a["sets"]) ? (a["sets"] as unknown[]).filter((s) => isObj(s) && known(s["exerciseId"]) && isNum(s["reps"])) : [];
+  const { extraSets: _, ...rest } = a;
+  const extraSets = migrateExtraSets(a["extraSets"]);
   return {
-    ...(a as unknown as ActiveSession),
+    ...(rest as unknown as ActiveSession),
+    ...(extraSets ? { extraSets } : {}),
     pausedMs: isNum(a["pausedMs"]) ? a["pausedMs"] : 0,
     pausedAt: isNum(a["pausedAt"]) ? a["pausedAt"] : null,
     minutesOverride: isNum(a["minutesOverride"]) ? a["minutesOverride"] : null,
