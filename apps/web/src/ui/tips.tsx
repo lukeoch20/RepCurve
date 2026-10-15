@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useLayoutEffe
 import { createPortal } from "react-dom";
 import { nextTip, TIPS, tipById, type TipId } from "../model/tips";
 import { loadTips, saveTips, type TipsState } from "../platform/tips";
+import { useFocusTrap } from "./focusTrap";
 
 interface TipsApi {
   state: TipsState;
@@ -148,16 +149,9 @@ function TipCard(props: { id: TipId; rect: DOMRect; onSeen: () => void; onSkipAl
   const vh = window.innerHeight;
   const pad = 6;
 
-  const onSeen = useRef(props.onSeen);
-  onSeen.current = props.onSeen;
-  useEffect(() => {
-    gotIt.current?.focus({ preventScroll: true });
-  }, [props.id]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onSeen.current();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const card = useRef<HTMLDivElement>(null);
+  // "Got it" has focus for each tip, Tab stays on the card, and Escape counts as "Got it".
+  useFocusTrap(card, { onEscape: props.onSeen, initialFocus: gotIt, contentKey: props.id });
 
   // The card goes on whichever side of the highlight has more room, or along the bottom
   // when neither side has enough (a tall highlight).
@@ -179,7 +173,7 @@ function TipCard(props: { id: TipId; rect: DOMRect; onSeen: () => void; onSkipAl
         aria-hidden="true"
         style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
       />
-      <div className="tip-card" role="dialog" aria-modal="true" aria-labelledby="tip-title" aria-describedby="tip-body" style={place}>
+      <div ref={card} tabIndex={-1} className="tip-card" role="dialog" aria-modal="true" aria-labelledby="tip-title" aria-describedby="tip-body" style={place}>
         <p className="eyebrow accent">{tip.kind === "lifting" ? "Lifting basics" : "Using RepCurve"}</p>
         <h2 id="tip-title" className="h3">{tip.title}</h2>
         <p id="tip-body" className="prose">{tip.body}</p>

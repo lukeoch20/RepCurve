@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { IS_TEST } from "../platform/channel";
+import { useFocusTrap } from "./focusTrap";
 import { PIXEL_ICONS } from "./pixelIcons";
 
 export function Seg<T extends string | number>(props: {
@@ -86,20 +87,9 @@ export function Stepper(props: {
 
 export function Sheet(props: { title: string; onClose: () => void; children: React.ReactNode }): React.ReactElement {
   const dialog = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && props.onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [props.onClose]);
-  // Move focus into the sheet when it opens (and when its content changes title), and give it
-  // back to whatever opened it when it closes.
-  React.useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    return () => opener?.focus?.();
-  }, []);
-  React.useEffect(() => {
-    dialog.current?.focus();
-  }, [props.title]);
+  // Focus stays inside while it's open (it moves in again when the content changes title),
+  // Escape closes it, and focus goes back to whatever opened it.
+  useFocusTrap(dialog, { onEscape: props.onClose, contentKey: props.title });
   // Rendered at the end of <body> so it never inherits styles from where it was opened.
   return createPortal(
     <div className="scrim" onClick={props.onClose}>
