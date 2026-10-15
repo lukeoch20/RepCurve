@@ -36,6 +36,7 @@ export {
   SCHEDULED_DELOAD_WEEKS,
 } from "./state.js";
 export type { TrainingState, ApplyOptions, ExerciseChange, RecordResult, DeloadReason } from "./state.js";
+export { judgedSets, recordSessionWithExtras } from "./extra.js";
 export { adviseNextSet } from "./advice.js";
 export type { SetAdvice } from "./advice.js";
 export { weeklyVolume, hardSets, MUSCLES, ceilingVolume, weeklyDeltHeads, deltHeadSets, isDeltRaise, DELT_HEADS } from "./volume.js";

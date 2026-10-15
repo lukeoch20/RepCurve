@@ -34,6 +34,16 @@ describe("reducer: a session from setup to finish", () => {
     expect(s.finished?.id).toBe(s.data.history[0]!.id);
   });
 
+  it("adds a set and takes it back", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, now: T0 });
+    s = reducer(s, { type: "start", now: T0, minutes: null });
+    const slot = nextUp(s.data.active!)!.slot;
+    s = reducer(s, { type: "addSet", slot });
+    expect(s.data.active!.extraSets).toEqual({ [slot]: 1 });
+    s = reducer(s, { type: "removeAddedSet", slot });
+    expect(s.data.active!.extraSets).toEqual({});
+  });
+
   it("skips a session without starting it", () => {
     let s = reducer(loaded(), { type: "setup", profile, equipment, now: T0 });
     s = reducer(s, { type: "skip", now: T0 });

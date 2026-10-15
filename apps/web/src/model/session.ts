@@ -3,7 +3,7 @@ import {
   fitToBudget,
   preferExercise,
   prescriptionsOf,
-  recordSession,
+  recordSessionWithExtras,
   swapPrescription,
   type ExerciseChange,
   type Prescription,
@@ -19,6 +19,12 @@ import type { ActiveSession, CardioProgress, CardioResult, Core, LoggedSet, Sess
 
 /** Rest between sets of the core finisher. */
 export const FINISHER_REST_SEC = 30;
+/** Sets that can be added to one exercise beyond the plan. */
+export const MAX_ADDED_SETS = 5;
+/** Time after the last logged set that still counts as training (cooling down, packing up). */
+export const AFTER_LAST_SET_MS = 10 * 60_000;
+/** A workout this long past its last set was probably left open. */
+export const STALE_MS = 3 * 3_600_000;
 
 export interface SetRef {
   slot: string;
@@ -33,20 +39,35 @@ export interface SetRef {
   label: string;
 }
 
-/** Every set in the order they are done: round by round through each superset, then the finisher. */
-export function setOrder(plan: SessionPlan): SetRef[] {
+/**
+ * Every set in the order they are done: round by round through each superset, then the finisher.
+ * Sets added to an exercise make extra rounds after the planned ones.
+ */
+export function setOrder(plan: SessionPlan, added: Record<string, number> = {}): SetRef[] {
   const out: SetRef[] = [];
+  const setsOf = (p: Prescription) => p.sets + (added[p.slot] ?? 0);
   plan.supersets.forEach((ss, g) => {
-    for (let r = 0; r < ss.rounds; r++) {
+    const rounds = Math.max(ss.rounds, ...ss.items.map(setsOf));
+    for (let r = 0; r < rounds; r++) {
       // An exercise with fewer sets than the superset has rounds sits out the last round.
       ss.items.forEach((p, i) => {
-        if (r < p.sets) out.push({ slot: p.slot, exerciseId: p.exerciseId, setIndex: r, group: g, round: r, position: i, label: `${ss.label}${i + 1}` });
+        if (r < setsOf(p)) out.push({ slot: p.slot, exerciseId: p.exerciseId, setIndex: r, group: g, round: r, position: i, label: `${ss.label}${i + 1}` });
       });
     }
   });
   const f = plan.finisher;
-  if (f) for (let r = 0; r < f.sets; r++) out.push({ slot: f.slot, exerciseId: f.exerciseId, setIndex: r, group: -1, round: r, position: 0, label: "Core" });
+  if (f) for (let r = 0; r < setsOf(f); r++) out.push({ slot: f.slot, exerciseId: f.exerciseId, setIndex: r, group: -1, round: r, position: 0, label: "Core" });
   return out;
+}
+
+/** Sets added to a slot beyond the plan. */
+export function addedSets(active: ActiveSession, slot: string): number {
+  return active.extraSets?.[slot] ?? 0;
+}
+
+/** Sets of a slot today: the plan's plus any added. */
+export function setCount(active: ActiveSession, slot: string): number {
+  return (prescriptionAt(active.plan, slot)?.sets ?? 0) + addedSets(active, slot);
 }
 
 export function prescriptionAt(plan: SessionPlan, slot: string): Prescription | undefined {
@@ -62,7 +83,7 @@ export function setsForSlot(active: ActiveSession, slot: string): LoggedSet[] {
 }
 
 export function pending(active: ActiveSession, sets = active.sets): SetRef[] {
-  return setOrder(active.plan).filter(
+  return setOrder(active.plan, active.extraSets).filter(
     (r) => !active.skippedSlots.includes(r.slot) && !sets.some((s) => s.slot === r.slot && s.setIndex === r.setIndex),
   );
 }
@@ -86,11 +107,11 @@ export function prefill(active: ActiveSession, slot: string, setIndex: number): 
   };
 }
 
-export function describeRef(plan: SessionPlan, ref: SetRef): string {
+export function describeRef(plan: SessionPlan, ref: SetRef, added: Record<string, number> = {}): string {
   const p = prescriptionAt(plan, ref.slot);
   const name = p?.name ?? findExercise(ref.exerciseId)?.name ?? ref.exerciseId;
-  const total = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (p?.sets ?? plan.supersets[ref.group]?.rounds ?? 1);
-  return `${ref.label} ${name} · set ${ref.setIndex + 1} of ${total}`;
+  const planned = ref.group === -1 ? (plan.finisher?.sets ?? 1) : (p?.sets ?? plan.supersets[ref.group]?.rounds ?? 1);
+  return `${ref.label} ${name} · set ${ref.setIndex + 1} of ${planned + (added[ref.slot] ?? 0)}`;
 }
 
 export interface SetValues {
@@ -111,7 +132,7 @@ function timerAfter(active: ActiveSession, done: SetRef, sets: LoggedSet[], core
     kind = "transition";
     durationSec = core.settings.transitionSec;
   }
-  return { kind, endsAt: now + durationSec * 1000, durationSec, next: describeRef(active.plan, next) };
+  return { kind, endsAt: now + durationSec * 1000, durationSec, next: describeRef(active.plan, next, active.extraSets) };
 }
 
 function coach(active: ActiveSession, slot: string, sets: LoggedSet[], core: Core): Pick<ActiveSession, "advice" | "nextSet"> {
@@ -144,6 +165,7 @@ export function logSet(active: ActiveSession, ref: SetRef, v: SetValues, core: C
     at: now,
   };
   if (v.painFlag) set.painFlag = true;
+  if (ref.setIndex >= p.sets) set.extra = true;
   const sets = [...active.sets.filter((s) => !(s.slot === ref.slot && s.setIndex === ref.setIndex)), set];
   const skippedSlots = v.painFlag && !active.skippedSlots.includes(ref.slot) ? [...active.skippedSlots, ref.slot] : active.skippedSlots;
   const next: ActiveSession = { ...active, sets, skippedSlots, ...coach(active, ref.slot, sets, core) };
@@ -174,6 +196,28 @@ export function setPainArea(active: ActiveSession, slot: string, setIndex: numbe
 export function removeSet(active: ActiveSession, slot: string, setIndex: number, core: Core): ActiveSession {
   const sets = active.sets.filter((s) => !(s.slot === slot && s.setIndex === setIndex));
   return { ...active, sets, ...coach(active, slot, sets, core) };
+}
+
+/** A running rest timer's "up next" follows the sets as they are now; with nothing left to do it stops. */
+function retarget(active: ActiveSession): ActiveSession {
+  if (!active.timer) return active;
+  const next = pending(active)[0];
+  return { ...active, timer: next ? { ...active.timer, next: describeRef(active.plan, next, active.extraSets) } : null };
+}
+
+/** One more set of an exercise than planned. It's logged like the others; progression judges the planned ones. */
+export function addSet(active: ActiveSession, slot: string): ActiveSession {
+  const n = addedSets(active, slot);
+  if (!prescriptionAt(active.plan, slot) || active.skippedSlots.includes(slot) || n >= MAX_ADDED_SETS) return active;
+  return retarget({ ...active, extraSets: { ...active.extraSets, [slot]: n + 1 } });
+}
+
+/** Take back the last added set of an exercise, while it isn't logged. */
+export function removeAddedSet(active: ActiveSession, slot: string): ActiveSession {
+  const n = addedSets(active, slot);
+  if (n === 0 || loggedSet(active, slot, setCount(active, slot) - 1)) return active;
+  const { [slot]: _, ...rest } = active.extraSets ?? {};
+  return retarget({ ...active, extraSets: n > 1 ? { ...rest, [slot]: n - 1 } : rest });
 }
 
 export function skipSlot(active: ActiveSession, slot: string): ActiveSession {
@@ -253,6 +297,42 @@ export function clearTimer(active: ActiveSession): ActiveSession {
 export function elapsedMs(active: ActiveSession, now: number): number {
   const pausedNow = active.pausedAt !== null ? now - active.pausedAt : 0;
   return Math.max(0, now - active.startedAt - active.pausedMs - pausedNow);
+}
+
+/**
+ * Active time up to an earlier moment `t`. Past pauses are only known in total, so they're
+ * placed as late as they could have been: a workout paused overnight after its last set still
+ * counts the time up to that set.
+ */
+export function elapsedAt(active: ActiveSession, t: number, now: number): number {
+  if (t >= now) return elapsedMs(active, now);
+  if (active.pausedAt !== null && active.pausedAt <= t) return elapsedMs(active, active.pausedAt);
+  const pausedBefore = Math.max(0, active.pausedMs - ((active.pausedAt ?? now) - t));
+  return Math.max(0, t - active.startedAt - pausedBefore);
+}
+
+/** When the last set was logged, or null before the first. */
+export function lastSetAt(active: ActiveSession): number | null {
+  return active.sets.length > 0 ? Math.max(...active.sets.map((s) => s.at)) : null;
+}
+
+/** Sets are logged but none for hours: the workout was probably left open after it ended. */
+export function looksLeftOpen(active: ActiveSession, now: number): boolean {
+  const last = lastSetAt(active);
+  return last !== null && now - last > STALE_MS;
+}
+
+/**
+ * Minutes recorded for a session that ended at `end` (now, or earlier when closed as of its last
+ * set). A workout left open doesn't count the hours it sat there: time stops a little after the
+ * last set, and never runs past twice the plan (or two hours, if that's longer).
+ */
+export function activeMinutes(active: ActiveSession, end: number, now = end): number {
+  let ms = elapsedAt(active, end, now);
+  const last = lastSetAt(active);
+  if (last !== null && end > last) ms = Math.min(ms, elapsedAt(active, last, now) + AFTER_LAST_SET_MS);
+  const capMs = Math.max(2 * active.plan.estimatedMinutes, 120) * 60_000;
+  return Math.round(Math.min(ms, capMs) / 60_000);
 }
 
 export function pause(active: ActiveSession, now: number): ActiveSession {
@@ -378,7 +458,7 @@ export function toggleWarmup(active: ActiveSession, name: string): ActiveSession
   return { ...active, warmupDone: done };
 }
 
-function baseRecord(active: ActiveSession, now: number): Omit<SessionRecord, "changes" | "cardio" | "skipped"> {
+function baseRecord(active: ActiveSession, now: number, end = now): Omit<SessionRecord, "changes" | "cardio" | "skipped"> {
   return {
     id: active.id,
     index: active.index,
@@ -386,8 +466,8 @@ function baseRecord(active: ActiveSession, now: number): Omit<SessionRecord, "ch
     name: active.plan.name,
     week: active.plan.week,
     startedAt: active.startedAt,
-    finishedAt: now,
-    activeMinutes: Math.round(elapsedMs(active, now) / 60_000),
+    finishedAt: end,
+    activeMinutes: activeMinutes(active, end, now),
     plan: active.plan,
     sets: active.sets,
     deload: active.plan.deload,
@@ -396,16 +476,19 @@ function baseRecord(active: ActiveSession, now: number): Omit<SessionRecord, "ch
   };
 }
 
-/** Close the session: progress every exercise and move on to the next session. */
-export function finishSession(active: ActiveSession, core: Core, now: number, cardio?: CardioResult): { core: Core; record: SessionRecord } {
+/**
+ * Close the session: progress every exercise and move on to the next session. `endedAt` closes
+ * it as of an earlier moment, for a workout that was left open.
+ */
+export function finishSession(active: ActiveSession, core: Core, now: number, cardio?: CardioResult, endedAt = now): { core: Core; record: SessionRecord } {
   let state = core.state;
   let changes: ExerciseChange[] = [];
   if (active.plan.kind === "strength") {
-    const result = recordSession(core.state, active.plan, active.sets, contextFor(core));
+    const result = recordSessionWithExtras(core.state, active.plan, active.sets, contextFor(core));
     state = result.state;
     changes = result.changes;
   }
-  const record: SessionRecord = { ...baseRecord(active, now), changes, cardio: cardio ?? null, skipped: false };
+  const record: SessionRecord = { ...baseRecord(active, now, Math.min(endedAt, now)), changes, cardio: cardio ?? null, skipped: false };
   return { core: { ...core, state, nextIndex: Math.max(core.nextIndex, active.index + 1) }, record };
 }
 
@@ -438,7 +521,7 @@ export function refit(plan: SessionPlan): SessionPlan {
 }
 
 export function progressSummary(active: ActiveSession): { done: number; total: number } {
-  const order = setOrder(active.plan).filter((r) => !active.skippedSlots.includes(r.slot));
+  const order = setOrder(active.plan, active.extraSets).filter((r) => !active.skippedSlots.includes(r.slot));
   const done = order.filter((r) => loggedSet(active, r.slot, r.setIndex)).length;
   return { done, total: order.length };
 }

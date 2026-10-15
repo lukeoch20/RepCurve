@@ -5,12 +5,14 @@ import { atLocation } from "../model/equipment";
 import { newCore, rescheduled } from "../model/plan";
 import { profileFor } from "../model/profile";
 import {
+  addSet,
   adjustTimer,
   clearTimer,
   editSet,
   finishSession,
   logSet,
   pause,
+  removeAddedSet,
   removeSet,
   setPainArea,
   resume,
@@ -49,6 +51,9 @@ export type Action =
   | { type: "log"; ref: SetRef; values: SetValues; now: number }
   | { type: "edit"; slot: string; setIndex: number; values: SetValues }
   | { type: "remove"; slot: string; setIndex: number }
+  /** One more set of an exercise than planned, or take the last added one back. */
+  | { type: "addSet"; slot: string }
+  | { type: "removeAddedSet"; slot: string }
   | { type: "painArea"; slot: string; setIndex: number; area: string | null }
   | { type: "skipSlot"; slot: string }
   | { type: "unskipSlot"; slot: string }
@@ -62,7 +67,8 @@ export type Action =
   | { type: "cardioStart"; now: number }
   | { type: "cardioTick"; now: number }
   | { type: "cardioNext"; now: number }
-  | { type: "finish"; now: number; cardio?: CardioResult }
+  /** `at` closes the session as of an earlier moment, e.g. its last set when it was left open. */
+  | { type: "finish"; now: number; cardio?: CardioResult; at?: number }
   | { type: "discard" }
   | { type: "skip"; now: number }
   | { type: "dismissFinished" };
@@ -120,6 +126,10 @@ export function reducer(s: AppState, a: Action): AppState {
       return withActive(editSet(active, a.slot, a.setIndex, a.values, core));
     case "remove":
       return withActive(removeSet(active, a.slot, a.setIndex, core));
+    case "addSet":
+      return withActive(addSet(active, a.slot));
+    case "removeAddedSet":
+      return withActive(removeAddedSet(active, a.slot));
     case "painArea":
       return withActive(setPainArea(active, a.slot, a.setIndex, a.area));
     case "skipSlot":
@@ -151,7 +161,7 @@ export function reducer(s: AppState, a: Action): AppState {
     case "discard":
       return { ...s, data: { ...s.data, active: null } };
     case "finish": {
-      const r = finishSession(active, core, a.now, a.cardio);
+      const r = finishSession(active, core, a.now, a.cardio, a.at);
       return { ...s, data: { core: r.core, active: null, history: [...history, r.record] }, finished: r.record };
     }
     default:

@@ -22,8 +22,10 @@ export interface Settings {
  * Version of the stored data's shape. 2: fields this version doesn't know are kept on load, and the
  * number tells an older app that newer data is in front of it. 3: an exercise in a superset may
  * do one set fewer than the superset's rounds (older apps would wait for a set they never show).
+ * 4: sets can be added to an exercise mid-session (older apps would hide them and count them
+ * toward progression).
  */
-export const DATA_VERSION = 3;
+export const DATA_VERSION = 4;
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
@@ -125,6 +127,8 @@ export interface ActiveSession {
   skippedSlots: string[];
   /** Swaps made in this session, and why: the training profile learns from them. Missing means none. */
   swaps?: SwapEvent[];
+  /** Sets added per slot beyond the plan. Missing means none. */
+  extraSets?: Record<string, number>;
 }
 
 export interface CardioResult {
