@@ -117,14 +117,21 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
   );
 }
 
-/** The RepCurve mark: a rising curve. RepCurve Test shows it with the colours swapped. */
+/** The RepCurve mark: three rising blocks on a white tile. RepCurve Test shows it with the colours swapped.
+ *  Keep in step with MARK in scripts/make-icons.mjs. */
 export function CurveMark(props: { size?: number }): React.ReactElement {
   const s = props.size ?? 28;
-  const [tile, curve] = IS_TEST ? ["var(--card)", "var(--accent)"] : ["var(--accent)", "var(--accent-ink)"];
+  const [tile, ink, edge] = IS_TEST ? ["#2a2e33", "#ffffff", "#2a2e33"] : ["#ffffff", "#2a2e33", "#c9ced4"];
   return (
-    <svg width={s} height={s} viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill={tile} stroke={IS_TEST ? "var(--accent)" : tile} strokeWidth="1" />
-      <path d="M6 24 C 12 23, 15 19, 17 15 S 22 8, 26 7" fill="none" stroke={curve} strokeWidth="2.6" strokeLinecap="round" />
+    <svg width={s} height={s} viewBox="0 0 100 100" aria-hidden="true" className="mark">
+      <rect x="1.5" y="1.5" width="97" height="97" rx="24" fill={tile} stroke={edge} strokeWidth="3" />
+      <g fill={ink} transform="translate(50 50) scale(0.82) translate(-50 -50)">
+        <rect x="9" y="40" width="22" height="34.5" rx="5.8" />
+        <rect x="30" y="52.8" width="7.8" height="7.1" />
+        <rect x="36.8" y="29" width="23.8" height="46.8" rx="6" />
+        <rect x="59.6" y="52.8" width="8.1" height="7.1" />
+        <rect x="66.7" y="17.6" width="24.3" height="64.8" rx="6.5" />
+      </g>
     </svg>
   );
 }
