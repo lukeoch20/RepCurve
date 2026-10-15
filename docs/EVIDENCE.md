@@ -14,7 +14,9 @@ Last reviewed: 2026-10-04
 **Sources:** Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains. *Sports Med* 56:481–505. https://doi.org/10.1007/s40279-025-02344-w · Schoenfeld BJ, Ogborn D, Krieger JW (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass. *J Sports Sci* 35:1073–1082. https://doi.org/10.1080/02640414.2016.1210197
 **Engine:** hypertrophy relative effect = (S/10)^0.4 and strength = (S/10)^0.25 [est]. Novice default is 6–10 fractional sets; about 12 is the practical ceiling in 3×20 min.
 
-**Built:** the dose exponents are implemented (packages/engine/src/projection.ts). Weekly targets are 8–10 sets for novices and 12–16 for intermediates (level.ts); the plan explanation reports muscles under target with their numbers.
+**Built:** the dose exponents are implemented (packages/engine/src/projection.ts). Weekly targets are 8–10 sets for novices and 12–16 for intermediates (level.ts); the plan explanation reports muscles under target with their numbers. Each week is also capped at half again the top of the target (15 sets for novices, 24 for intermediates, 30 for advanced; `volumeCeiling` in level.ts) [est]: past it the curve is nearly flat for strength and flattening for size, so the planner leaves pairs and rounds out and the session finishes early with a note, rather than piling on sets. Push days press twice in their first two pairs, as pull days row and pull down, so chest and back get the same sets.
+
+Sessions are filled toward what the week is short on (generate.ts `weekChain`, session.ts). The week's lifting days are planned in order; each sees what the days before it planned and keeps room for the main pairs of the days after it. After its opening pairs, a session adds whatever is worth most for the time it takes: another round, the day's next pair, or a pair for the muscles furthest below the target (split days only add pairs for their own muscles). A set is worth 1 below the bottom of the target, 0.5 up to the top, 0.15 up to the ceiling and nothing past it, and calves and arms count for less than the big movers [est]. When the ceiling stops one exercise of a pair, its partner can still do one more set. The volume level steps up with sessions logged: novices are planned as intermediates after 60 strength sessions (16 for someone returning after a break), and regular lifters as advanced after 150 [est].
 
 ## 2. Proximity to failure (RIR)
 **Claim:** sets at ~0–3 RIR count fully for hypertrophy; strength is less sensitive.
@@ -93,6 +95,8 @@ Last reviewed: 2026-10-04
 **Engine:** reactive deload when e1RM stalls on ≥2 lifts for 2 sessions or recovery is poor: half the sets, same load, RIR 3–4. Optional scheduled deload every 8–10 weeks. A deload week counts as 0.5 training week in projections [est].
 
 **Built:** a different trigger. When at least half the sets in each of the last 3 strength sessions were grinders (0 RIR, or below the range when an easier option exists), the next week's strength sessions drop one round and one dumbbell step. Pain overrides a deload or comeback. Projections do not discount deload weeks.
+
+**Built (planned deloads):** past the novice stage, a light week is also due after 8 weeks of training for intermediates and 6 for advanced lifters (one per exercise block), counted in strength sessions. Inside Bell 2024's 5.6 ± 2.3 weeks and the 8–10 week option above. Novices stay reactive only, as nothing shows scheduled deloads help them. A reactive deload, or a break of 14+ days, restarts the count. The banner tells a planned week apart from a reactive one.
 
 ## 10. Novices progress on almost anything; double progression
 **Verdict: supported.**

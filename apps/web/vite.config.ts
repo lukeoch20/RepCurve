@@ -38,6 +38,8 @@ export default defineConfig(({ mode }) => {
           outDir: "dist-artifact",
           emptyOutDir: true,
           cssCodeSplit: false,
+          // One self-contained page: every asset (the bundled fonts) goes inline as a data URI.
+          assetsInlineLimit: Number.MAX_SAFE_INTEGER,
           rollupOptions: {
             input: "src/main.tsx",
             external: ["virtual:pwa-register"],
@@ -67,8 +69,9 @@ export default defineConfig(({ mode }) => {
               start_url: "./",
               scope: "./",
               display: "standalone",
-              background_color: "#eaf1fb",
-              theme_color: "#1e5b3b",
+              // The splash screen matches the icon's tile so the mark doesn't sit on a second colour.
+              background_color: test ? "#2a2e33" : "#ffffff",
+              theme_color: test ? "#2a2e33" : "#ffffff",
               icons: [
                 { src: icon("icon-192.png"), sizes: "192x192", type: "image/png" },
                 { src: icon("icon-512.png"), sizes: "512x512", type: "image/png" },
@@ -76,17 +79,11 @@ export default defineConfig(({ mode }) => {
               ],
             },
             workbox: {
+              // The bundled fonts (woff2) are precached with the app, so every style looks right offline.
               globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
               // The real app's offline worker covers /RepCurve/, which contains /RepCurve/test/. It must
               // never answer for the test app: no test files cached, and test pages go to the network.
               ...(test ? {} : { globIgnores: ["test/**"], navigateFallbackDenylist: [/\/test\//] }),
-              runtimeCaching: [
-                {
-                  urlPattern: ({ url }) => url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com",
-                  handler: "StaleWhileRevalidate",
-                  options: { cacheName: "fonts", expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 } },
-                },
-              ],
             },
           }),
         ],

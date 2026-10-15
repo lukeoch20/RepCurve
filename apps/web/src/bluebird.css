@@ -169,9 +169,11 @@
 [data-style="bluebird"] .switch { border-radius: var(--radius-sm); background: var(--sunk); border: 1px solid var(--control-line); box-shadow: inset 1px 1px 2px rgb(0 0 0 / 0.18); }
 [data-style="bluebird"] .switch::after { top: 2px; left: 2px; border-radius: 3px; background: var(--card); box-shadow: inset 1px 1px 0 var(--bevel-hi), inset -1px -1px 0 var(--bevel-lo), 0 0 0 1px var(--control-line); }
 /* a check on the "on" side, a dash on the "off" side, so the state never rests on colour */
-[data-style="bluebird"] .switch::before { content: ""; position: absolute; left: 31px; top: 13px; width: 9px; height: 0; border-top: 2px solid var(--muted); }
+/* Inside the 1px border the track is 48 × 28; the thumb leaves 0–22 free when on and 26–48 when off,
+   so the check centres on (11, 14) and the dash on (37, 14). */
+[data-style="bluebird"] .switch::before { content: ""; position: absolute; box-sizing: border-box; left: 32.5px; top: 13px; width: 9px; height: 2px; background: var(--muted); }
 [data-style="bluebird"] .switch:checked { background: var(--accent); border-color: var(--accent-line); }
-[data-style="bluebird"] .switch:checked::before { left: 8px; top: 8px; width: 10px; height: 5px; border: 0; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
+[data-style="bluebird"] .switch:checked::before { left: 5.5px; top: 9px; width: 11px; height: 6px; background: none; border-left: 2px solid var(--accent-ink); border-bottom: 2px solid var(--accent-ink); transform: rotate(-45deg); }
 
 /* tab bar: a blue taskbar; the current tab is a raised green button */
 [data-style="bluebird"] .tabbar { background: linear-gradient(var(--chrome-top), var(--chrome)); border-top: 1px solid var(--chrome); backdrop-filter: none; }

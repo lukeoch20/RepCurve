@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { IS_TEST } from "../platform/channel";
+import { useFocusTrap } from "./focusTrap";
 import { PIXEL_ICONS } from "./pixelIcons";
 
 export function Seg<T extends string | number>(props: {
@@ -22,14 +23,23 @@ export function Seg<T extends string | number>(props: {
 
 export function Choice<T extends string>(props: {
   value: T | undefined;
-  options: { value: T; label: string; hint?: string }[];
+  options: { value: T; label: string; hint?: string; disabled?: boolean }[];
   onChange: (v: T) => void;
   label: string;
 }): React.ReactElement {
   return (
     <div className="choice" role="group" aria-label={props.label}>
       {props.options.map((o) => (
-        <button key={o.value} type="button" aria-pressed={props.value === o.value} onClick={() => props.onChange(o.value)}>
+        // An unavailable option stays focusable so its reason can be reached and read.
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={props.value === o.value}
+          aria-disabled={o.disabled || undefined}
+          onClick={() => {
+            if (!o.disabled) props.onChange(o.value);
+          }}
+        >
           <b>{o.label}</b>
           {o.hint ? <span>{o.hint}</span> : null}
         </button>
@@ -77,20 +87,9 @@ export function Stepper(props: {
 
 export function Sheet(props: { title: string; onClose: () => void; children: React.ReactNode }): React.ReactElement {
   const dialog = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && props.onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [props.onClose]);
-  // Move focus into the sheet when it opens (and when its content changes title), and give it
-  // back to whatever opened it when it closes.
-  React.useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    return () => opener?.focus?.();
-  }, []);
-  React.useEffect(() => {
-    dialog.current?.focus();
-  }, [props.title]);
+  // Focus stays inside while it's open (it moves in again when the content changes title),
+  // Escape closes it, and focus goes back to whatever opened it.
+  useFocusTrap(dialog, { onEscape: props.onClose, contentKey: props.title });
   // Rendered at the end of <body> so it never inherits styles from where it was opened.
   return createPortal(
     <div className="scrim" onClick={props.onClose}>
@@ -108,14 +107,21 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
   );
 }
 
-/** The RepCurve mark: a rising curve. RepCurve Test shows it with the colours swapped. */
+/** The RepCurve mark: three rising blocks on a white tile. RepCurve Test shows it with the colours swapped.
+ *  Keep in step with MARK in scripts/make-icons.mjs. */
 export function CurveMark(props: { size?: number }): React.ReactElement {
   const s = props.size ?? 28;
-  const [tile, curve] = IS_TEST ? ["var(--card)", "var(--accent)"] : ["var(--accent)", "var(--accent-ink)"];
+  const [tile, ink, edge] = IS_TEST ? ["#2a2e33", "#ffffff", "#2a2e33"] : ["#ffffff", "#2a2e33", "#c9ced4"];
   return (
-    <svg width={s} height={s} viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill={tile} stroke={IS_TEST ? "var(--accent)" : tile} strokeWidth="1" />
-      <path d="M6 24 C 12 23, 15 19, 17 15 S 22 8, 26 7" fill="none" stroke={curve} strokeWidth="2.6" strokeLinecap="round" />
+    <svg width={s} height={s} viewBox="0 0 100 100" aria-hidden="true" className="mark">
+      <rect x="1.5" y="1.5" width="97" height="97" rx="24" fill={tile} stroke={edge} strokeWidth="3" />
+      <g fill={ink} transform="translate(50 50) scale(0.82) translate(-50 -50)">
+        <rect x="9" y="40" width="22" height="34.5" rx="5.8" />
+        <rect x="30" y="52.8" width="7.8" height="7.1" />
+        <rect x="36.8" y="29" width="23.8" height="46.8" rx="6" />
+        <rect x="59.6" y="52.8" width="8.1" height="7.1" />
+        <rect x="66.7" y="17.6" width="24.3" height="64.8" rx="6.5" />
+      </g>
     </svg>
   );
 }
@@ -143,6 +149,22 @@ export const ICONS = {
   gym: "M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12",
   pairs: "M5 8v8M9 8v8M15 8v8M19 8v8M5 12h4M15 12h4",
   core: "M12 4v16M7 8h10M7 16h10M9 12h6",
+  barbell: "M2 12h20M5 8v8M8 6v12M16 6v12M19 8v8",
+  cable: "M5 3v18M5 5h9l4 4M18 9v6M16 15h4M5 21h4",
+  machine: "M5 3v18h14M9 7h6v10H9zM9 10h6M9 13h6",
+  bike: "M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM6 17l4-7h6l2 7M10 10l-1-3h-2M16 10l-1-4h2",
+  rower: "M3 18h18M6 18v-3M18 18v-3M8 13l6-4 5 1M14 9a1.5 1.5 0 1 0 0-.01",
+  stairs: "M4 20h5v-4h4v-4h4V8h3",
+  elliptical: "M5 18a7 3 0 0 0 14 0 7 3 0 0 0-14 0M8 18 10 5M10 5h4",
+  anchor: "M4 4h6v16H4zM10 12h4c2 0 3 2 6 2M18 12l2 2-2 2",
+  slider: "M4 15a4 2 0 0 0 7 0 4 2 0 0 0-7 0M13 15a4 2 0 0 0 7 0 4 2 0 0 0-7 0M7 13V9M17 13V9",
+  suspension: "M12 3v5M12 8l-5 9M12 8l5 9M5 17h4M15 17h4",
+  // Day emblems: press up into a bar, pull a bar down, a star jump, head and shoulders, hips and legs
+  push: "M5 3v4M19 3v4M5 5h14M12 21V8M8 12l4-4 4 4",
+  pull: "M4 4h16M8 4v6M16 4v6M12 8v12M8.5 16.5 12 20l3.5-3.5",
+  fullBody: "M14 4.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 7.5v7M4 7l8 4 8-4M7 21l5-6.5 5 6.5",
+  upper: "M14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM4 20v-5a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v5M9 20v-4M15 20v-4",
+  lower: "M6 4h12M7 4 6 12l1.5 7M17 4l1 8-1.5 7M11 4l-.5 8 .5 7M13 4l.5 8-.5 7M4 20h7M13 20h7",
   pause: "M8 5v14M16 5v14",
   play: "M7 5v14l11-7z",
 } as const;

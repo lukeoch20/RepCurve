@@ -70,16 +70,17 @@ describe("recordSession", () => {
 
   it("moves every slot that used an exercise when it ladders up, without duplicating", () => {
     let state = initialTrainingState();
-    state.exercises["goblet_squat"] = {
-      exerciseId: "goblet_squat", loadKg: lb(30), repRange: [8, 15], targetRir: 2, targetReps: 15,
-      stalls: 0, e1rmKg: null, bestE1rmKg: null, calibrated: true, timesPerformed: 4,
+    state.exercises["incline_push_up"] = {
+      exerciseId: "incline_push_up", loadKg: null, repRange: [8, 20], targetRir: 2, targetReps: 20,
+      stalls: 0, e1rmKg: null, bestE1rmKg: null, calibrated: true, timesPerformed: 4, topStreak: 1,
     };
-    state = train(state, 4, (p) => ({ reps: p.exerciseId === "goblet_squat" ? 15 : p.targetReps, rir: 2 })).state;
-    expect(resolveExercise(state, "goblet_squat")).toBe("db_front_squat");
+    state = train(state, 4, (p) => ({ reps: p.exerciseId === "incline_push_up" ? 20 : p.targetReps, rir: 2 })).state;
+    expect(resolveExercise(state, "incline_push_up")).toBe("push_up");
 
-    const a = applyState(planSessionWith(ctx, 8), state, ctx); // Full body A, week 3
-    expect(find(a, "A.squat").exerciseId).toBe("db_front_squat");
-    const b = applyState(planSessionWith(ctx, 9), state, ctx); // Full body B already programs front squats
+    const a = applyState(planSessionWith(ctx, 8), state, ctx);
+    const ids0 = prescriptionsOf(a).map((p) => p.exerciseId);
+    expect(ids0).not.toContain("incline_push_up");
+    const b = applyState(planSessionWith(ctx, 9), state, ctx);
     const ids = prescriptionsOf(b).map((p) => p.exerciseId);
     expect(new Set(ids).size).toBe(ids.length);
   });

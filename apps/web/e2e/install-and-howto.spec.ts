@@ -50,9 +50,10 @@ test("tapping an exercise shows how to do it, before and during a workout", asyn
   await page.getByRole("button", { name: "Goblet squat" }).click();
   const sheet = page.getByRole("dialog", { name: "Goblet squat" });
   await expect(sheet).toContainText("Each rep");
-  await expect(sheet).toContainText("Works your quads and glutes");
-  // Easier and harder versions open in place (the sheet takes their name), with a way back.
-  await sheet.getByRole("button", { name: /^Harder:/ }).click();
+  await expect(sheet).toContainText("Works your quadriceps and gluteus maximus");
+  await expect(sheet).toContainText("Why it's here");
+  // Other exercises for the same job open in place (the sheet takes their name), with a way back.
+  await sheet.getByRole("button", { name: "Dumbbell front squat" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toHaveAccessibleName("Dumbbell front squat");
   await dialog.getByRole("button", { name: "Back to Goblet squat" }).click();
@@ -83,13 +84,14 @@ test.describe("in a desktop browser that offers its own install prompt", () => {
   });
 });
 
-test("in an app's built-in browser on iPhone, it says to open Safari", async ({ browser }) => {
+test("in an app's built-in browser on iPhone, it says to open Safari", async ({ browser, baseURL }) => {
   const ctx = await browser.newContext({
+    ...(baseURL ? { baseURL } : {}),
     viewport: { width: 390, height: 844 },
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 300.0.0",
   });
   const page = await ctx.newPage();
-  await page.goto("http://127.0.0.1:4173/");
+  await page.goto("./");
   await expect(page.getByRole("region", { name: "Install RepCurve" })).toContainText("Open this page in Safari");
   await ctx.close();
 });

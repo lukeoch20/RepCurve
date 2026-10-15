@@ -15,20 +15,36 @@ export interface LiftSeries {
   points: { t: number; y: number }[];
 }
 
+export interface LiftPoint {
+  id: string;
+  name: string;
+  metric: LiftSeries["metric"];
+  y: number;
+}
+
+/** A session's best set per exercise (core work aside); none for cardio or a skipped session. */
+export function sessionLiftPoints(r: SessionRecord): LiftPoint[] {
+  if (r.kind !== "strength" || r.skipped) return [];
+  const byEx = new Map<string, SessionRecord["sets"]>();
+  for (const s of r.sets) byEx.set(s.exerciseId, [...(byEx.get(s.exerciseId) ?? []), s]);
+  const out: LiftPoint[] = [];
+  for (const [id, sets] of byEx) {
+    const e = findExercise(id);
+    if (!e || e.pattern === "core") continue;
+    const loaded = sets.filter((s) => s.loadKg !== null && s.reps > 0);
+    const metric = loaded.length > 0 ? "e1rm" : "reps";
+    const y = metric === "e1rm" ? Math.max(...loaded.map((s) => e1RM(s.loadKg!, s.reps, s.rir))) : Math.max(...sets.map((s) => s.reps));
+    out.push({ id, name: e.name, metric, y });
+  }
+  return out;
+}
+
 /** One series per exercise (core work aside): the best set of each session. */
 export function liftSeries(history: SessionRecord[]): LiftSeries[] {
   const map = new Map<string, LiftSeries>();
   for (const r of history) {
-    if (r.kind !== "strength" || r.skipped) continue;
-    const byEx = new Map<string, SessionRecord["sets"]>();
-    for (const s of r.sets) byEx.set(s.exerciseId, [...(byEx.get(s.exerciseId) ?? []), s]);
-    for (const [id, sets] of byEx) {
-      const e = findExercise(id);
-      if (!e || e.pattern === "core") continue;
-      const loaded = sets.filter((s) => s.loadKg !== null && s.reps > 0);
-      const metric = loaded.length > 0 ? "e1rm" : "reps";
-      const y = metric === "e1rm" ? Math.max(...loaded.map((s) => e1RM(s.loadKg!, s.reps, s.rir))) : Math.max(...sets.map((s) => s.reps));
-      const cur = map.get(id) ?? { id, name: e.name, metric, points: [] };
+    for (const { id, name, metric, y } of sessionLiftPoints(r)) {
+      const cur = map.get(id) ?? { id, name, metric, points: [] };
       // A move from bodyweight to dumbbells starts a fresh series rather than mixing units.
       if (cur.metric !== metric) {
         cur.metric = metric;

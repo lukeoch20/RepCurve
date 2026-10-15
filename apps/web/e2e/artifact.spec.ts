@@ -52,7 +52,6 @@ function fakeClaude() {
 test.beforeEach(async ({ page: p }) => {
   // Any script from elsewhere would mean the page trusts a third party with the user's data (RC-35).
   await p.route("**/*.js", (route) => (route.request().url().startsWith("http://artifact.test/") ? route.continue() : route.abort()));
-  await p.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ contentType: "text/css", body: "" }));
   await p.route("http://artifact.test/**", (route) => route.fulfill({ contentType: "text/html", body: doc }));
   await p.addInitScript(fakeClaude);
   await p.addInitScript(() => localStorage.setItem("repcurve.tips", JSON.stringify({ off: true, seen: [] })));
@@ -60,6 +59,24 @@ test.beforeEach(async ({ page: p }) => {
 
 test("the claude.ai page loads no third-party scripts", () => {
   expect(page).not.toMatch(/<script[^>]+src=/i);
+});
+
+test("the claude.ai page carries its own fonts and asks no other site for anything", async ({ page: p }) => {
+  const elsewhere: string[] = [];
+  p.on("request", (r) => {
+    if (!r.url().startsWith("http://artifact.test/") && !r.url().startsWith("data:")) elsewhere.push(r.url());
+  });
+  await p.goto("http://artifact.test/");
+  await expect(p.getByRole("button", { name: "Set up my plan" })).toBeVisible();
+  const families = ["Inter", "Newsreader", "Archivo Narrow", "Cinzel", "Manrope", "Bodoni Moda", "Hanken Grotesk", "Pixel Press 5x7"];
+  const ready = await p.evaluate(async (fs) => {
+    const out: Record<string, boolean> = {};
+    for (const f of fs) out[f] = (await document.fonts.load(`16px "${f}"`)).length > 0 && document.fonts.check(`16px "${f}"`);
+    return out;
+  }, families);
+  expect(ready).toEqual(Object.fromEntries(families.map((f) => [f, true])));
+  expect(page).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
+  expect(elsewhere).toEqual([]);
 });
 
 test("the claude.ai page never suggests installing", async ({ page: p }) => {
@@ -78,6 +95,7 @@ test("the claude.ai page saves to the account database and survives a reload", a
   await p.getByLabel("Height (cm)").fill("168");
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: /A little/ }).click();
+  await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("group", { name: "Dumbbells" }).getByRole("button", { name: "None" }).click();

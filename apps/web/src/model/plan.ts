@@ -1,4 +1,5 @@
 import {
+  applySoreness,
   applyState,
   generateProgram,
   initialTrainingState,
@@ -10,22 +11,34 @@ import {
   type SessionPlan,
 } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
-import { DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
+import { withProfile } from "./profile";
+import { currentSoreness } from "./soreness";
+import { DATA_VERSION, DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 let cached: { key: string; ctx: EngineContext } | null = null;
 
-/** Engine context for the user's current profile and equipment (memoised). */
-export function contextFor(core: Pick<Core, "profile" | "equipment">): EngineContext {
-  const key = JSON.stringify([core.profile, core.equipment]);
-  if (!cached || cached.key !== key) cached = { key, ctx: makeContext(core.profile, core.equipment) };
+/**
+ * Engine context for the user's current profile and equipment (memoised). Sessions logged so far
+ * step the plan's volume up as the person moves past the novice stage.
+ */
+export function contextFor(
+  core: Pick<Core, "profile" | "equipment"> & Partial<Pick<Core, "nextIndex" | "positionOffset">> & { state?: Pick<Core["state"], "strengthSessionsLogged"> },
+): EngineContext {
+  const logged = core.state?.strengthSessionsLogged ?? 0;
+  // Where the person is in the sequence places a promotion in time: it starts with the next week.
+  const position = core.nextIndex !== undefined ? positionOf(core, core.nextIndex) : undefined;
+  const key = JSON.stringify([core.profile, core.equipment, logged, position]);
+  if (!cached || cached.key !== key) {
+    cached = { key, ctx: makeContext(core.profile, core.equipment, { strengthSessionsLogged: logged, ...(position !== undefined ? { position } : {}) }) };
+  }
   return cached.ctx;
 }
 
 export function newCore(profile: Profile, equipment: Equipment, now: number, settings: Settings = DEFAULT_SETTINGS): Core {
   return {
-    version: 1,
+    version: DATA_VERSION,
     profile,
     equipment,
     settings,
@@ -63,13 +76,15 @@ export function rescheduled(core: Core, profile: Profile, equipment: Equipment):
   return { ...next, positionOffset: week * after + day - core.nextIndex };
 }
 
-export function planFor(core: Core, index: number, minutes?: number | null, lastCardioEffort?: number): SessionPlan {
+export function planFor(core: Core, index: number, minutes?: number | null, lastCardioEffort?: number, weekDone?: SessionPlan[]): SessionPlan {
   const ctx = contextFor(core);
   return planSessionWith(ctx, positionOf(core, index), {
+    ...(weekDone && weekDone.length > 0 ? { weekDone } : {}),
     restSec: core.settings.restSec,
     transitionSec: core.settings.transitionSec,
     ...(minutes ? { minutes } : {}),
     ...(lastCardioEffort !== undefined ? { lastCardioEffort } : {}),
+    ...(core.settings.cardioActivity ? { cardioActivity: core.settings.cardioActivity } : {}),
   });
 }
 
@@ -89,13 +104,13 @@ export function lastCardioEffort(history: SessionRecord[]): number | undefined {
 export function currentProgram(core: Core): Program {
   return generateProgram(
     { profile: core.profile, equipment: core.equipment },
-    { weeks: 2, restSec: core.settings.restSec, transitionSec: core.settings.transitionSec, state: core.state, createdAt: "current" },
+    { weeks: 2, restSec: core.settings.restSec, transitionSec: core.settings.transitionSec, state: core.state, position: positionOf(core, core.nextIndex), createdAt: "current" },
   );
 }
 
-/** Candidate lengths for today: 10 to 40 minutes in fives, plus the user's usual length. */
+/** Candidate lengths for today: 10 to 60 minutes in fives, plus the user's usual length. */
 export function timeSteps(usual: number): number[] {
-  const steps = new Set([10, 15, 20, 25, 30, 35, 40, usual]);
+  const steps = new Set([10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, usual]);
   return [...steps].sort((a, b) => a - b);
 }
 
@@ -122,11 +137,18 @@ export function planWork(plan: SessionPlan): number {
   return plan.supersets.reduce((n, ss) => n + ss.items.reduce((m, p) => m + p.sets, 0), 0) + (plan.finisher?.sets ?? 0);
 }
 
-/** The next session, personalised from the training state. */
+/** Strength sessions done in the current week, as done, so the next session fits around them. */
+export function doneThisWeek(core: Core, history: SessionRecord[]): SessionPlan[] {
+  const { week } = weekAndDay(contextFor(core), positionOf(core, core.nextIndex));
+  return history.filter((r) => r.kind === "strength" && !r.skipped && r.plan.kind === "strength" && r.plan.week === week).map((r) => r.plan);
+}
+
+/** The next session, personalised from the training state, the training profile and today's "still sore" answers. */
 export function todayPlan(core: Core, history: SessionRecord[], now: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
   const days = daysSinceLastStrength(history, now);
-  return applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
+  const plan = applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history), doneThisWeek(core, history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
+  return applySoreness(withProfile(plan, core, history, now), currentSoreness(core, now));
 }
 
 export interface WeekSlot {

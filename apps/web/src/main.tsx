@@ -3,10 +3,13 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { applyStyle, loadStyle } from "./platform/style";
 import { setUpdateReady } from "./platform/update";
+import "./fonts.css";
 import "./styles.css";
 import "./bluebird.css";
 import "./forge.css";
 import "./pixel.css";
+import "./gold.css";
+import "./diamond.css";
 
 declare const __RUNTIME__: "pwa" | "artifact";
 
@@ -16,6 +19,8 @@ applyStyle(loadStyle());
 createRoot(document.getElementById("root")!).render(<App />);
 
 if (__RUNTIME__ === "pwa" && "serviceWorker" in navigator && import.meta.env.PROD) {
+  // Fonts used to come from a font service and were cached here; they ship with the app now.
+  if ("caches" in window) void caches.delete("fonts").catch(() => {});
   void import("virtual:pwa-register")
     .then(({ registerSW }) => {
       const updateSW = registerSW({

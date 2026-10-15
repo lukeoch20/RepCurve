@@ -2,7 +2,7 @@ import type { Equipment, Profile } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { dayLabel } from "../model/format";
 import { nextUp } from "../model/session";
-import { INITIAL, reducer, type AppState } from "./reducer";
+import { INITIAL, reducer, safeReducer, type AppState } from "./reducer";
 
 const profile: Profile = {
   sex: "male", age: 33, heightCm: 178, bodyweightKg: 84, trainingHistory: "never", goal: "both",
@@ -32,6 +32,16 @@ describe("reducer: a session from setup to finish", () => {
     expect(s.data.history).toHaveLength(1);
     expect(s.data.core!.nextIndex).toBe(1);
     expect(s.finished?.id).toBe(s.data.history[0]!.id);
+  });
+
+  it("adds a set and takes it back", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, now: T0 });
+    s = reducer(s, { type: "start", now: T0, minutes: null });
+    const slot = nextUp(s.data.active!)!.slot;
+    s = reducer(s, { type: "addSet", slot });
+    expect(s.data.active!.extraSets).toEqual({ [slot]: 1 });
+    s = reducer(s, { type: "removeAddedSet", slot });
+    expect(s.data.active!.extraSets).toEqual({});
   });
 
   it("skips a session without starting it", () => {
@@ -66,5 +76,58 @@ describe("dayLabel", () => {
     expect(dayLabel(new Date(2026, 9, 6, 23, 30).getTime(), now)).toBe("Yesterday");
     expect(dayLabel(new Date(2026, 9, 3, 12).getTime(), now)).toBe(new Date(2026, 9, 3).toLocaleDateString(undefined, { weekday: "long" }));
     expect(dayLabel(new Date(2026, 8, 20, 12).getTime(), now)).toBe(new Date(2026, 8, 20).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+  });
+});
+
+describe("reducer: training at home and at a gym", () => {
+  const gym: Equipment = { ...equipment, barbell: true, rack: true, cables: true, machines: ["leg_press", "lat_pulldown", "chest_press"] };
+
+  it("plans from where the user trains today, and switches with the place", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+    expect(s.data.core!.equipment).toEqual(equipment);
+    s = reducer(s, { type: "location", at: "gym" });
+    expect(s.data.core!.equipment).toEqual(gym);
+    expect(s.data.core!.locations!.at).toBe("gym");
+    // Changing units from Settings keeps both places.
+    s = reducer(s, { type: "setup", profile: { ...profile, units: "kg" }, equipment: s.data.core!.equipment, now: T0 });
+    expect(s.data.core!.locations!.home).toEqual(equipment);
+    expect(s.data.core!.equipment).toEqual(gym);
+  });
+
+  it("doesn't switch place in the middle of a session", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+    s = reducer(s, { type: "start", now: T0, minutes: null });
+    expect(reducer(s, { type: "location", at: "gym" })).toBe(s);
+  });
+});
+
+describe("L2: an action that fails changes nothing", () => {
+  // Data the engine can't plan from (an unknown goal got past every check), so starting throws.
+  const broken = (): AppState => {
+    const s = safeReducer(loaded(), { type: "setup", profile, equipment, now: T0 });
+    return { ...s, data: { ...s.data, core: { ...s.data.core!, profile: { ...profile, goal: "unknown" as never } } } };
+  };
+
+  it("the plain reducer throws, so this is a real failure", () => {
+    expect(() => reducer(broken(), { type: "start", now: T0, minutes: null })).toThrow();
+  });
+
+  it("keeps the data exactly as it was and records what failed", () => {
+    const before = broken();
+    const after = safeReducer(before, { type: "start", now: T0 + 5, minutes: null });
+    // The same objects: nothing is saved, nothing re-renders from new data.
+    expect(after.data).toBe(before.data);
+    expect(after.finished).toBe(before.finished);
+    expect(after.failure).toMatchObject({ action: "start" });
+    expect(after.failure!.error).toBeInstanceOf(Error);
+    // Each failure is a new record, so the app notices a repeat.
+    const again = safeReducer(after, { type: "start", now: T0 + 6, minutes: null });
+    expect(again.failure).not.toBe(after.failure);
+    expect(again.data).toBe(before.data);
+  });
+
+  it("carries on as usual for actions that work", () => {
+    const s = safeReducer(safeReducer(broken(), { type: "start", now: T0, minutes: null }), { type: "settings", settings: { restSec: 90 } });
+    expect(s.data.core!.settings.restSec).toBe(90);
   });
 });

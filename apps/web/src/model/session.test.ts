@@ -2,7 +2,13 @@ import { lbToKg } from "@repcurve/shared";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { newCore } from "./plan";
+import { migrateActive } from "./migrate";
 import {
+  AFTER_LAST_SET_MS,
+  MAX_ADDED_SETS,
+  STALE_MS,
+  activeMinutes,
+  addSet,
   adjustTimer,
   cardioMinutesDone,
   cardioRemainingMs,
@@ -10,12 +16,15 @@ import {
   elapsedMs,
   finishSession,
   logSet,
+  looksLeftOpen,
   nextUp,
   pending,
   pause,
   prefill,
   progressSummary,
+  removeAddedSet,
   removeSet,
+  skipSlot,
   resume,
   setOrder,
   setTimerLength,
@@ -123,6 +132,85 @@ describe("logging sets", () => {
   });
 });
 
+describe("adding a set", () => {
+  it("adds one more set to an exercise: in order, in the counts, and in the timer", () => {
+    const { core, active } = fresh(4);
+    const p = active.plan.supersets[0]!.items[0]!;
+    const before = progressSummary(active).total;
+    const a = addSet(active, p.slot);
+    expect(progressSummary(a).total).toBe(before + 1);
+    // The added set is an extra round after the planned ones, before the next superset.
+    const order = setOrder(a.plan, a.extraSets).map((r) => `${r.label}#${r.setIndex}`);
+    const ss = active.plan.supersets[0]!;
+    const extraAt = order.indexOf(`A1#${p.sets}`);
+    expect(extraAt).toBeGreaterThan(order.indexOf(`A1#${p.sets - 1}`));
+    expect(order[extraAt + 1]).toBe(ss.items[1]!.sets > p.sets ? `A2#${p.sets}` : "B1#0");
+    // Every set, the added one included, is logged before the session is done.
+    const done = logAll(a, core);
+    expect(nextUp(done)).toBeNull();
+    expect(done.sets.filter((s) => s.slot === p.slot)).toHaveLength(p.sets + 1);
+    const extra = done.sets.find((s) => s.slot === p.slot && s.setIndex === p.sets)!;
+    expect(extra.extra).toBe(true);
+    expect(done.sets.filter((s) => s.extra)).toHaveLength(1);
+  });
+
+  it("says which set is next out of how many, added sets included", () => {
+    const { core, active } = fresh(4);
+    const p = active.plan.supersets[0]!.items[0]!;
+    let a = addSet(active, p.slot);
+    expect(nextUp(a)!.slot).toBe(p.slot);
+    a = logSet(a, nextUp(a)!, { loadKg: p.loadKg, reps: 10, rir: 2 }, core, T0 + 1);
+    expect(a.timer?.next).toMatch(/· set 1 of /);
+    for (let ref = nextUp(a); ref && !(ref.slot === p.slot && ref.setIndex === p.sets); ref = nextUp(a)) {
+      a = logSet(a, ref, prefill(a, ref.slot, ref.setIndex), core, T0 + 2);
+    }
+    // The timer now points at the added set.
+    expect(a.timer?.next).toMatch(new RegExp(`^A1 .* · set ${p.sets + 1} of ${p.sets + 1}$`));
+  });
+
+  it("can be taken back until it's logged, and is capped", () => {
+    const { core, active } = fresh(4);
+    const p = active.plan.supersets[0]!.items[0]!;
+    let a = addSet(addSet(active, p.slot), p.slot);
+    a = removeAddedSet(a, p.slot);
+    expect(a.extraSets).toEqual({ [p.slot]: 1 });
+    a = removeAddedSet(a, p.slot);
+    expect(a.extraSets).toEqual({});
+    expect(removeAddedSet(a, p.slot)).toBe(a);
+    // Logged: it stays.
+    a = addSet(a, p.slot);
+    const logged = logSet(a, { slot: p.slot, exerciseId: p.exerciseId, setIndex: p.sets, group: 0, round: p.sets, position: 0, label: "A1" }, { loadKg: p.loadKg, reps: 8, rir: 1 }, core, T0 + 1);
+    expect(removeAddedSet(logged, p.slot)).toBe(logged);
+    for (let i = 0; i < MAX_ADDED_SETS + 2; i++) a = addSet(a, p.slot);
+    expect(a.extraSets![p.slot]).toBe(MAX_ADDED_SETS);
+    // Not to a skipped exercise.
+    expect(addSet(skipSlot(active, p.slot), p.slot).extraSets).toBeUndefined();
+  });
+
+  it("is judged on the planned sets: a grinding added set doesn't change next time", () => {
+    const { core, active } = fresh(4);
+    const p = active.plan.supersets[0]!.items[0]!;
+    const plain = finishSession(logAll(active, core), core, T0 + 20 * 60_000);
+    let a = logAll(addSet(active, p.slot), core);
+    const i = a.sets.findIndex((s) => s.extra);
+    a = { ...a, sets: a.sets.map((s, j) => (j === i ? { ...s, reps: 1, rir: 0 as const } : s)) };
+    const withExtra = finishSession(a, core, T0 + 20 * 60_000);
+    expect(withExtra.record.changes).toEqual(plain.record.changes);
+    expect(withExtra.core.state.strain).toEqual(plain.core.state.strain);
+    // It's still in the record, for volume and records.
+    expect(withExtra.record.sets.length).toBe(plain.record.sets.length + 1);
+  });
+
+  it("survives a reload", () => {
+    const { active } = fresh(4);
+    const p = active.plan.supersets[0]!.items[0]!;
+    const a = addSet(active, p.slot);
+    expect(migrateActive(JSON.parse(JSON.stringify(a)))!.extraSets).toEqual({ [p.slot]: 1 });
+    expect(migrateActive(JSON.parse(JSON.stringify({ ...a, extraSets: { [p.slot]: -2, x: "3", y: 99 } })))!.extraSets).toEqual({ y: MAX_ADDED_SETS });
+    expect(migrateActive(JSON.parse(JSON.stringify({ ...a, extraSets: "lots" })))!.extraSets).toBeUndefined();
+  });
+});
+
 describe("swaps", () => {
   it("swaps before the first set, and can make it permanent", () => {
     const { core, active } = fresh(4);
@@ -209,6 +297,41 @@ describe("finishing", () => {
     expect(record.sets.length).toBe(done.sets.length);
     expect(Object.keys(next.state.exercises).length).toBeGreaterThan(0);
     expect(record.activeMinutes).toBe(20);
+  });
+
+  it("doesn't count hours a workout was left open", () => {
+    const { core, active } = fresh(4);
+    const done = logAll(active, core);
+    const last = Math.max(...done.sets.map((s) => s.at));
+    const lastMin = Math.round((last - T0) / 60_000);
+    // Finished a few minutes after the last set: every minute counts.
+    expect(activeMinutes(done, last + 5 * 60_000)).toBe(lastMin + 5);
+    // Left open overnight: time stops a little after the last set.
+    const morning = last + 15 * 3_600_000;
+    expect(activeMinutes(done, morning)).toBe(lastMin + AFTER_LAST_SET_MS / 60_000);
+    expect(finishSession(done, core, morning).record.activeMinutes).toBe(lastMin + AFTER_LAST_SET_MS / 60_000);
+    // Nothing logged: capped at twice the plan, or two hours.
+    expect(activeMinutes(active, T0 + 15 * 3_600_000)).toBe(Math.max(2 * active.plan.estimatedMinutes, 120));
+  });
+
+  it("asks about a workout left open, and can close it as of the last set", () => {
+    const { core, active } = fresh(4);
+    expect(looksLeftOpen(active, T0 + 10 * 3_600_000)).toBe(false); // nothing logged: nothing to close
+    let a = logSet(active, nextUp(active)!, { loadKg: lbToKg(30), reps: 10, rir: 2 }, core, T0 + 60_000);
+    expect(looksLeftOpen(a, T0 + 60_000 + STALE_MS - 1)).toBe(false);
+    expect(looksLeftOpen(a, T0 + 60_000 + STALE_MS + 1)).toBe(true);
+    // Closed as of the last set: it ends then, and counts the time up to it.
+    const morning = T0 + 14 * 3_600_000;
+    const closed = finishSession(a, core, morning, undefined, T0 + 60_000).record;
+    expect(closed.finishedAt).toBe(T0 + 60_000);
+    expect(closed.activeMinutes).toBe(1);
+    // Paused after the last set, whether or not it was resumed: the time up to the last set still counts.
+    a = pause(a, T0 + 2 * 60_000);
+    expect(finishSession(a, core, morning, undefined, T0 + 60_000).record.activeMinutes).toBe(1);
+    a = resume(a, morning - 60_000);
+    expect(finishSession(a, core, morning, undefined, T0 + 60_000).record.activeMinutes).toBe(1);
+    // Finished now instead: the minute before the pause, plus the minute since.
+    expect(finishSession(a, core, morning).record.activeMinutes).toBe(3);
   });
 
   it("records a skipped session and moves on", () => {

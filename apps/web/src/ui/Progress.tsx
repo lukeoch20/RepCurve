@@ -8,10 +8,15 @@ import { userProjection, weeksSince } from "../model/projection";
 import type { Core, SessionRecord } from "../model/types";
 import { Seg } from "./common";
 import { ProjectionCard } from "./ProjectionCard";
+import { ActivityCard } from "./ActivityCard";
 import { ShareBars, TrendChart } from "./charts";
 import { useTip } from "./tips";
 import { CalendarCard, ChallengeCard, LifetimeCard, RecordsWall, TrophyShelf } from "./Trophies";
 import { monthChallenge } from "../model/gamify";
+import { NextLook } from "./Looks";
+import { shareCard, type ShareCard as ShareCardData } from "../model/share";
+import { ShareSheet } from "./ShareCard";
+import { KnowsLink } from "./Knows";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -26,6 +31,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   const statsTip = useTip("progress.charts");
   const [liftId, setLiftId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [sharing, setSharing] = useState<ShareCardData | null>(null);
   const lift = lifts.find((l) => l.id === liftId) ?? lifts[0] ?? null;
   const done = history.filter((r) => !r.skipped);
   const minutes = done.reduce((n, r) => n + r.activeMinutes, 0);
@@ -37,9 +43,17 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   return (
     <div className="stack-lg">
       <header className="stack" style={{ gap: 6 }}>
-        <p className="eyebrow">Progress</p>
+        <div className="spread">
+          <p className="eyebrow">Progress</p>
+          {done.length > 0 ? (
+            <button type="button" className="btn small" onClick={() => setSharing(shareCard(history, lift, units, now))}>
+              Share
+            </button>
+          ) : null}
+        </div>
         <h1 className="title">Your curve so far</h1>
       </header>
+      {sharing ? <ShareSheet card={sharing} onClose={() => setSharing(null)} /> : null}
 
       <Seg
         label="Time range"
@@ -58,6 +72,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
         <div className="stat"><b className="num">{streak}</b><span>week streak</span></div>
       </div>
 
+      <ActivityCard core={core} history={history} now={now} />
+
       {lift ? (
         <StrengthTrend lifts={lifts} lift={lift} onLift={setLiftId} range={range} now={now} units={units} />
       ) : (
@@ -70,6 +86,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
       <ChallengeCard challenge={monthChallenge(history, core, now)} />
 
       <TrophyShelf core={core} history={history} />
+
+      <NextLook core={core} history={history} />
 
       <LifetimeCard history={history} units={units} />
 
@@ -84,6 +102,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
       ) : null}
 
       <ProjectionCard projection={projection} units={core.profile.units} />
+
+      <KnowsLink card />
 
       <section className="card">
         <h2 className="h3" style={{ marginBottom: 6 }}>History</h2>

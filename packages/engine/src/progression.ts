@@ -25,6 +25,13 @@ export interface ExerciseProgress {
   timesPerformed: number;
   /** Set once the user has outgrown every progression their equipment allows on this exercise. */
   maxedOut?: boolean;
+  /** Sessions in a row at the top of the rep range with reps to spare. Weight goes up after two. */
+  topStreak?: number;
+  /**
+   * Set when a set hurt. Next time the app checks in before the exercise, and nothing gets
+   * heavier or harder until a session goes by without pain.
+   */
+  painCheck?: boolean;
 }
 
 export type ProgressionAction =
@@ -73,14 +80,6 @@ export function ladderNeighbour(e: Exercise, ctx: EngineContext, dir: 1 | -1): E
   return dir === 1 ? candidates[0]! : candidates[candidates.length - 1]!;
 }
 
-/** Easiest exercise of the same pattern on a different ladder, for when something hurts. */
-export function alternativeOnOtherLadder(e: Exercise, ctx: EngineContext): Exercise | null {
-  const others = ctx.pool.exercises
-    .filter((x) => x.pattern === e.pattern && x.ladder !== e.ladder)
-    .sort((a, b) => a.ladderLevel - b.ladderLevel);
-  return others[0] ?? null;
-}
-
 /**
  * Load for `to` that matches the effort of `loadKg` on `from`, using the
  * exercises' relative starting-load ratios. Rounded down to an owned dumbbell.
@@ -89,7 +88,7 @@ export function convertLoad(from: Exercise, to: Exercise, loadKg: number | null,
   if (!isLoaded(to)) return null;
   const rf = STARTING_LOAD_RATIO[from.id]?.[ctx.profile.sex];
   const rt = STARTING_LOAD_RATIO[to.id]?.[ctx.profile.sex];
-  if (loadKg !== null && isLoaded(from) && rf && rt) return roundDownToOwned((loadKg * rt) / rf, ctx.ownedLoadsKg);
+  if (loadKg !== null && isLoaded(from) && rf && rt) return roundDownToOwned((loadKg * rt) / rf, ctx.loadsFor(to));
   return startingLoadKg(to, ctx.profile, ctx.equipment, ctx.level, repRangeFor(to, ctx.level), TARGET_RIR);
 }
 
@@ -162,6 +161,9 @@ function withinCap(p: ExerciseProgress, e: Exercise): ExerciseProgress {
  * dumbbell-aware steps). Loads follow what the user actually lifted: the last
  * set's load is the working load, so mid-session changes carry forward.
  */
+/** Sessions on an exercise during which a new lifter moves on after one session at the top of the range. */
+export const FAST_START_SESSIONS = 6;
+
 export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: EngineContext): ProgressionResult {
   const e = getExercise(saved.exerciseId);
   const progress = withinCap(saved, e);
@@ -188,6 +190,8 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
 
   const performed: ExerciseProgress = {
     ...progress,
+    topStreak: 0,
+    painCheck: false,
     loadKg: workingLoad,
     e1rmKg: e1 ?? progress.e1rmKg,
     bestE1rmKg: maxOrNull(progress.bestE1rmKg, e1),
@@ -205,14 +209,11 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
   });
 
   if (all.some((s) => s.painFlag)) {
-    const alt = ladderNeighbour(e, ctx, -1) ?? alternativeOnOtherLadder(e, ctx);
-    if (alt) {
-      return move(alt, convertLoad(e, alt, workingLoad, ctx), "pain",
-        `You flagged pain on ${e.name}, so next time it's ${alt.name}. If the pain keeps coming back, stop and get it checked.`, "comfortable");
-    }
-    const lighter = workingLoad !== null ? prevOwnedLoad(workingLoad, ctx.ownedLoadsKg) ?? workingLoad : null;
-    return same({ loadKg: lighter, stalls: 0, targetReps: lo }, "pain",
-      "You flagged pain: lighter and fewer reps next time. If it keeps hurting, skip it and get it checked.");
+    // Pain stops progression, not the exercise: a replacement for the same muscles isn't automatically
+    // pain-free. It stays put (a step lighter where there is one) and you're asked how it feels first.
+    const lighter = workingLoad !== null ? prevOwnedLoad(workingLoad, ctx.loadsFor(e)) ?? workingLoad : null;
+    return same({ loadKg: lighter, stalls: 0, targetReps: lo, painCheck: true }, "pain",
+      `You flagged pain on ${e.name}. Nothing gets heavier for now${lighter !== null && lighter !== workingLoad ? ", it's a step lighter," : ""} and you'll be asked how it feels before you start it next time. If the pain was sharp or keeps coming back, get it checked.`);
   }
 
   if (tooHard) {
@@ -221,7 +222,7 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
       return same({ stalls }, "stall_noted", "That one was tough. Same plan next time; if it's tough again we'll ease off.");
     }
     if (isLoaded(e) && workingLoad !== null) {
-      const prev = prevOwnedLoad(workingLoad, ctx.ownedLoadsKg);
+      const prev = prevOwnedLoad(workingLoad, ctx.loadsFor(e));
       if (prev !== null) {
         const target = e1 !== null ? clamp(repsAtLoad(e1, prev) - rirT, lo, hi) : clamp(lo + 2, lo, hi);
         return same({ loadKg: prev, stalls: 0, targetReps: target }, "load_down",
@@ -236,9 +237,25 @@ export function progressExercise(saved: ExerciseProgress, logs: SetLog[], ctx: E
     return same({ stalls: 0, targetReps: lo }, "hold", "Tough twice, but there's nothing easier here: same setup, aim for the bottom of the range.");
   }
 
+  if (allTop && avgRir >= rirT && progress.painCheck) {
+    return same({ stalls: 0, painCheck: false }, "hold", "Pain-free this time. Same again next time before anything gets harder.");
+  }
+
   if (allTop && avgRir >= rirT) {
+    // Two sessions at the top before anything changes, so one unusually good day doesn't move you on.
+    // A new lifter's first few sessions on an exercise are the exception: early gains are real (and
+    // first benchmarks lean light), so one session at the top is enough.
+    const fastStart = ctx.volumeLevel === "novice" && progress.timesPerformed < FAST_START_SESSIONS;
+    if (!fastStart && (progress.topStreak ?? 0) < 1) {
+      const then = e.assisted ? "you'll use a little less help" : isLoaded(e) ? "the weight goes up" : "you'll move on";
+      return same({ stalls: 0, topStreak: 1, targetReps: hi }, "hold", `Top of the range with reps to spare. Do that once more and ${then}.`);
+    }
+    if (e.assisted) {
+      return same({ stalls: 0, targetReps: lo }, "load_up",
+        `${fastStart ? "Top of the range with reps to spare" : "Top of the range twice"}: use a little less help next time (a lighter band, or less assistance on the machine) and build back up from the bottom of the range.`);
+    }
     if (isLoaded(e) && workingLoad !== null) {
-      const next = nextOwnedLoad(workingLoad, ctx.ownedLoadsKg);
+      const next = nextOwnedLoad(workingLoad, ctx.loadsFor(e));
       if (next !== null && e1 !== null) {
         const reachable = repsAtLoad(e1, next) - rirT;
         if (reachable >= lo) {
@@ -303,7 +320,7 @@ export function calibrate(progress: ExerciseProgress, logs: SetLog[], ctx: Engin
   });
 
   if (isLoaded(e) && e1 !== null) {
-    const owned = ctx.ownedLoadsKg;
+    const owned = ctx.loadsFor(e);
     let chosen: number | null = null;
     for (const w of owned) if (repsAtLoad(e1, w) - rirT >= lo) chosen = w;
     if (chosen === null) {

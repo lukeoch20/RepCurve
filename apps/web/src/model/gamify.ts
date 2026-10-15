@@ -1,7 +1,7 @@
 import { kgToLb } from "@repcurve/shared";
-import { movedKg, newRecords } from "./celebrate";
+import { addBests, movedKg, recordsAgainst, type BestsSoFar } from "./celebrate";
 import { localWeek } from "./plan";
-import { liftSeries, type LiftSeries } from "./progress";
+import { liftSeries, sessionLiftPoints, type LiftSeries } from "./progress";
 import type { Core, SessionRecord } from "./types";
 
 /**
@@ -48,9 +48,11 @@ export function lifetimeMovedKg(history: SessionRecord[]): number {
 /** Level 1 at the first session; each 5% on the estimated max (or 2 more reps) is a level. */
 export function liftLevel(lift: Pick<LiftSeries, "metric" | "points">): number {
   if (lift.points.length === 0) return 1;
-  const first = lift.points[0]!.y;
-  const best = Math.max(...lift.points.map((p) => p.y));
-  const steps = lift.metric === "e1rm" ? (first > 0 ? (best / first - 1) / 0.05 : 0) : (best - first) / 2;
+  return levelFrom(lift.metric, lift.points[0]!.y, Math.max(...lift.points.map((p) => p.y)));
+}
+
+function levelFrom(metric: LiftSeries["metric"], first: number, best: number): number {
+  const steps = metric === "e1rm" ? (first > 0 ? (best / first - 1) / 0.05 : 0) : (best - first) / 2;
   return Math.max(1, 1 + Math.floor(steps + 1e-9));
 }
 
@@ -95,13 +97,19 @@ export function challengeTarget(daysPerWeek: number, activeDays: number): number
   return Math.max(2, Math.round((daysPerWeek * activeDays * 0.9) / 7));
 }
 
-export function monthChallenge(history: SessionRecord[], core: Pick<Core, "profile" | "startedAt">, now: number): Challenge {
+/** The month around a moment, and its target. */
+function monthOf(core: Pick<Core, "profile" | "startedAt">, now: number): { start: number; end: number; target: number } {
   const d = new Date(now);
   const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
   const began = Math.max(start, new Date(new Date(core.startedAt).toDateString()).getTime());
   const activeDays = Math.max(1, Math.round((end - Math.min(began, end - DAY_MS)) / DAY_MS));
-  const target = challengeTarget(core.profile.daysPerWeek, activeDays);
+  return { start, end, target: challengeTarget(core.profile.daysPerWeek, activeDays) };
+}
+
+export function monthChallenge(history: SessionRecord[], core: Pick<Core, "profile" | "startedAt">, now: number): Challenge {
+  const d = new Date(now);
+  const { start, end, target } = monthOf(core, now);
   const count = done(history).filter((r) => r.finishedAt >= start && r.finishedAt < end).length;
   return {
     month: MONTHS[d.getMonth()]!,
@@ -161,7 +169,7 @@ export interface Badge {
   progress?: { have: number; need: number };
 }
 
-interface Def {
+export interface BadgeDef {
   id: string;
   name: string;
   how: string;
@@ -169,23 +177,33 @@ interface Def {
   tier: Tier;
   need: number;
   /** Which running count it tracks. */
-  counter: keyof Counters;
+  counter: keyof BadgeCounters;
 }
 
-interface Counters {
+/** Days without a session after which the next one counts as coming back. */
+export const RETURN_GAP_DAYS = 7;
+
+/** The running counts badges are earned from, after each session in order. */
+export interface BadgeCounters {
   workouts: number;
   fullWeeks: number;
+  /** Weeks running with a session, up to this one. */
   streak: number;
   records: number;
   movedLb: number;
+  /** The highest level on any lift right now. */
   topLevel: number;
   harder: number;
+  /** A first personal record and a first harder move: 0, 1 or 2 of them. */
+  firsts: number;
   cardio: number;
   challenges: number;
   comebacks: number;
+  /** Sessions done after a week or more without one. */
+  returns: number;
 }
 
-const DEFS: Def[] = [
+export const BADGE_DEFS: readonly BadgeDef[] = [
   { id: "workouts-1", name: "First workout", how: "Finish your first workout", mark: "1", tier: "bronze", need: 1, counter: "workouts" },
   { id: "workouts-5", name: "Five down", how: "Finish 5 workouts", mark: "5", tier: "bronze", need: 5, counter: "workouts" },
   { id: "workouts-10", name: "Ten strong", how: "Finish 10 workouts", mark: "10", tier: "silver", need: 10, counter: "workouts" },
@@ -194,6 +212,7 @@ const DEFS: Def[] = [
   { id: "workouts-100", name: "Century", how: "Finish 100 workouts", mark: "100", tier: "gold", need: 100, counter: "workouts" },
   { id: "workouts-250", name: "Lifer", how: "Finish 250 workouts", mark: "250", tier: "platinum", need: 250, counter: "workouts" },
   { id: "week-1", name: "Full week", how: "Do every planned session in a week", mark: "W", tier: "bronze", need: 1, counter: "fullWeeks" },
+  { id: "week-3", name: "Three full weeks", how: "Do every planned session in a week, 3 times", mark: "3W", tier: "silver", need: 3, counter: "fullWeeks" },
   { id: "week-10", name: "Ten full weeks", how: "Do every planned session in 10 weeks", mark: "10W", tier: "gold", need: 10, counter: "fullWeeks" },
   { id: "streak-4", name: "Four-week streak", how: "Train at least once a week for 4 weeks running", mark: "4", tier: "bronze", need: 4, counter: "streak" },
   { id: "streak-12", name: "Twelve-week streak", how: "Train every week for 12 weeks running", mark: "12", tier: "silver", need: 12, counter: "streak" },
@@ -209,23 +228,46 @@ const DEFS: Def[] = [
   { id: "moved-whale", name: "Humpback whale", how: "Lift 66,000 lb (29,940 kg) in total", mark: "66K", tier: "platinum", need: 66_000, counter: "movedLb" },
   { id: "level-5", name: "Level 5", how: "Reach level 5 on any lift", mark: "L5", tier: "silver", need: 5, counter: "topLevel" },
   { id: "level-10", name: "Level 10", how: "Reach level 10 on any lift", mark: "L10", tier: "gold", need: 10, counter: "topLevel" },
+  { id: "level-15", name: "Level 15", how: "Reach level 15 on any lift", mark: "L15", tier: "platinum", need: 15, counter: "topLevel" },
   { id: "harder-1", name: "Level up the move", how: "Move up to a harder version of an exercise", mark: "↑", tier: "bronze", need: 1, counter: "harder" },
+  { id: "firsts-2", name: "Getting stronger", how: "Set a personal record and move up to a harder version of an exercise", mark: "PR↑", tier: "bronze", need: 2, counter: "firsts" },
   { id: "cardio-1", name: "Heart starter", how: "Finish a cardio session", mark: "C", tier: "bronze", need: 1, counter: "cardio" },
   { id: "cardio-10", name: "Ten cardio", how: "Finish 10 cardio sessions", mark: "C10", tier: "silver", need: 10, counter: "cardio" },
   { id: "challenge-1", name: "Challenge met", how: "Complete a monthly challenge", mark: "M", tier: "silver", need: 1, counter: "challenges" },
   { id: "challenge-6", name: "Six months strong", how: "Complete 6 monthly challenges", mark: "6M", tier: "gold", need: 6, counter: "challenges" },
   { id: "comeback-1", name: "Welcome back", how: "Come back after a break of two weeks or more", mark: "↺", tier: "bronze", need: 1, counter: "comebacks" },
+  // Rewarding a return after missed sessions was the most effective of 54 nudges in a megastudy of gym members (Milkman 2021).
+  { id: "return-1", name: "Back on track", how: "Train again after a week or more off", mark: "↩", tier: "bronze", need: 1, counter: "returns" },
+  { id: "return-5", name: "Bounce back", how: "Come back after a week off five times", mark: "5↩", tier: "silver", need: 5, counter: "returns" },
 ];
 
-/** Every badge, earned or not, walking the history in order to find when each was earned. */
+/** Counters before the first session. */
+export const NO_COUNTS: Readonly<BadgeCounters> = { workouts: 0, fullWeeks: 0, streak: 0, records: 0, movedLb: 0, topLevel: 1, harder: 0, firsts: 0, cardio: 0, challenges: 0, comebacks: 0, returns: 0 };
+
+/** Badges from the final counts and when each was earned. */
+export function badgeList(c: BadgeCounters, earned: Map<string, { at: number; sessionId: string }>): Badge[] {
+  return BADGE_DEFS.map((d) => {
+    const e = earned.get(d.id) ?? null;
+    const have = Math.min(d.need, Math.floor(c[d.counter]));
+    return { id: d.id, name: d.name, how: d.how, mark: d.mark, tier: d.tier, earned: e, ...(e ? {} : { progress: { have, need: d.need } }) };
+  });
+}
+
+/**
+ * Every badge, earned or not, walking the history once in order to find when each was earned.
+ * Each running total (bests per exercise, levels per lift, sessions per week and month) is kept
+ * as it goes, so a long history costs one pass rather than a re-read per session.
+ */
 export function badges(history: SessionRecord[], core: Pick<Core, "profile" | "startedAt">): Badge[] {
   const sessions = done(history);
-  const c: Counters = { workouts: 0, fullWeeks: 0, streak: 0, records: 0, movedLb: 0, topLevel: 1, harder: 0, cardio: 0, challenges: 0, comebacks: 0 };
+  const c: BadgeCounters = { ...NO_COUNTS };
   const earned = new Map<string, { at: number; sessionId: string }>();
   const perWeek = new Map<number, number>();
   const perMonth = new Map<string, number>();
   const metMonths = new Set<string>();
-  const seen: SessionRecord[] = [];
+  const bests: BestsSoFar = new Map();
+  /** Per lift: its measure, first and best value since it last changed measure. */
+  const lifts = new Map<string, { metric: LiftSeries["metric"]; first: number; best: number }>();
   let lastWeek: number | null = null;
   let lastAt: number | null = null;
 
@@ -233,6 +275,7 @@ export function badges(history: SessionRecord[], core: Pick<Core, "profile" | "s
     c.workouts++;
     if (r.kind === "cardio") c.cardio++;
     if (lastAt !== null && r.finishedAt - lastAt >= 14 * DAY_MS) c.comebacks++;
+    if (lastAt !== null && r.finishedAt - lastAt >= RETURN_GAP_DAYS * DAY_MS) c.returns++;
 
     const w = localWeek(r.finishedAt);
     perWeek.set(w, (perWeek.get(w) ?? 0) + 1);
@@ -242,32 +285,36 @@ export function badges(history: SessionRecord[], core: Pick<Core, "profile" | "s
 
     const m = new Date(r.finishedAt);
     const mk = `${m.getFullYear()}-${m.getMonth()}`;
-    perMonth.set(mk, (perMonth.get(mk) ?? 0) + 1);
-    if (!metMonths.has(mk)) {
-      const ch = monthChallenge(seen.concat(r), core, r.finishedAt);
-      if (ch.complete) {
-        metMonths.add(mk);
-        c.challenges++;
-      }
+    const inMonth = (perMonth.get(mk) ?? 0) + 1;
+    perMonth.set(mk, inMonth);
+    // Sessions are in order, so this month's count so far is everything in it up to this one.
+    if (!metMonths.has(mk) && inMonth >= monthOf(core, r.finishedAt).target) {
+      metMonths.add(mk);
+      c.challenges++;
     }
 
     if (r.kind === "strength") {
-      c.records += newRecords(r, seen.concat(r)).length;
+      c.records += recordsAgainst(r, bests).length;
+      addBests(bests, r);
       c.movedLb += kgToLb(movedKg(r));
       c.harder += r.changes.filter((x) => x.action === "ladder_up").length;
+      for (const p of sessionLiftPoints(r)) {
+        const l = lifts.get(p.id);
+        // A move from bodyweight to dumbbells starts afresh, as in liftSeries.
+        if (!l || l.metric !== p.metric) lifts.set(p.id, { metric: p.metric, first: p.y, best: p.y });
+        else l.best = Math.max(l.best, p.y);
+      }
+      // A lift can drop back when it changes measure, so this is the highest level now, not ever.
+      c.topLevel = 1;
+      for (const l of lifts.values()) c.topLevel = Math.max(c.topLevel, levelFrom(l.metric, l.first, l.best));
     }
-    seen.push(r);
-    if (r.kind === "strength") c.topLevel = Math.max(1, ...liftSeries(seen).map(liftLevel));
+    c.firsts = Number(c.records > 0) + Number(c.harder > 0);
 
-    for (const d of DEFS) if (!earned.has(d.id) && c[d.counter] >= d.need) earned.set(d.id, { at: r.finishedAt, sessionId: r.id });
+    for (const d of BADGE_DEFS) if (!earned.has(d.id) && c[d.counter] >= d.need) earned.set(d.id, { at: r.finishedAt, sessionId: r.id });
     lastAt = r.finishedAt;
   }
 
-  return DEFS.map((d) => {
-    const e = earned.get(d.id) ?? null;
-    const have = Math.min(d.need, Math.floor(c[d.counter]));
-    return { id: d.id, name: d.name, how: d.how, mark: d.mark, tier: d.tier, earned: e, ...(e ? {} : { progress: { have, need: d.need } }) };
-  });
+  return badgeList(c, earned);
 }
 
 /** Badges this session earned. */

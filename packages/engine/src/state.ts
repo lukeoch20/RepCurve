@@ -1,7 +1,8 @@
 import { getExercise } from "@repcurve/exercises";
 import { prevOwnedLoad, roundDownToOwned } from "@repcurve/shared";
-import type { Exercise, SetLog } from "@repcurve/shared";
+import type { Exercise, SetLog, TrainingLevel } from "@repcurve/shared";
 import type { EngineContext } from "./context.js";
+import { cautionAreasFor, markCaution, type TrainingProfile } from "./profile.js";
 import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
 import {
   calibrate,
@@ -13,7 +14,8 @@ import {
   type ProgressionResult,
 } from "./progression.js";
 import { TARGET_RIR, buildPrescription, clamp, defaultTargetReps, maxRepsFor } from "./prescribe.js";
-import { finisherSeconds, supersetSeconds } from "./timing.js";
+import { rampSeconds } from "./session.js";
+import { finisherSeconds, setupSeconds, supersetSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
 
 /** Everything that carries over from one session to the next. Plain JSON, safe to persist. */
@@ -27,6 +29,10 @@ export interface TrainingState {
   exercises: Record<string, ExerciseProgress>;
   /** Strength sessions left in the current deload. */
   deloadRemaining: number;
+  /** Why the current deload started: recent sessions were grinds, or it was due. Absent outside a deload. */
+  deloadReason?: DeloadReason;
+  /** Strength sessions since the last deload or break. Absent in states saved before scheduled deloads (read as 0). */
+  sessionsSinceDeload?: number;
   /** Share of "grinder" sets (0 left in the tank, or below the rep range) in recent strength sessions. */
   strain: number[];
   strengthSessionsLogged: number;
@@ -38,6 +44,16 @@ export function initialTrainingState(): TrainingState {
 
 /** Days off after which the next strength session eases you back in. */
 export const COMEBACK_DAYS = 14;
+
+export type DeloadReason = "strain" | "scheduled";
+
+/**
+ * Weeks of training after which a planned lighter week is due, for lifters past the novice stage.
+ * Novices recover quickly and only deload when sessions turn into grinds. For trained lifters a
+ * light week every 4 to 8 weeks is common practice; the advanced interval matches the length of
+ * an exercise block. [verify]
+ */
+export const SCHEDULED_DELOAD_WEEKS: Record<TrainingLevel, number | null> = { novice: null, intermediate: 8, advanced: 6 };
 
 export function resolveExercise(state: TrainingState, programmedId: string): string {
   return state.substitutions[programmedId] ?? programmedId;
@@ -73,9 +89,9 @@ export function prescriptionsOf(session: SessionPlan): Prescription[] {
   return [...session.supersets.flatMap((ss) => ss.items), ...(session.finisher ? [session.finisher] : [])];
 }
 
-function ownedOrRounded(loadKg: number, ctx: EngineContext): number {
-  if (ctx.ownedLoadsKg.some((w) => Math.abs(w - loadKg) < 1e-6)) return loadKg;
-  return roundDownToOwned(loadKg, ctx.ownedLoadsKg) ?? loadKg;
+function ownedOrRounded(loadKg: number, owned: number[]): number {
+  if (owned.some((w) => Math.abs(w - loadKg) < 1e-6)) return loadKg;
+  return roundDownToOwned(loadKg, owned) ?? loadKg;
 }
 
 /** A prescription for `exercise` in `slot`, using what the state remembers about it. */
@@ -93,10 +109,11 @@ export function prescriptionFor(
   const cap = maxRepsFor(exercise);
   const repRange: [number, number] = [Math.min(stored[0], cap), Math.min(stored[1], cap)];
   let loadKg: number | null = null;
-  if (isLoaded(exercise) && ctx.ownedLoadsKg.length > 0) {
+  const owned = ctx.loadsFor(exercise);
+  if (isLoaded(exercise) && owned.length > 0) {
     const remembered = progress?.loadKg ?? fallback?.loadKg ?? null;
     loadKg = remembered !== null
-      ? ownedOrRounded(remembered, ctx)
+      ? ownedOrRounded(remembered, owned)
       : startingLoadKg(exercise, ctx.profile, ctx.equipment, ctx.level, repRange, TARGET_RIR);
   }
   const targetReps = clamp(
@@ -104,7 +121,7 @@ export function prescriptionFor(
     repRange[0],
     repRange[1],
   );
-  return buildPrescription({
+  const p = buildPrescription({
     exercise,
     slot,
     sets,
@@ -115,12 +132,14 @@ export function prescriptionFor(
     benchmarkSet: false,
     units: ctx.loadUnits,
   });
+  if (progress?.painCheck) p.painCheck = true;
+  return p;
 }
 
 function lighter(p: Prescription, ctx: EngineContext): Prescription {
   if (p.loadKg === null) return { ...p, benchmarkSet: false };
-  const prev = prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg);
   const e = getExercise(p.exerciseId);
+  const prev = prevOwnedLoad(p.loadKg, ctx.loadsFor(e));
   if (prev === null) return { ...p, benchmarkSet: false };
   return buildPrescription({
     exercise: e,
@@ -154,26 +173,44 @@ const MIN_PAIR_SAVING_SEC = 60;
  */
 export function fitToBudget(session: SessionPlan): SessionPlan {
   if (session.kind !== "strength") return session;
-  const planned = session.supersets.map((ss) => ss.rounds);
+  // What was planned, per superset and per exercise: cuts can be put back, never more than this
+  // (the plan already kept each muscle's week within its ceiling).
+  const plannedSets = session.supersets.map((ss) => ss.items.map((p) => p.sets));
   let supersets: Superset[] = session.supersets.map((ss) => ({ ...ss, items: ss.items.map((p) => ({ ...p })) }));
   const plannedFinisher = session.finisher;
   let finisher = plannedFinisher ? { ...plannedFinisher } : null;
 
-  const timedItem = (p: Prescription) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps });
-  const secsFor = (ss: Superset, rounds = ss.rounds) => supersetSeconds(ss.items.map(timedItem), rounds, ss.transitionSec, ss.restSec);
+  const timedItem = (p: Prescription, sets = p.sets) => ({ exercise: getExercise(p.exerciseId), repRange: p.repRange, reps: p.targetReps, sets });
+  /** Sets each exercise would do with the superset at `rounds` (an exercise one set behind stays one behind). */
+  const setsAt = (ss: Superset, rounds: number, i: number) =>
+    ss.items.map((p, j) => Math.min(plannedSets[i]?.[j] ?? rounds, Math.max(1, rounds - (ss.rounds - p.sets))));
+  // Setup (machines, bars, band anchors) and warm-up sets happen once; each round costs the same after that.
+  const secsAt = (ss: Superset, rounds: number) => {
+    const i = supersets.indexOf(ss);
+    const sets = setsAt(ss, rounds, i);
+    const exercises = ss.items.map((p) => getExercise(p.exerciseId));
+    return (
+      supersetSeconds(ss.items.map((p, j) => timedItem(p, sets[j])), Math.max(...sets), ss.transitionSec, ss.restSec) +
+      setupSeconds(exercises) +
+      rampSeconds(exercises, i)
+    );
+  };
+  const secsFor = (ss: Superset) => secsAt(ss, ss.rounds);
+  const roundSecs = (ss: Superset) => secsFor(ss) - secsAt(ss, ss.rounds - 1);
   const finisherSecs = (f: Prescription | null) => (f ? finisherSeconds(getExercise(f.exerciseId), f.repRange, f.sets, f.targetReps) : 0);
   const totalSec = () => session.warmupMinutes * 60 + supersets.reduce((s, ss) => s + secsFor(ss), 0) + finisherSecs(finisher);
   const budgetSec = session.budgetMinutes * 60;
   const limitSec = budgetSec * (1 + BUDGET_TOLERANCE);
   const setRounds = (ss: Superset, rounds: number) => {
-    ss.rounds = rounds;
-    for (const p of ss.items) p.sets = rounds;
+    const sets = setsAt(ss, rounds, supersets.indexOf(ss));
+    ss.items.forEach((p, j) => (p.sets = sets[j]!));
+    ss.rounds = Math.max(...sets);
   };
   /** Of the supersets that can lose a round, the cheapest round that clears the overage, else the most expensive. */
   const roundToCut = (minRounds: number): Superset | undefined => {
     const over = totalSec() - limitSec;
-    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => secsFor(a, 1) - secsFor(b, 1));
-    return options.find((ss) => secsFor(ss, 1) >= over) ?? options[options.length - 1];
+    const options = supersets.filter((ss) => ss.rounds > minRounds).sort((a, b) => roundSecs(a) - roundSecs(b));
+    return options.find((ss) => roundSecs(ss) >= over) ?? options[options.length - 1];
   };
 
   while (totalSec() > limitSec + 1e-9) {
@@ -189,22 +226,27 @@ export function fitToBudget(session: SessionPlan): SessionPlan {
     else break;
   }
 
-  // Put back what fits within the budget itself: rounds first (cheapest first, up to the
-  // session's largest planned superset), then the finisher.
-  const roundCap = Math.max(0, ...planned);
+  // Put back what was cut and fits within the budget itself: rounds first (cheapest first, up to
+  // each superset's planned rounds), then the finisher.
   let restored = true;
   while (restored) {
     restored = false;
     const candidates = supersets
-      .map((ss) => ({ ss, planned: roundCap }))
-      .filter((c) => c.ss.rounds < c.planned)
-      .sort((a, b) => secsFor(a.ss, 1) - secsFor(b.ss, 1));
-    for (const c of candidates) {
-      if (totalSec() + secsFor(c.ss, 1) <= budgetSec) {
-        setRounds(c.ss, c.ss.rounds + 1);
+      .filter((ss, i) => ss.items.some((p, j) => p.sets < (plannedSets[i]?.[j] ?? 0)))
+      .sort((a, b) => secsAt(a, a.rounds + 1) - secsFor(a) - (secsAt(b, b.rounds + 1) - secsFor(b)));
+    for (const ss of candidates) {
+      const i = supersets.indexOf(ss);
+      const target = ss.items.map((p, j) => Math.min(p.sets + 1, plannedSets[i]![j]!));
+      const before = secsFor(ss);
+      const prev = ss.items.map((p) => p.sets);
+      ss.items.forEach((p, j) => (p.sets = target[j]!));
+      ss.rounds = Math.max(...target);
+      if (totalSec() <= budgetSec + 1e-9 && secsFor(ss) > before) {
         restored = true;
         break;
       }
+      ss.items.forEach((p, j) => (p.sets = prev[j]!));
+      ss.rounds = Math.max(...prev);
     }
     if (restored || !plannedFinisher) continue;
     const next = finisher ? (finisher.sets < plannedFinisher.sets ? { ...finisher, sets: finisher.sets + 1 } : null) : { ...plannedFinisher, sets: 1 };
@@ -236,9 +278,15 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
   const used = new Set<string>();
   const usable = (id: string) => inPool.has(id) && !used.has(id);
 
-  /** The exercise for a slot: its substitute, else what was programmed, else another exercise of the same movement. */
+  /**
+   * The exercise for a slot: its substitute, else what was programmed, else another exercise of the
+   * same movement. In an alternate block, a swap or ladder move made on the slot's usual exercise
+   * carries over (unless the alternate has its own), so a block of variety never undoes a "do this
+   * instead" or drops someone back down a ladder they have climbed.
+   */
   const pick = (p: Prescription): string | null => {
-    const resolved = resolveExercise(state, p.exerciseId);
+    const carried = p.alternateOf !== undefined && state.substitutions[p.exerciseId] === undefined && state.substitutions[p.alternateOf] !== undefined;
+    const resolved = carried ? resolveExercise(state, p.alternateOf!) : resolveExercise(state, p.exerciseId);
     if (usable(resolved)) return resolved;
     if (usable(p.exerciseId)) return p.exerciseId;
     const pattern = getExercise(p.exerciseId).pattern;
@@ -259,32 +307,76 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
     return np;
   };
 
+  // An easier session does one set fewer of each exercise (at least one); an exercise that sat out a
+  // superset's last round still does one fewer than its partner.
   const supersets = session.supersets
     .map((ss) => {
-      const rounds = easier ? Math.max(1, ss.rounds - 1) : ss.rounds;
-      return { ...ss, rounds, items: ss.items.map((p) => remap(p, rounds)).filter((p): p is Prescription => p !== null) };
+      const items = ss.items.map((p) => remap(p, easier ? Math.max(1, p.sets - 1) : p.sets)).filter((p): p is Prescription => p !== null);
+      return { ...ss, rounds: items.length > 0 ? Math.max(...items.map((p) => p.sets)) : 0, items };
     })
     .filter((ss) => ss.items.length > 0);
   const finisher = session.finisher ? remap(session.finisher, session.finisher.sets) : null;
-  return fitToBudget({ ...session, supersets, finisher, deload, comeback });
+  const deloadReason = deload ? (state.deloadReason ?? "strain") : undefined;
+  return fitToBudget({ ...session, supersets, finisher, deload, comeback, ...(deloadReason ? { deloadReason } : {}) });
 }
 
-/** Other exercises that train the same movement and that the user can do with their equipment. */
-export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = []): Exercise[] {
+/** Why someone wants a different exercise; each wants different options first. */
+export type SwapReason = "busy" | "hard" | "balance" | "dislike";
+
+const TIER_RANK = { default: 0, optional: 1, advanced: 2, retired: 3 } as const;
+
+/**
+ * Other exercises that do the same job and that the user can do with their equipment, best match
+ * first: same family, then the planner's own choices before optional branches and advanced skills.
+ * The reason reorders them: equipment busy or missing puts different equipment first; too hard puts
+ * easier and more stable options first (no advanced skills); balance puts two-sided options first.
+ */
+export function alternativesFor(p: Prescription, ctx: EngineContext, excludeIds: string[] = [], reason?: SwapReason, profile?: TrainingProfile): Exercise[] {
+  const current = getExercise(p.exerciseId);
   const exclude = new Set([p.exerciseId, ...excludeIds]);
-  return ctx.pool.exercises
-    .filter((e) => e.pattern === p.pattern && !exclude.has(e.id))
-    .sort((a, b) => (a.ladder === b.ladder ? a.ladderLevel - b.ladderLevel : a.ladder.localeCompare(b.ladder)));
+  const isolationFamily = (e: Exercise) => current.pattern !== "isolation" || e.family === current.family;
+  let options = ctx.pool.exercises.filter((e) => e.pattern === p.pattern && !exclude.has(e.id) && isolationFamily(e));
+  if (reason === "hard" || reason === "balance") options = options.filter((e) => e.tier !== "advanced");
+  // Options that spare a recently painful area come first, whatever the reason.
+  const cautioned = (e: Exercise) => (profile && cautionAreasFor(profile, e.id).length > 0 ? 1 : 0);
+  const key = (e: Exercise): number[] => [cautioned(e), ...byReason(e)];
+  const byReason = (e: Exercise): number[] => {
+    const family = e.family === current.family ? 0 : 1;
+    // Entry regressions (wall push-ups, sit-to-stands) are for when it's too hard, not a first offer.
+    const tier = TIER_RANK[e.tier] + (e.ladderLevel === 0 && reason !== "hard" ? 0.5 : 0);
+    switch (reason) {
+      case "busy":
+        return [e.loadType === current.loadType ? 1 : 0, family, tier];
+      case "hard": {
+        const easierRung = e.ladder === current.ladder && e.ladderLevel < current.ladderLevel ? 0 : 1;
+        const stable = e.unilateral ? 1 : 0;
+        return [easierRung, family, stable, tier];
+      }
+      case "balance":
+        return [e.unilateral ? 1 : 0, family, tier];
+      default:
+        return [family, tier];
+    }
+  };
+  return options
+    .map((e) => ({ e, k: key(e) }))
+    .sort((a, b) => {
+      for (let i = 0; i < a.k.length; i++) if (a.k[i] !== b.k[i]) return a.k[i]! - b.k[i]!;
+      return a.e.ladder === b.e.ladder ? a.e.ladderLevel - b.e.ladderLevel : a.e.ladder.localeCompare(b.e.ladder);
+    })
+    .map((x) => x.e);
 }
 
 /**
  * Swap an exercise for this session only, keeping the slot and the number of sets. A benchmark
- * set carries over when the new exercise hasn't been calibrated yet.
+ * set carries over when the new exercise hasn't been calibrated yet. With the training profile, the
+ * new exercise gets the same caution as any planned exercise that loads a recently painful area.
  */
-export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext): Prescription {
+export function swapPrescription(p: Prescription, newExerciseId: string, state: TrainingState, ctx: EngineContext, profile?: TrainingProfile): Prescription {
   const np = prescriptionFor(getExercise(newExerciseId), p.slot, p.sets, state, ctx);
   np.benchmarkSet = p.benchmarkSet && np.loadType !== "time" && !(state.exercises[newExerciseId]?.calibrated ?? false);
-  return np;
+  // A recently painful area keeps its check-in whichever exercise loads it.
+  return profile ? markCaution(np, profile) : np;
 }
 
 export interface ExerciseChange {
@@ -314,7 +406,7 @@ function progressFromPrescription(p: Prescription, ctx: EngineContext): Exercise
 }
 
 function hasEasierOption(p: Prescription, ctx: EngineContext): boolean {
-  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.ownedLoadsKg) !== null) return true;
+  if (p.loadKg !== null && prevOwnedLoad(p.loadKg, ctx.loadsFor(getExercise(p.exerciseId))) !== null) return true;
   return ladderNeighbour(getExercise(p.exerciseId), ctx, -1) !== null;
 }
 
@@ -363,6 +455,17 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
     } else if (p.benchmarkSet && !progress.calibrated) {
       result = calibrate(progress, sets, ctx);
       action = result.action;
+    } else if (p.caution && !progress.painCheck) {
+      // A recently painful area this exercise loads: judged like an exercise that hurt itself, so
+      // nothing gets heavier, but it isn't marked as having hurt unless it did.
+      result = progressExercise({ ...progress, painCheck: true }, sets, ctx);
+      if (!pain) {
+        result = { ...result, next: { ...result.next, painCheck: false }, performed: { ...result.performed, painCheck: false } };
+        if (result.action === "hold" && result.reason.startsWith("Pain-free")) {
+          result.reason = `Felt fine. Held steady while your ${p.caution.toLowerCase()} settles.`;
+        }
+      }
+      action = result.action;
     } else {
       result = progressExercise(progress, sets, ctx);
       action = result.action;
@@ -391,7 +494,14 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
   if (session.deload) {
     next.deloadRemaining = Math.max(0, next.deloadRemaining - 1);
     deloadFinished = next.deloadRemaining === 0;
-  } else if (!session.comeback) {
+    if (deloadFinished) {
+      delete next.deloadReason;
+      next.sessionsSinceDeload = 0;
+    }
+  } else if (session.comeback) {
+    // A break of two weeks or more is rest enough; the count towards a planned light week restarts.
+    next.sessionsSinceDeload = 0;
+  } else {
     const byId = new Map(prescriptions.map((p) => [p.exerciseId, p]));
     const counted = logs.filter((l) => {
       const p = byId.get(l.exerciseId);
@@ -404,9 +514,14 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
       const grinders = counted.filter((l) => l.rir === 0 || (l.reps < byId.get(l.exerciseId)!.repRange[0] && canEase.get(l.exerciseId))).length;
       next.strain = [...next.strain, grinders / counted.length].slice(-6);
     }
+    next.sessionsSinceDeload = (next.sessionsSinceDeload ?? 0) + 1;
     const recent = next.strain.slice(-STRAINED_SESSIONS_FOR_DELOAD);
-    if (recent.length === STRAINED_SESSIONS_FOR_DELOAD && recent.every((s) => s >= STRAIN_THRESHOLD)) {
+    const dueWeeks = SCHEDULED_DELOAD_WEEKS[ctx.volumeLevel];
+    const strained = recent.length === STRAINED_SESSIONS_FOR_DELOAD && recent.every((s) => s >= STRAIN_THRESHOLD);
+    const due = dueWeeks !== null && next.sessionsSinceDeload >= dueWeeks * Math.max(1, ctx.strengthPerWeek);
+    if (strained || due) {
       next.deloadRemaining = Math.max(1, ctx.strengthPerWeek);
+      next.deloadReason = strained ? "strain" : "scheduled";
       next.strain = [];
       deloadStarted = true;
     }

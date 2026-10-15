@@ -11,7 +11,7 @@ export interface Prescription {
   pattern: Pattern;
   loadType: LoadType;
   unilateral: boolean;
-  /** Rounds in the superset this belongs to; equals sets. */
+  /** Sets of this exercise: the superset's rounds, or one fewer when it sits out the last round. */
   sets: number;
   /** Reps, or seconds for time-based exercises. */
   repRange: [number, number];
@@ -23,6 +23,17 @@ export interface Prescription {
   targetRir: Rir;
   /** First set is "as many good reps as you can, stop with 2 left, cap 20". */
   benchmarkSet: boolean;
+  /** It hurt last time: ask how it feels before starting, and offer to skip or swap. */
+  painCheck?: boolean;
+  /** The recently painful area this exercise loads (e.g. "Shoulder"), when the check-in is for that. */
+  caution?: string;
+  /**
+   * In an alternate block, the exercise this slot uses in the other blocks. Swaps and ladder moves
+   * the person made on that exercise carry over here.
+   */
+  alternateOf?: string;
+  /** Works a muscle group still very sore today: `setOff` when it does one set fewer for it. Held at its weight. */
+  sore?: { groups: Muscle[]; setOff: boolean };
   cue?: string;
 }
 
@@ -52,8 +63,16 @@ export interface CardioSegment {
   note?: string;
 }
 
+/** What you do for cardio, separate from how (steady or intervals). Ids match the evidence catalog. */
+export type CardioActivity = "walking" | "running" | "cycling" | "elliptical" | "rowing" | "stairs" | "jump_rope" | "marching";
+
 export interface CardioPlan {
+  /** Where walking or running happens (a treadmill or outside), or a jump rope. */
   mode: "treadmill" | "outdoor" | "jump_rope";
+  /** The activity planned. Missing on plans saved before activities were separate (walking). */
+  activity?: CardioActivity;
+  /** Activities the user's equipment allows in this format, to switch to. */
+  options?: CardioActivity[];
   style: "steady" | "incline_walk" | "intervals";
   segments: CardioSegment[];
   totalMinutes: number;
@@ -79,9 +98,13 @@ export interface SessionPlan {
   cardio: CardioPlan | null;
   /** Lighter session: part of a deload, or the first session back after a break. */
   deload: boolean;
+  /** Why a deload session is lighter: recent grinds, or a planned light week. Set only when `deload` is. */
+  deloadReason?: "strain" | "scheduled";
   comeback: boolean;
   /** Plain-language notes about compromises in this session, e.g. settings that leave little room. */
   notes?: string[];
+  /** Movements the user's equipment can't train, and the smallest step that would cover them. */
+  coverage?: string[];
 }
 
 export interface Program {
@@ -109,6 +132,11 @@ export interface GenerateOptions {
    * sessions the user actually gets now (their exercises, rep targets and fitted rounds).
    */
   state?: TrainingState;
+  /**
+   * Position of the user's next session. The weekly volume and explanation then describe the week
+   * they're in (from week 2: week 1 is the lighter benchmark week), alternate exercises included.
+   */
+  position?: number;
   createdAt?: string;
 }
 
@@ -117,7 +145,14 @@ export interface GenerateInput {
   equipment: Equipment;
 }
 
+/** How an exercise is loaded, for choosing between machines, free weights, bands and bodyweight. */
+export type LoadClass = "machine" | "cable" | "barbell" | "dumbbell" | "band" | "bodyweight";
+
 export interface Pool {
+  /** Everything the user can do, including optional and advanced exercises (for swaps). */
   exercises: Exercise[];
+  /** Exercises the planner may pick, by ladder, easiest first. */
   byLadder: Map<string, Exercise[]>;
+  /** Kinds of loading to try first, most preferred first. */
+  classOrder: LoadClass[];
 }

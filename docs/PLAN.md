@@ -149,6 +149,7 @@ See §4.
 
 ### 3.8 Readiness (post-MVP)
 Two taps before a session (slept badly? sore?) → scale today's loads −5% or drop a round.
+Soreness is now specified as backlog item B2, feeding a single training profile (B1): see [BACKLOG.md](BACKLOG.md).
 
 ---
 
@@ -182,7 +183,7 @@ else:
 ```
 
 ### Over the weeks
-- **Reactive deload**, not scheduled. As built: when at least half the sets in each of the last three strength sessions were grinders (0 reps in reserve, or below the range when an easier option exists), the next week runs one round fewer and one dumbbell lighter. Pain overrides this and still swaps the exercise. (Evidence for fixed scheduled deloads is weak; reactive is the defensible default. **[verify]**)
+- **Reactive deload**, not scheduled. As built: when at least half the sets in each of the last three strength sessions were grinders (0 reps in reserve, or below the range when an easier option exists), the next week runs one round fewer and one dumbbell lighter. Pain overrides this and still swaps the exercise. (Evidence for fixed scheduled deloads is weak; reactive is the defensible default. **[verify]**) Past the novice stage, a planned light week also comes round every 8 weeks (intermediate) or 6 weeks (advanced); see EVIDENCE §9.
 - Not built yet: blocks with a volume ramp, and rotating one accessory per block. The programme is an open-ended sequence; brand-new lifters get a one-round-lighter first week.
 
 ### Safety rails

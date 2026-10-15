@@ -1,25 +1,33 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, type Prescription } from "@repcurve/engine";
-import { loadUnitsFor } from "@repcurve/shared";
+import { alternativesFor, cautionAreasFor, needsRampSet, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
+import { getExercise } from "@repcurve/exercises";
+import { loadUnitsFor, platesFor, plateText } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
 import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, plural, repsUnit } from "../model/format";
 import { contextFor, exerciseCount } from "../model/plan";
+import { profileFor } from "../model/profile";
 import {
+  MAX_ADDED_SETS,
+  addedSets,
   elapsedMs,
+  lastSetAt,
   loggedSet,
+  looksLeftOpen,
   nextUp,
   prefill,
   progressSummary,
+  setCount,
   setsForSlot,
   timerRemainingMs,
   type SetRef,
 } from "../model/session";
 import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
+import { whyThisLoad } from "../model/why";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
-import { ExerciseInfo } from "./ExerciseInfo";
+import { ExerciseInfo, TIER_LABEL } from "./ExerciseInfo";
 import { useTip } from "./tips";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
@@ -29,6 +37,9 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
   const up = nextUp(active);
   const { done, total } = progressSummary(active);
   const [endOpen, setEndOpen] = useState(false);
+  // A workout left open for hours asks once whether it ended back at the last set.
+  const [leftOpenAnswered, setLeftOpenAnswered] = useState(false);
+  const leftOpen = !leftOpenAnswered && looksLeftOpen(active, now);
   const paused = active.pausedAt !== null;
   // Tutorial tips arrive a few at a time: the basics before the first set, the rest as the session goes on.
   const headTip = useTip("run.head", active.sets.length >= 5);
@@ -98,7 +109,8 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         {active.plan.deload ? (
           <div className="banner info">
             <b>Deload week</b>
-            Your last few sessions were grinders, so this week is lighter: one round fewer and a dumbbell down. Progress resumes next week.
+            {active.plan.deloadReason === "scheduled" ? "A planned light week after a long run of training" : "Your last few sessions were grinders"}, so this week is
+            lighter: one round fewer and a dumbbell down. Progress resumes next week.
           </div>
         ) : null}
         {active.plan.comeback ? (
@@ -116,6 +128,9 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
               <span className="eyebrow">Superset {ss.label}</span>
               <span className="meta small num">
                 {ss.rounds} rounds · alternate {ss.items.map((_, i) => `${ss.label}${i + 1}`).join(" and ")}
+                {ss.items.some((p) => p.sets < ss.rounds)
+                  ? ` · ${ss.items.map((p, i) => (p.sets < ss.rounds ? `${ss.label}${i + 1}` : null)).filter(Boolean).join(" and ")} sits out the last round`
+                  : ""}
               </span>
             </div>
             {ss.items.map((p, i) => (
@@ -140,7 +155,9 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
 
       {active.timer ? <TimerDock core={core} active={active} now={now} /> : null}
 
-      {endOpen ? (
+      {leftOpen ? <LeftOpenSheet core={core} active={active} now={now} onKeepGoing={() => setLeftOpenAnswered(true)} /> : null}
+
+      {endOpen && !leftOpen ? (
         <Sheet title="End this session?" onClose={() => setEndOpen(false)}>
           {active.sets.length > 0 ? (
             <>
@@ -171,6 +188,34 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         </Sheet>
       ) : null}
     </>
+  );
+}
+
+/** "Did you finish this workout around 7:42 PM?": save it as ending at the last set, or carry on. */
+function LeftOpenSheet(props: { core: Core; active: ActiveSession; now: number; onKeepGoing: () => void }): React.ReactElement {
+  const { dispatch } = useStore();
+  const last = lastSetAt(props.active)!;
+  const at = new Date(last);
+  const sameDay = at.toDateString() === new Date(props.now).toDateString();
+  const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const when = sameDay ? time : `${at.toLocaleDateString(undefined, { weekday: "long" })} at ${time}`;
+  return (
+    <Sheet title="Still going?" onClose={props.onKeepGoing}>
+      <p className="prose">Did you finish this workout around {when}? Your last set was logged then.</p>
+      <button
+        type="button"
+        className="btn go big"
+        onClick={() => {
+          if (props.core.settings.haptics) haptic("session");
+          dispatch({ type: "finish", now: Date.now(), at: last });
+        }}
+      >
+        Yes, finish it as of {time}
+      </button>
+      <button type="button" className="btn big" onClick={props.onKeepGoing}>
+        No, keep going
+      </button>
+    </Sheet>
   );
 }
 
@@ -224,10 +269,14 @@ function ExerciseBlock(props: {
   up: SetRef | null;
 }): React.ReactElement {
   const { core, active, p, tag, group, position, up } = props;
-  const { dispatch } = useStore();
+  const { dispatch, data } = useStore();
   const [infoOpen, setInfoOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
+  const [painSet, setPainSet] = useState<number | null>(null);
+  const [painChecked, setPainChecked] = useState(false);
+  const [gentleSwap, setGentleSwap] = useState(false);
   const skipped = active.skippedSlots.includes(p.slot);
   const logged = setsForSlot(active, p.slot);
   const advice = active.advice[p.slot];
@@ -235,8 +284,15 @@ function ExerciseBlock(props: {
   const unit = repsUnit(p.loadType);
   const menuTip = useTip("run.menu", group === 0 && position === 0 && active.sets.length >= 4);
 
-  const target = `${p.sets} sets · ${p.targetReps}${p.loadType === "time" ? " s" : " reps"}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
+  const added = addedSets(active, p.slot);
+  const count = setCount(active, p.slot);
+  const target = `${p.sets} sets${added > 0 ? ` + ${added} added` : ""} · ${p.targetReps}${p.loadType === "time" ? " s" : " reps"}${p.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}${p.loadKg !== null ? ` · ${p.loadDisplay}` : ""}`;
   const loaded = p.loadKg !== null;
+  const barKg = getExercise(p.exerciseId).barKg;
+  const why = whyOpen ? whyThisLoad(p, active, data.history, units) : [];
+  const whyId = `why-${p.slot}`;
+  // The last added set can be taken back while it isn't logged.
+  const removable = added > 0 && !loggedSet(active, p.slot, count - 1);
   const loadCell = (loadKg: number | null) => (loadKg !== null ? loadNumber(loadKg, units) : p.loadType === "band" ? "Band" : p.loadType === "time" ? "—" : "BW");
 
   return (
@@ -248,8 +304,22 @@ function ExerciseBlock(props: {
             <button type="button" className="exercise-link" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>{p.name}</button>
           </div>
           <div className="block-target">{target}</div>
+          {p.loadType === "barbell" && p.loadKg !== null ? <div className="block-target">{plateText(platesFor(p.loadKg, barKg, units), units)}</div> : null}
+          {group > 0 && needsRampSet(p, group) ? (
+            <div className="block-target">Warm up first: one easy set of 5 at about half your working weight.</div>
+          ) : null}
+          <button type="button" className="link-btn why-btn" aria-expanded={whyOpen} aria-controls={whyId} onClick={() => setWhyOpen(!whyOpen)}>
+            {loaded ? "Why this weight?" : "Why this target?"}
+          </button>
         </div>
       </div>
+      {whyOpen ? (
+        <div className="why-panel" id={whyId}>
+          {why.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      ) : null}
       <div className="menu" ref={menuTip}>
         <button type="button" className="btn" aria-haspopup="dialog" onClick={() => setInfoOpen(true)}>
           How to
@@ -269,6 +339,19 @@ function ExerciseBlock(props: {
           </button>
         )}
       </div>
+      {p.painCheck && logged.length === 0 && !skipped && !painChecked ? (
+        <div className="banner adjust" role="status">
+          <b>{p.caution ? `Your ${p.caution.toLowerCase()} hurt recently` : "Last time this hurt"}</b>
+          {p.caution
+            ? `This one works your ${p.caution.toLowerCase()} too. How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's held steady until your ${p.caution.toLowerCase()} has had a couple of pain-free sessions.`
+            : "How does it feel today? Go ahead only if it's fine at rest and moving it gently without weight doesn't hurt. It's kept a step lighter either way."}
+          <div className="row-wrap" style={{ marginTop: 10 }}>
+            <button type="button" className="btn small" onClick={() => setPainChecked(true)}>Feels fine</button>
+            <button type="button" className="btn small" onClick={() => setGentleSwap(true)}>Something gentler</button>
+            <button type="button" className="btn small" onClick={() => dispatch({ type: "skipSlot", slot: p.slot })}>Skip it today</button>
+          </div>
+        </div>
+      ) : null}
       {p.benchmarkSet && logged.length === 0 && !skipped ? (
         <div className="banner info bench">
           <b>Benchmark set</b>
@@ -291,7 +374,7 @@ function ExerciseBlock(props: {
         <span>Effort</span>
         <span />
       </div>
-      {Array.from({ length: p.sets }, (_, setIndex) => {
+      {Array.from({ length: count }, (_, setIndex) => {
         const done = loggedSet(active, p.slot, setIndex);
         const isUp = !!up && up.slot === p.slot && up.setIndex === setIndex;
         const open = !skipped && (editing === setIndex || (isUp && editing === null));
@@ -328,6 +411,7 @@ function ExerciseBlock(props: {
                 setIndex={setIndex}
                 existing={!!done}
                 onSave={(values) => {
+                  if (values.painFlag && !done?.painFlag) setPainSet(setIndex);
                   if (done) dispatch({ type: "edit", slot: p.slot, setIndex, values });
                   else {
                     if (core.settings.haptics) haptic("set");
@@ -344,8 +428,24 @@ function ExerciseBlock(props: {
           </div>
         );
       })}
+      {!skipped && (added < MAX_ADDED_SETS || removable) ? (
+        <div className="add-set">
+          {added < MAX_ADDED_SETS ? (
+            <button type="button" className="btn" aria-label={`Add a set of ${p.name}`} onClick={() => dispatch({ type: "addSet", slot: p.slot })}>
+              Add a set
+            </button>
+          ) : null}
+          {removable ? (
+            <button type="button" className="btn" onClick={() => { if (editing === count - 1) setEditing(null); dispatch({ type: "removeAddedSet", slot: p.slot }); }}>
+              Remove set {count}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {infoOpen ? <ExerciseInfo exerciseId={p.exerciseId} onClose={() => setInfoOpen(false)} /> : null}
       {swapOpen ? <SwapSheet core={core} active={active} p={p} onClose={() => setSwapOpen(false)} /> : null}
+      {gentleSwap ? <SwapSheet core={core} active={active} p={p} reason="hard" fromPain onClose={() => setGentleSwap(false)} /> : null}
+      {painSet !== null ? <PainSheet active={active} slot={p.slot} setIndex={painSet} onClose={() => setPainSet(null)} /> : null}
     </article>
   );
 }
@@ -361,7 +461,8 @@ function SetEditor(props: {
 }): React.ReactElement {
   const { core, active, p, setIndex } = props;
   const initial = prefill(active, p.slot, setIndex);
-  const owned = contextFor(core).ownedLoadsKg;
+  const exercise = getExercise(p.exerciseId);
+  const owned = contextFor(core).loadsFor(exercise);
   const [loadKg, setLoadKg] = useState<number | null>(initial.loadKg);
   const [reps, setReps] = useState(initial.reps);
   const [rir, setRir] = useState<Rir>(initial.rir);
@@ -403,7 +504,7 @@ function SetEditor(props: {
             <button type="button" aria-label="Lighter" onClick={() => stepLoad(-1)} disabled={loadIdx === 0}>−</button>
             <div className="value">
               <b>{loadNumber(loadKg, units)}</b>
-              <span>{units}{p.loadType === "dumbbell_pair" ? " each" : ""}</span>
+              <span>{units}{p.loadType === "dumbbell_pair" ? " each" : p.loadType === "barbell" ? " total" : ""}</span>
             </div>
             <button type="button" aria-label="Heavier" onClick={() => stepLoad(1)} disabled={loadIdx === owned.length - 1}>+</button>
           </div>
@@ -423,13 +524,16 @@ function SetEditor(props: {
           <button type="button" aria-label={isTime ? "More seconds" : "More reps"} onClick={() => setReps((r) => Math.min(isTime ? 300 : 60, r + step))}>+</button>
         </div>
       </div>
+      {p.loadType === "barbell" && loadKg !== null ? (
+        <p className="plates" aria-live="polite">{plateText(platesFor(loadKg, exercise.barKg, units), units)}</p>
+      ) : null}
       <div className="effort stack" style={{ gap: 6 }} ref={effortTip}>
         <span className="label">How many more could you have done?</span>
         <Seg label="Effort" value={rir} onChange={setRir} options={EFFORT_OPTIONS.map((o) => ({ value: o.rir, label: o.label }))} />
         <span className="effort-hint">{isBenchmark ? "For the benchmark, stop when you have about 2 left." : effortHint}</span>
       </div>
       {props.existing ? (
-        <Toggle id={`pain-${p.slot}-${setIndex}`} label="It hurt" hint="Flags pain: this exercise is swapped for an easier one next time." checked={pain} onChange={setPain} />
+        <Toggle id={`pain-${p.slot}-${setIndex}`} label="It hurt" hint="Flags pain: this exercise stops for today and comes back lighter, after a check-in." checked={pain} onChange={setPain} />
       ) : null}
       <div className="row">
         <button
@@ -455,38 +559,133 @@ function SetEditor(props: {
   );
 }
 
-function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; onClose: () => void }): React.ReactElement {
+const SWAP_REASONS: { value: SwapReason; label: string; hint: string }[] = [
+  { value: "busy", label: "It's taken", hint: "Different equipment first. For today only." },
+  { value: "hard", label: "Too hard", hint: "Easier and more stable options first." },
+  { value: "balance", label: "Couldn't balance", hint: "Two-sided options first." },
+  { value: "dislike", label: "Don't like it", hint: "Same job, other ways. Used from now on." },
+];
+
+const PAIN_AREAS = ["Knee", "Hip", "Lower back", "Shoulder", "Elbow", "Wrist", "Neck", "Somewhere else"];
+
+/**
+ * After "It hurt": the exercise is done for today. Where it hurt is noted, and the signs that mean
+ * stopping the whole workout are spelled out. A gentler alternative is offered next time, after a check-in.
+ */
+function PainSheet(props: { active: ActiveSession; slot: string; setIndex: number; onClose: () => void }): React.ReactElement {
   const { dispatch } = useStore();
+  const area = loggedSet(props.active, props.slot, props.setIndex)?.painArea ?? null;
+  return (
+    <Sheet title="Stopping this exercise" onClose={props.onClose}>
+      <p className="meta">That's it for this exercise today. Next time it comes back a step lighter, and you'll be asked how it feels before you start.</p>
+      <div className="field">
+        <span className="label">Where did it hurt?</span>
+        <div className="row-wrap" role="group" aria-label="Where it hurt">
+          {PAIN_AREAS.map((a) => (
+            <button key={a} type="button" className="chip" aria-pressed={area === a} onClick={() => dispatch({ type: "painArea", slot: props.slot, setIndex: props.setIndex, area: area === a ? null : a })}>
+              {a}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="banner stop">
+        <b>Stop the whole workout if</b>
+        you have chest pain or pressure, feel faint or dizzy, are unusually short of breath, or the pain is severe, a joint gives way, or it swells. Get medical help for chest pain or fainting.
+        <div className="row" style={{ marginTop: 10 }}>
+          <button type="button" className="btn danger" onClick={() => { props.onClose(); dispatch({ type: "finish", now: Date.now() }); }}>
+            End workout
+          </button>
+        </div>
+      </div>
+      <p className="meta small">Otherwise carry on with the rest if everything else feels fine. Pain that's sharp or keeps coming back is worth getting checked.</p>
+      <button type="button" className="btn primary" onClick={props.onClose}>Carry on</button>
+    </Sheet>
+  );
+}
+
+function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; reason?: SwapReason; fromPain?: boolean; onClose: () => void }): React.ReactElement {
+  const { dispatch, data } = useStore();
+  const [reason, setReason] = useState<SwapReason | undefined>(props.reason);
+  // A reason the user picked is remembered; the gentler options offered after pain are not "too hard".
+  const [chosen, setChosen] = useState(false);
   const [permanent, setPermanent] = useState(false);
+  const [sticks, setSticks] = useState(false);
   const ctx = contextFor(props.core);
+  const profile = useMemo(() => profileFor(props.core, data.history, Date.now()), [props.core, data.history]);
   const inSession = useMemo(
     () => [...props.active.plan.supersets.flatMap((ss) => ss.items), ...(props.active.plan.finisher ? [props.active.plan.finisher] : [])].map((x) => x.exerciseId),
     [props.active.plan],
   );
-  const alts = alternativesFor(props.p, ctx, inSession);
+  // Options that spare a recently painful area come first; the others are marked.
+  const alts = alternativesFor(props.p, ctx, inSession, reason, profile);
+  const areasOf = (id: string) => cautionAreasFor(profile, id).map((a) => a.toLowerCase());
+  const allLoadCaution = alts.length > 0 && alts.every((e) => areasOf(e.id).length > 0);
+  const pickReason = (r: SwapReason) => {
+    setReason(r);
+    setChosen(true);
+    // Busy equipment is a today problem; not liking an exercise is a for-good one, and so is finding it
+    // too hard or unsteady a second time.
+    const stick = swapSticks(profile, props.p.exerciseId, r);
+    setPermanent(stick);
+    setSticks(stick && r !== "dislike");
+  };
   return (
     <Sheet title={`Swap ${props.p.name}`} onClose={props.onClose}>
-      <p className="meta">Same movement, different exercise. Pick one you can do right now.</p>
+      <div className="field">
+        <span className="label">Why swap?</span>
+        <div className="row-wrap" role="group" aria-label="Why swap">
+          {SWAP_REASONS.map((r) => (
+            <button key={r.value} type="button" className="chip" aria-pressed={reason === r.value} onClick={() => pickReason(r.value)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <span className="meta small">{reason ? SWAP_REASONS.find((r) => r.value === reason)!.hint : "Same job, different exercise. Pick one you can do right now."}</span>
+      </div>
       <div className="choice">
-        {alts.length === 0 ? <p className="meta">Nothing else trains this movement with your equipment.</p> : null}
+        {alts.length === 0 ? <p className="meta">Nothing else does this job with your equipment.</p> : null}
+        {props.fromPain && allLoadCaution ? (
+          <div className="banner adjust" role="status">
+            <b>Every option here works your {areasOf(alts[0]!.id).join(" and ")} too</b>
+            Each comes with the same check-in and stays at a steady weight. Skipping it today is fine.
+            <div className="row-wrap" style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => {
+                  dispatch({ type: "skipSlot", slot: props.p.slot });
+                  props.onClose();
+                }}
+              >
+                Skip it today
+              </button>
+            </div>
+          </div>
+        ) : null}
         {alts.map((e) => (
           <button
             key={e.id}
             type="button"
             onClick={() => {
-              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent });
+              dispatch({ type: "swap", slot: props.p.slot, exerciseId: e.id, permanent, now: Date.now(), ...(chosen && reason ? { reason } : {}) });
               props.onClose();
             }}
           >
-            <b>{e.name}</b>
+            <b>
+              {e.name}
+              {TIER_LABEL[e.tier] ? <span className="example-tag" style={{ marginLeft: 8 }}>{TIER_LABEL[e.tier]}</span> : null}
+            </b>
             {e.cue ? <span>{e.cue}</span> : null}
+            {areasOf(e.id).length > 0 ? <span className="caution-note">Works your {areasOf(e.id).join(" and ")}: same check-in, steady weight</span> : null}
           </button>
         ))}
       </div>
       <label className="toggle" htmlFor="perm">
         <span className="grow">
           <b>Always use this instead</b>
-          <span className="meta small" style={{ display: "block" }}>Otherwise the swap is for today only.</span>
+          <span className="meta small" style={{ display: "block" }}>
+            {sticks ? `You've swapped ${props.p.name} for this reason before, so this one sticks. Untick to keep it for today only.` : "Otherwise the swap is for today only."}
+          </span>
         </span>
         <input id="perm" type="checkbox" role="switch" className="switch" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} />
       </label>
@@ -501,6 +700,8 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
   const over = remaining <= 0;
   const [chooser, setChooser] = useState(false);
   const alerted = useRef<number | null>(null);
+  // The beep can't be heard by everyone: screen readers announce the end of a rest too.
+  const [announce, setAnnounce] = useState("");
   const switchTip = useTip("run.switch", t.kind === "transition");
   const restTip = useTip("run.rest", t.kind !== "transition");
 
@@ -508,11 +709,13 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
     if (over && alerted.current !== t.endsAt) {
       alerted.current = t.endsAt;
       if (props.core.settings.sound) beep("go");
-    }
-  }, [over, t.endsAt, props.core.settings.sound]);
+      setAnnounce(`${t.kind === "transition" ? "Switch now" : "Rest over"}. Next: ${t.next.replace(" · ", ", ")}`);
+    } else if (!over) setAnnounce("");
+  }, [over, t.endsAt, t.kind, t.next, props.core.settings.sound]);
 
   return (
     <>
+      <div className="sr-only" role="alert" aria-atomic="true">{announce}</div>
       <div className={`dock${over ? " go" : ""}`} role="timer" aria-live="off" onPointerDown={unlockAudio}>
         <div className="dock-inner" ref={t.kind === "transition" ? switchTip : restTip}>
           <button type="button" className="ring" onClick={() => setChooser(true)} aria-label={`Rest timer ${clock(remaining)}. Tap to change the rest length.`}>

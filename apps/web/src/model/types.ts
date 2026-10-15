@@ -1,5 +1,7 @@
-import type { ExerciseChange, SessionPlan, TrainingState } from "@repcurve/engine";
+import type { CardioActivity, ExerciseChange, ProfileOverrides, SessionPlan, Soreness, SoreLevel, SwapEvent, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
+
+import type { Reminders } from "./calendar";
 
 export interface Settings {
   /** Rest after each superset round, seconds. */
@@ -10,18 +12,56 @@ export interface Settings {
   keepAwake: boolean;
   /** A buzz on each logged set and a bigger one at the end, where the phone allows it. */
   haptics: boolean;
+  /** The cardio activity the user picked last; used whenever the day's equipment and format allow. */
+  cardioActivity?: CardioActivity;
+  /** Training days and time last added to the phone's calendar as reminders. */
+  reminders?: Reminders;
 }
+
+/**
+ * Version of the stored data's shape. 2: fields this version doesn't know are kept on load, and the
+ * number tells an older app that newer data is in front of it. 3: an exercise in a superset may
+ * do one set fewer than the superset's rounds (older apps would wait for a set they never show).
+ * 4: sets can be added to an exercise mid-session (older apps would hide them and count them
+ * toward progression).
+ */
+export const DATA_VERSION = 4;
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
 export const REST_CHOICES = [30, 45, 60, 75, 90, 120, 150, 180];
 export const TRANSITION_CHOICES = [10, 15, 20, 30, 45];
 
+/** Activity done outside RepCurve (a walk, a match, a swim), counted toward the weekly target. */
+export interface ExtraActivity {
+  /** Epoch ms when it was logged; also its id. */
+  at: number;
+  name: string;
+  minutes: number;
+  /** Breathing hard, few words at a time: counts double. */
+  vigorous: boolean;
+}
+
+export type Location = "home" | "gym";
+
+/** Equipment for each place the user trains, and where today's training happens. */
+export interface Locations {
+  home?: Equipment;
+  gym?: Equipment;
+  at: Location;
+}
+
 /** Everything about the user and their training that isn't a session log. */
 export interface Core {
-  version: 1;
+  /** The data's shape version (DATA_VERSION when this app saved it; higher if a newer app did). */
+  version: number;
   profile: Profile;
+  /** Equipment where the user is training now: what plans are built from. */
   equipment: Equipment;
+  /** Places the user trains. Missing on setups from before locations existed. */
+  locations?: Locations;
+  /** Activity logged outside RepCurve. Missing means none. */
+  activities?: ExtraActivity[];
   settings: Settings;
   state: TrainingState;
   /** ISO timestamp of the first day. */
@@ -33,11 +73,29 @@ export interface Core {
    * user stays in the same week of the programme. Missing means 0.
    */
   positionOffset?: number;
+  /** Corrections made on the "What RepCurve knows" screen. Missing means none. */
+  profileOverrides?: ProfileOverrides;
+  /** The "still sore" check-in answered for the next session. Missing means not asked yet. */
+  soreCheck?: SoreCheck;
+}
+
+/** Answers to "Still sore from last time?" for one upcoming session. */
+export interface SoreCheck {
+  /** The session (its position in the sequence) the answers are for. */
+  index: number;
+  /** Epoch ms when answered; answers go stale after a while, since soreness changes by the hour. */
+  at: number;
+  /** The overall answer. */
+  level: SoreLevel;
+  /** Every group asked about: the ones picked at `level`, the rest "none". */
+  answers: Soreness[];
 }
 
 export interface LoggedSet extends SetLog {
   /** Epoch ms when the set was logged. */
   at: number;
+  /** Active workout time (pauses left out) when the set was logged. Missing on sets saved before it was kept. */
+  activeMs?: number;
 }
 
 export type TimerKind = "rest" | "transition";
@@ -85,6 +143,12 @@ export interface ActiveSession {
   nextSet: Record<string, { loadKg: number | null; reps: number }>;
   /** Slots the user chose to skip for the rest of this session. */
   skippedSlots: string[];
+  /** Swaps made in this session, and why: the training profile learns from them. Missing means none. */
+  swaps?: SwapEvent[];
+  /** Sets added per slot beyond the plan. Missing means none. */
+  extraSets?: Record<string, number>;
+  /** The "still sore" check-in's answers before starting. Missing means not asked. */
+  soreness?: Soreness[];
 }
 
 export interface CardioResult {
@@ -111,6 +175,10 @@ export interface SessionRecord {
   deload: boolean;
   comeback: boolean;
   skipped: boolean;
+  /** Swaps made in the session, and why. Missing on older records. */
+  swaps?: SwapEvent[];
+  /** The "still sore" check-in's answers before the session. Missing when not asked. */
+  soreness?: Soreness[];
 }
 
 export interface AppData {

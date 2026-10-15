@@ -1,4 +1,4 @@
-import { generateProgram, project, type LiftObservation, type Program, type Projection } from "@repcurve/engine";
+import { generateProgram, initialTrainingState, project, type LiftObservation, type Program, type Projection } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import { e1RM } from "@repcurve/shared";
 import type { Equipment, Profile } from "@repcurve/shared";
@@ -12,15 +12,22 @@ export function weeksSince(iso: string, now: number): number {
 }
 
 /** Projection for a profile and equipment before any training (onboarding preview). */
-export function previewProjection(profile: Profile, equipment: Equipment, settings: Settings = DEFAULT_SETTINGS): Projection {
-  const program = previewProgram(profile, equipment, settings);
+export function previewProjection(profile: Profile, equipment: Equipment, settings: Settings = DEFAULT_SETTINGS, logged = 0): Projection {
+  const program = previewProgram(profile, equipment, settings, logged);
   const cardioMinutes = program.template.filter((k) => k === "cardio").length * profile.minutesPerSession;
   return project({ profile, weeklyVolume: program.weeklyVolume, template: program.template, cardioMinutesPerWeek: cardioMinutes });
 }
 
-/** The programme a new user would get, with the same rest and switch times as their real sessions. */
-export function previewProgram(profile: Profile, equipment: Equipment, settings: Settings = DEFAULT_SETTINGS): Program {
-  return generateProgram({ profile, equipment }, { weeks: 2, createdAt: "preview", restSec: settings.restSec, transitionSec: settings.transitionSec });
+/**
+ * The programme for a profile, with the same rest and switch times as real sessions. When an
+ * existing user edits their setup, `logged` (strength sessions so far) keeps the volume they've
+ * stepped up to.
+ */
+export function previewProgram(profile: Profile, equipment: Equipment, settings: Settings = DEFAULT_SETTINGS, logged = 0): Program {
+  return generateProgram(
+    { profile, equipment },
+    { weeks: 2, createdAt: "preview", restSec: settings.restSec, transitionSec: settings.transitionSec, ...(logged > 0 ? { state: { ...initialTrainingState(), strengthSessionsLogged: logged } } : {}) },
+  );
 }
 
 /** Best estimated 1RM per loaded exercise per session, timed in weeks since the start. */

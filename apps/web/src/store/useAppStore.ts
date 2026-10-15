@@ -1,14 +1,21 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { migrateData } from "../model/migrate";
-import { EMPTY_DATA, type AppData } from "../model/types";
-import { memoryPersistence, openPersistence, type Persistence, type StorageKind } from "./persistence";
-import { INITIAL, reducer, type Action, type AppState } from "./reducer";
+import { migrateData, savedByNewerVersion } from "../model/migrate";
+import { DATA_VERSION, EMPTY_DATA, type AppData } from "../model/types";
+import { logCrash } from "../platform/crashLog";
+import { isStorageFull, memoryPersistence, openPersistence, STORAGE_FULL, type Persistence, type StorageKind } from "./persistence";
+import { INITIAL, safeReducer, type Action, type AppState } from "./reducer";
+
+/** Shown when a tap or timer step failed inside the app; nothing was changed. */
+export const ACTION_FAILED = "That didn't work, so nothing was changed. Try again, or reload the app if it keeps happening.";
 
 export interface AppStore extends AppState {
   dispatch: (a: Action) => void;
   storage: StorageKind | null;
   saveError: string | null;
   clearSaveError: () => void;
+  /** An action failed and changed nothing (ACTION_FAILED), until dismissed. */
+  actionError: string | null;
+  clearActionError: () => void;
   /** Data isn't going where the user expects (memory only, or device instead of account). */
   storageWarning: string | null;
   /** One-off notice, e.g. data reloaded after a change on another device. */
@@ -19,15 +26,25 @@ export interface AppStore extends AppState {
 }
 
 export function useAppStore(): AppStore {
-  const [state, dispatch] = useReducer(reducer, INITIAL);
+  const [state, dispatch] = useReducer(safeReducer, INITIAL);
   const [storage, setStorage] = useState<StorageKind | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const persistence = useRef<Persistence | null>(null);
   const saved = useRef<AppData>(EMPTY_DATA);
   const current = useRef<AppData>(EMPTY_DATA);
   current.current = state.data;
+
+  // An action threw and changed nothing: keep a note of it on the device and say so.
+  useEffect(() => {
+    const f = state.failure;
+    if (!f) return;
+    console.error(`RepCurve couldn't do "${f.action}"`, f.error);
+    logCrash(`action: ${f.action}`, f.error, f.at);
+    setActionError(ACTION_FAILED);
+  }, [state.failure]);
 
   /** Load from storage again and show it, e.g. after another device saved. */
   const reload = useCallback(async (message?: string) => {
@@ -44,9 +61,12 @@ export function useAppStore(): AppStore {
     void (async () => {
       let p: Persistence;
       let data: AppData;
+      let behind = false;
       try {
         p = await openPersistence();
-        data = migrateData(await p.load());
+        const raw = await p.load();
+        data = migrateData(raw);
+        behind = storedVersionBehind(raw);
       } catch {
         p = memoryPersistence("Couldn't open your saved data, so changes this visit won't be kept. Reload to try again.");
         data = EMPTY_DATA;
@@ -54,12 +74,24 @@ export function useAppStore(): AppStore {
       if (cancelled) return;
       p.onError(setSaveError);
       p.onConflict(() => {
-        void reload("Your training was updated on another device, so the latest version is loaded here.").catch(() => {});
+        void reload(
+          p.kind === "device"
+            ? "RepCurve is open in another tab or window too, and that copy saved first, so its latest version is loaded here."
+            : "Your training was updated on another device, so the latest version is loaded here.",
+        ).catch(() => {});
       });
       persistence.current = p;
       saved.current = data;
+      // Saved by an older version: write the setup back once at this version, so an older copy of
+      // the app open elsewhere sees it and warns, instead of misreading newer data (added sets).
+      if (behind && data.core) p.saveCore(data.core);
       setStorage(p.kind);
-      setStorageWarning(p.warning);
+      setStorageWarning(
+        p.warning ??
+          (savedByNewerVersion(data.core)
+            ? "Your data was saved by a newer version of RepCurve. Update in Settings when you can: this version keeps everything, but can't use the newest parts."
+            : null),
+      );
       dispatch({ type: "loaded", data });
     })();
     return () => {
@@ -95,7 +127,9 @@ export function useAppStore(): AppStore {
       if (current.current.active) return;
       void p
         .changedElsewhere()
-        .then((changed) => (changed && !current.current.active ? reload("Loaded the latest from your other device.") : undefined))
+        .then((changed) =>
+          changed && !current.current.active ? reload(p.kind === "device" ? "Loaded the latest from RepCurve's other open window." : "Loaded the latest from your other device.") : undefined,
+        )
         .catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -108,6 +142,9 @@ export function useAppStore(): AppStore {
       if (!p) return;
       try {
         await p.replaceAll(data);
+      } catch (e) {
+        if (isStorageFull(e)) setSaveError(STORAGE_FULL);
+        throw e;
       } finally {
         // Show what storage actually holds, whether or not every write landed.
         await reload().catch(() => {
@@ -125,6 +162,8 @@ export function useAppStore(): AppStore {
     storage,
     saveError,
     clearSaveError: () => setSaveError(null),
+    actionError,
+    clearActionError: () => setActionError(null),
     storageWarning,
     notice,
     clearNotice: () => setNotice(null),
@@ -155,4 +194,13 @@ export function useStore(): AppStore {
   const s = React.useContext(StoreContext);
   if (!s) throw new Error("StoreContext missing");
   return s;
+}
+
+/** Whether stored data was last saved by an older version than this one. */
+function storedVersionBehind(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const core = (raw as { core?: unknown }).core;
+  if (typeof core !== "object" || core === null) return false;
+  const v = (core as { version?: unknown }).version;
+  return typeof v !== "number" || v < DATA_VERSION;
 }
