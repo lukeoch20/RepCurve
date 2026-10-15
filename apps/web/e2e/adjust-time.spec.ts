@@ -11,11 +11,11 @@ test("today's time goes from 10 minutes up: more time adds work, less takes exer
   await expect(page.getByText("Your usual length")).toBeVisible();
   const usual = await exercisesInHeader(page);
 
-  // Up to the longest length that still adds work (at most 40, and less once the week's volume
+  // Up to the longest length that still adds work (at most 60, and less once the week's volume
   // ceiling is reached), stepping only through lengths that change the session; then "+" stops.
   // A step adds sets, which may be another exercise or more sets of one already planned.
   const more = time(page).getByRole("button", { name: "More time" });
-  for (let i = 0; i < 6 && (await more.isEnabled()); i++) {
+  for (let i = 0; i < 12 && (await more.isEnabled()); i++) {
     const before = await exercisesInHeader(page);
     await more.click();
     expect(await exercisesInHeader(page)).toBeGreaterThanOrEqual(before);
@@ -40,7 +40,7 @@ test("today's time goes from 10 minutes up: more time adds work, less takes exer
 test("a session started on a long day runs the longer plan", async ({ page }) => {
   await onboard(page);
   const more = time(page).getByRole("button", { name: "More time" });
-  for (let i = 0; i < 6 && (await more.isEnabled()); i++) await more.click();
+  for (let i = 0; i < 12 && (await more.isEnabled()); i++) await more.click();
   const planned = await exercisesInHeader(page);
   await page.getByRole("button", { name: "Start session" }).click();
   await expect(page.locator("article.block")).toHaveCount(planned);
