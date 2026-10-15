@@ -16,6 +16,7 @@ import { useTip } from "./tips";
 import { ChallengeCard } from "./Trophies";
 import { badges, monthChallenge, RETURN_GAP_DAYS } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
+import { SoreCheckCard } from "./SoreCheck";
 
 const DAY_MS = 86_400_000;
 
@@ -148,6 +149,8 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           <span className="meta small">Same plan and effort on any of them. Your pick is remembered for next time.</span>
         </div>
       ) : null}
+
+      {plan.kind === "strength" ? <SoreCheckCard core={core} history={history} plan={plan} now={now} /> : null}
 
       <section className="card stack" style={{ gap: 14 }}>
         <span className="eyebrow accent">Today</span>

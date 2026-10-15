@@ -1,4 +1,4 @@
-import type { CardioActivity, ExerciseChange, SessionPlan, SwapEvent, TrainingState } from "@repcurve/engine";
+import type { CardioActivity, ExerciseChange, ProfileOverrides, SessionPlan, Soreness, SoreLevel, SwapEvent, TrainingState } from "@repcurve/engine";
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
 import type { Reminders } from "./calendar";
@@ -71,6 +71,22 @@ export interface Core {
    * user stays in the same week of the programme. Missing means 0.
    */
   positionOffset?: number;
+  /** Corrections made on the "What RepCurve knows" screen. Missing means none. */
+  profileOverrides?: ProfileOverrides;
+  /** The "still sore" check-in answered for the next session. Missing means not asked yet. */
+  soreCheck?: SoreCheck;
+}
+
+/** Answers to "Still sore from last time?" for one upcoming session. */
+export interface SoreCheck {
+  /** The session (its position in the sequence) the answers are for. */
+  index: number;
+  /** Epoch ms when answered; answers go stale after a while, since soreness changes by the hour. */
+  at: number;
+  /** The overall answer. */
+  level: SoreLevel;
+  /** Every group asked about: the ones picked at `level`, the rest "none". */
+  answers: Soreness[];
 }
 
 export interface LoggedSet extends SetLog {
@@ -125,6 +141,8 @@ export interface ActiveSession {
   skippedSlots: string[];
   /** Swaps made in this session, and why: the training profile learns from them. Missing means none. */
   swaps?: SwapEvent[];
+  /** The "still sore" check-in's answers before starting. Missing means not asked. */
+  soreness?: Soreness[];
 }
 
 export interface CardioResult {
@@ -153,6 +171,8 @@ export interface SessionRecord {
   skipped: boolean;
   /** Swaps made in the session, and why. Missing on older records. */
   swaps?: SwapEvent[];
+  /** The "still sore" check-in's answers before the session. Missing when not asked. */
+  soreness?: Soreness[];
 }
 
 export interface AppData {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
 import { CardioRunner } from "./ui/CardioRunner";
 import { Finished } from "./ui/Finished";
+import { Knows, KnowsOpener } from "./ui/Knows";
 import { Onboarding } from "./ui/Onboarding";
 import { Plan } from "./ui/Plan";
 import { Progress } from "./ui/Progress";
@@ -37,6 +38,8 @@ export function App(): React.ReactElement {
   const store = useAppStore();
   const [tab, setTab] = useState<Tab>(rememberedTab);
   const [editingSetup, setEditingSetup] = useState(false);
+  // "What RepCurve knows", opened from Settings or Progress, over the tab it came from.
+  const [knows, setKnows] = useState(false);
   const [update, setUpdate] = useState(updateReady);
   useEffect(() => onUpdateReady(() => setUpdate(true)), []);
 
@@ -77,15 +80,21 @@ export function App(): React.ReactElement {
     body = (
       <>
         <main className="app">
-          {tab === "today" ? <Today core={core} history={history} /> : null}
-          {tab === "plan" ? <Plan core={core} history={history} /> : null}
-          {tab === "progress" ? <Progress core={core} history={history} /> : null}
-          {tab === "settings" ? <Settings core={core} onEditSetup={() => setEditingSetup(true)} /> : null}
+          {knows ? (
+            <Knows core={core} history={history} onClose={() => { setKnows(false); window.scrollTo(0, 0); }} />
+          ) : (
+            <KnowsOpener value={() => { setKnows(true); window.scrollTo(0, 0); }}>
+              {tab === "today" ? <Today core={core} history={history} /> : null}
+              {tab === "plan" ? <Plan core={core} history={history} /> : null}
+              {tab === "progress" ? <Progress core={core} history={history} /> : null}
+              {tab === "settings" ? <Settings core={core} onEditSetup={() => setEditingSetup(true)} /> : null}
+            </KnowsOpener>
+          )}
         </main>
         <div className="tabbar">
           <nav aria-label="Sections">
             {TABS.map((t) => (
-              <button key={t.id} type="button" aria-current={tab === t.id ? "page" : undefined} onClick={() => { setTab(t.id); window.scrollTo(0, 0); }}>
+              <button key={t.id} type="button" aria-current={tab === t.id ? "page" : undefined} onClick={() => { setTab(t.id); setKnows(false); window.scrollTo(0, 0); }}>
                 <Icon name={t.id} size={22} strokeWidth={tab === t.id ? 2 : 1.7} />
                 {t.label}
               </button>

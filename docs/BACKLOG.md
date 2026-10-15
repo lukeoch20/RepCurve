@@ -204,8 +204,20 @@ first two rungs need. Higher rungs as new looks arrive.
 1. ~~**B1 groundwork:** add the derived profile and route existing feedback through it, starting with the two
    gaps that are already collected but ignored: pain area, and the "too hard" and "couldn't balance" swap reasons.~~
    Done: `buildProfile` / `applyProfile` in the engine, `profileFor` in the app.
-2. **B2:** the soreness check-in as the first new input to the profile.
-3. **B1 screen:** "What RepCurve knows about you", with corrections.
+2. ~~**B2:** the soreness check-in as the first new input to the profile.~~
+   Done, smaller than drafted above: on Today, only when today's plan works a muscle a session in the
+   last three days worked, "Still sore from yesterday's session?" with Not sore / A bit / Very and, for
+   more than one muscle, where. A bit changes nothing; very takes one set off the exercises whose prime
+   movers are sore (never below one, never more than one under the superset's rounds) and holds their
+   weight (`applySoreness`, `recordSoreSession` in `packages/engine/src/soreness.ts`). Groups are the
+   engine's muscles (biceps and triceps apart, so push then pull doesn't ask). The answers are saved
+   with the session and the profile keeps them per muscle. Not yet: swapping very sore exercises,
+   "Still sore" on an exercise card, and trimming sets after three sore check-ins in a row.
+3. ~~**B1 screen:** "What RepCurve knows about you", with corrections.~~
+   Done: from Settings and Progress. Level and volume step, weekly sets per muscle, pain cautions
+   ("It's fine now"), swapped-out exercises ("Bring it back" / "Forget this"), soreness, and working
+   weights with trends ("Re-test" gives a benchmark set next time). Corrections are stored in
+   `core.profileOverrides` and read by `buildProfile`.
 4. **B3:** research pass for reference tables, then push-up percentiles, then the rest.
 5. **B4:** style previews in Settings.
 6. **B5:** looks as rewards, first two rungs (Fired Forge and Pixel Press), once the open decisions are made.

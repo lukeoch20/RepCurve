@@ -5,6 +5,8 @@ import { MACHINES } from "@repcurve/shared";
 import type { Equipment, Goal, Profile, TrainingHistory } from "@repcurve/shared";
 import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
+import { migrateOverrides } from "./profile";
+import { migrateSoreCheck, migrateSoreness } from "./soreness";
 import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type Locations, type SessionRecord, type Settings } from "./types";
 
 /**
@@ -155,7 +157,17 @@ export function migrateCore(c: unknown): Core | null {
     core.equipment = locations[locations.at]!;
   }
   if (isNum(c["positionOffset"])) core.positionOffset = Math.floor(c["positionOffset"]);
-  return core;
+  return withValid(core, { profileOverrides: migrateOverrides(c["profileOverrides"]), soreCheck: migrateSoreCheck(c["soreCheck"]) });
+}
+
+/** `o` with each of these fields set when valid and removed when not. */
+function withValid<T extends object>(o: T, fields: { [K in keyof T]?: T[K] | undefined }): T {
+  const out = { ...o };
+  for (const [k, v] of Object.entries(fields) as [keyof T, T[keyof T] | undefined][]) {
+    if (v === undefined) delete out[k];
+    else out[k] = v;
+  }
+  return out;
 }
 
 /** Every exercise a plan refers to is still in the library. */
@@ -177,7 +189,7 @@ export function migrateRecord(r: unknown): SessionRecord | null {
   const sets = Array.isArray(r["sets"])
     ? (r["sets"] as unknown[]).filter((s): s is SessionRecord["sets"][number] => isObj(s) && known(s["exerciseId"]) && isNum(s["reps"]))
     : [];
-  return {
+  return withValid<SessionRecord>({
     ...(r as unknown as SessionRecord),
     name: typeof r["name"] === "string" ? r["name"] : r["kind"] === "cardio" ? "Cardio" : "Strength",
     week: isNum(r["week"]) ? r["week"] : 1,
@@ -193,13 +205,13 @@ export function migrateRecord(r: unknown): SessionRecord | null {
     ...(Array.isArray(r["swaps"])
       ? { swaps: (r["swaps"] as unknown[]).filter((w): w is NonNullable<SessionRecord["swaps"]>[number] => isObj(w) && known(w["from"]) && known(w["to"]) && typeof w["slot"] === "string") }
       : {}),
-  };
+  }, { soreness: migrateSoreness(r["soreness"]) });
 }
 
 export function migrateActive(a: unknown): ActiveSession | null {
   if (!isObj(a) || typeof a["id"] !== "string" || !isNum(a["index"]) || !isNum(a["startedAt"]) || !planUsable(a["plan"])) return null;
   const sets = Array.isArray(a["sets"]) ? (a["sets"] as unknown[]).filter((s) => isObj(s) && known(s["exerciseId"]) && isNum(s["reps"])) : [];
-  return {
+  return withValid<ActiveSession>({
     ...(a as unknown as ActiveSession),
     pausedMs: isNum(a["pausedMs"]) ? a["pausedMs"] : 0,
     pausedAt: isNum(a["pausedAt"]) ? a["pausedAt"] : null,
@@ -211,7 +223,7 @@ export function migrateActive(a: unknown): ActiveSession | null {
     advice: isObj(a["advice"]) ? (a["advice"] as ActiveSession["advice"]) : {},
     nextSet: isObj(a["nextSet"]) ? (a["nextSet"] as ActiveSession["nextSet"]) : {},
     skippedSlots: Array.isArray(a["skippedSlots"]) ? (a["skippedSlots"] as string[]) : [],
-  };
+  }, { soreness: migrateSoreness(a["soreness"]) });
 }
 
 export function migrateData(raw: unknown): AppData {

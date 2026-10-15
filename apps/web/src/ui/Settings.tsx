@@ -11,6 +11,7 @@ import { useTips } from "./tips";
 import { InstallCard } from "./Install";
 import { backUp } from "./Backup";
 import { ReminderSettings } from "./Reminders";
+import { KnowsLink } from "./Knows";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -142,6 +143,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
           Edit profile, schedule and equipment
         </button>
         <p className="meta small">Your progress is kept when you change these.</p>
+        <KnowsLink />
       </section>
 
       <InstallCard />
