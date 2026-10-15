@@ -1,7 +1,7 @@
 import type { Muscle, Rir } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { planSessionWith } from "./generate.js";
-import { applySoreness, primeMovers, recordSoreSession, soreQuestion, sorenessSummary, SORE_WINDOW_HOURS, type Soreness } from "./soreness.js";
+import { applySoreness, primeMovers, recordSoreSession, soreQuestion, sorenessSummary, SORE_MIN_HOURS, SORE_WINDOW_HOURS, type Soreness } from "./soreness.js";
 import { applyState, initialTrainingState, prescriptionsOf, recordSession, type TrainingState } from "./state.js";
 import { logSession, onTarget, referenceContext } from "./testkit.js";
 import type { Prescription, SessionPlan } from "./types.js";
@@ -36,13 +36,20 @@ describe("the still-sore question", () => {
 
   it("doesn't ask after three days, for cardio, or when nothing is shared", () => {
     expect(soreQuestion(plan, [legs], T0 + (SORE_WINDOW_HOURS + 1) * HOUR)).toBeNull();
-    expect(soreQuestion(planSessionWith(ctx, 2), [legs], T0 + HOUR)).toBeNull();
-    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: ["standing_calf_raise"] }], T0 + HOUR)).toBeNull();
+    expect(soreQuestion(planSessionWith(ctx, 2), [legs], T0 + 8 * HOUR)).toBeNull();
+    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: ["standing_calf_raise"] }], T0 + 8 * HOUR)).toBeNull();
     expect(soreQuestion(plan, [], T0)).toBeNull();
     // Core alone (the finisher) doesn't ask; with another muscle it's included.
     const core = prescriptionsOf(plan).find((p) => primeMovers(p.exerciseId).includes("core"))!.exerciseId;
-    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core] }], T0 + HOUR)).toBeNull();
-    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core, "goblet_squat"] }], T0 + HOUR)!.groups).toEqual(["quads", "glutes", "core"]);
+    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core] }], T0 + 8 * HOUR)).toBeNull();
+    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core, "goblet_squat"] }], T0 + 8 * HOUR)!.groups).toEqual(["quads", "glutes", "core"]);
+  });
+
+  it("waits until soreness could have come on: not in the hours straight after a session", () => {
+    const legsNow = { finishedAt: T0, exerciseIds: ["goblet_squat"] };
+    expect(soreQuestion(plan, [legsNow], T0 + 2 * 60_000)).toBeNull();
+    expect(soreQuestion(plan, [legsNow], T0 + (SORE_MIN_HOURS - 1) * HOUR)).toBeNull();
+    expect(soreQuestion(plan, [legsNow], T0 + SORE_MIN_HOURS * HOUR)).not.toBeNull();
   });
 });
 

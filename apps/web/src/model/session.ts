@@ -3,6 +3,7 @@ import {
   fitToBudget,
   preferExercise,
   prescriptionsOf,
+  primeMovers,
   recordSessionWithExtras,
   recordSoreSession,
   swapPrescription,
@@ -12,6 +13,7 @@ import {
   type SwapEvent,
   type SwapReason,
   type TrainingProfile,
+  verySore,
 } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
@@ -165,6 +167,7 @@ export function logSet(active: ActiveSession, ref: SetRef, v: SetValues, core: C
     reps: Math.max(0, Math.round(v.reps)),
     rir: v.rir,
     at: now,
+    activeMs: elapsedMs(active, now),
   };
   if (v.painFlag) set.painFlag = true;
   if (ref.setIndex >= p.sets) set.extra = true;
@@ -249,11 +252,15 @@ export function swapExercise(
   if (!p || setsForSlot(active, slot).length > 0) return { active, core };
   const ctx = contextFor(core);
   const state = permanent ? preferExercise(core.state, p.exerciseId, exerciseId) : core.state;
-  const np = swapPrescription(p, exerciseId, state, ctx, profile);
+  const np = withSoreness(p, swapPrescription(p, exerciseId, state, ctx, profile), active.soreness);
   const replace = (x: Prescription) => (x.slot === slot ? np : x);
   const plan: SessionPlan = {
     ...active.plan,
-    supersets: active.plan.supersets.map((ss) => ({ ...ss, items: ss.items.map(replace) })),
+    supersets: active.plan.supersets.map((ss) => {
+      if (!ss.items.some((x) => x.slot === slot)) return ss;
+      const items = ss.items.map(replace);
+      return { ...ss, items, rounds: Math.max(...items.map((x) => x.sets)) };
+    }),
     finisher: active.plan.finisher ? replace(active.plan.finisher) : null,
   };
   const { [slot]: _a, ...advice } = active.advice;
@@ -261,6 +268,18 @@ export function swapExercise(
   const swap: SwapEvent = { slot, from: p.exerciseId, to: exerciseId, permanent, ...(reason ? { reason } : {}) };
   const swaps = [...(active.swaps ?? []), swap];
   return { active: { ...active, plan, advice, nextSet, swaps }, core: permanent ? { ...core, state } : core };
+}
+
+/**
+ * The soreness hold for an exercise swapped in: one that works a muscle answered very sore is held
+ * like the one it replaces; one that doesn't gets back the set the sore exercise gave up.
+ */
+function withSoreness(from: Prescription, to: Prescription, soreness: ActiveSession["soreness"]): Prescription {
+  const very = new Set(verySore(soreness));
+  const groups = primeMovers(to.exerciseId).filter((m) => very.has(m));
+  const { sore: _, ...rest } = to;
+  if (groups.length > 0) return { ...rest, benchmarkSet: false, sore: { groups, setOff: from.sore?.setOff ?? false } };
+  return from.sore?.setOff ? { ...rest, sets: to.sets + 1 } : rest;
 }
 
 // ---------------------------------------------------------------- timers
@@ -318,6 +337,17 @@ export function lastSetAt(active: ActiveSession): number | null {
   return active.sets.length > 0 ? Math.max(...active.sets.map((s) => s.at)) : null;
 }
 
+/**
+ * Active time when the last set was logged. Sets keep the active time they were logged at, so
+ * pauses before the last set are left out exactly; older sets fall back to placing pauses late.
+ */
+function activeAtLastSet(active: ActiveSession, now: number): number | null {
+  const last = lastSetAt(active);
+  if (last === null) return null;
+  const set = active.sets.find((s) => s.at === last)!;
+  return set.activeMs ?? elapsedAt(active, last, now);
+}
+
 /** Sets are logged but none for hours: the workout was probably left open after it ended. */
 export function looksLeftOpen(active: ActiveSession, now: number): boolean {
   const last = lastSetAt(active);
@@ -330,9 +360,10 @@ export function looksLeftOpen(active: ActiveSession, now: number): boolean {
  * last set, and never runs past twice the plan (or two hours, if that's longer).
  */
 export function activeMinutes(active: ActiveSession, end: number, now = end): number {
-  let ms = elapsedAt(active, end, now);
   const last = lastSetAt(active);
-  if (last !== null && end > last) ms = Math.min(ms, elapsedAt(active, last, now) + AFTER_LAST_SET_MS);
+  const atLast = activeAtLastSet(active, now);
+  let ms = last !== null && atLast !== null && end === last ? atLast : elapsedAt(active, end, now);
+  if (last !== null && atLast !== null && end > last) ms = Math.min(ms, atLast + AFTER_LAST_SET_MS);
   const capMs = Math.max(2 * active.plan.estimatedMinutes, 120) * 60_000;
   return Math.round(Math.min(ms, capMs) / 60_000);
 }

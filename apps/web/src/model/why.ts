@@ -53,8 +53,12 @@ export function whyThisLoad(p: Prescription, active: ActiveSession, history: Ses
   const swap = [...(active.swaps ?? [])].reverse().find((s) => s.slot === p.slot && s.to === p.exerciseId);
   if (swap) lines.push(`Swapped in for ${nameOf(swap.from)} today.`);
   if (p.benchmarkSet) {
+    // A re-test of an exercise already done starts from its working weight, not a first guess.
+    const doneBefore = history.some((r) => r.sets.some((x) => x.exerciseId === p.exerciseId));
     lines.push(
-      p.loadKg !== null
+      p.loadKg !== null && doneBefore
+        ? `Re-test: ${fmt(p.loadKg)} is your current working weight. Your first set, as many clean reps as you can with about 2 left, resets it.`
+        : p.loadKg !== null
         ? `Benchmark: ${fmt(p.loadKg)} is a first guess from your body weight, experience and equipment. Your first set, as many clean reps as you can with about 2 left, sets your working weight.`
         : "Benchmark: your first set, as many clean reps as you can with about 2 left, sets your target from here.",
     );

@@ -81,7 +81,7 @@ describe("what RepCurve knows", () => {
     const k = whatRepCurveKnows(core, history, now);
     const w = k.weights.find((x) => x.canRetest)!;
     const re = retest(core, w.exerciseId);
-    expect(whatRepCurveKnows(re, history, now).weights.find((x) => x.exerciseId === w.exerciseId)).toMatchObject({ retesting: true, canRetest: false, trend: "Re-testing next time" });
+    expect(whatRepCurveKnows(re, history, now).weights.find((x) => x.exerciseId === w.exerciseId)).toMatchObject({ retesting: true, canRetest: false, trend: "Re-testing on your next full session" });
     let found = false;
     for (let i = re.nextIndex; i < re.nextIndex + 8 && !found; i++) {
       const p = prescriptionsOf(todayPlan({ ...re, nextIndex: i }, history, now)).find((x) => x.exerciseId === w.exerciseId);

@@ -306,6 +306,10 @@ function migrateSet(s: unknown, at: number): LoggedSet | null {
   if ("slot" in s && typeof s["slot"] !== "string") delete out.slot;
   if ("painFlag" in s) out.painFlag = s["painFlag"] === true;
   if ("extra" in s) out.extra = s["extra"] === true;
+  if ("activeMs" in s) {
+    if (isNum(s["activeMs"])) out.activeMs = Math.max(0, s["activeMs"]);
+    else delete out.activeMs;
+  }
   if ("painArea" in s && typeof s["painArea"] !== "string") delete out.painArea;
   return out;
 }

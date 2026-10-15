@@ -94,6 +94,8 @@ export interface SoreCheck {
 export interface LoggedSet extends SetLog {
   /** Epoch ms when the set was logged. */
   at: number;
+  /** Active workout time (pauses left out) when the set was logged. Missing on sets saved before it was kept. */
+  activeMs?: number;
 }
 
 export type TimerKind = "rest" | "transition";
