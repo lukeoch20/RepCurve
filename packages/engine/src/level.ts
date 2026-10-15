@@ -44,6 +44,28 @@ export function volumeTarget(level: TrainingLevel): [number, number] {
 }
 
 /**
+ * Hard sets per week for each tracked shoulder head (the side), counted on top of the shoulders'
+ * own target: direct work for the part of the shoulder that pressing leaves short. None for
+ * novices, who grow from the big lifts alone and whose time goes further on them. [verify]
+ */
+export function deltHeadTarget(level: TrainingLevel): [number, number] | null {
+  switch (level) {
+    case "novice":
+      return null;
+    case "intermediate":
+      return [6, 8];
+    case "advanced":
+      return [8, 10];
+  }
+}
+
+/** The most hard sets each tracked shoulder head gets in a week (none tracked for novices). */
+export function deltHeadCeiling(level: TrainingLevel): number {
+  const t = deltHeadTarget(level);
+  return t ? Math.ceil(t[1] * 1.5) : Infinity;
+}
+
+/**
  * The most hard sets a muscle gets in a week: half again the top of the target. Past it, more sets
  * add little (the dose-response flattens) and cost recovery, so spare minutes go unused instead.
  */

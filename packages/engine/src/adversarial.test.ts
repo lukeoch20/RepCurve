@@ -14,7 +14,7 @@ import * as contextMod from "./context.js";
 import type { EngineContext } from "./context.js";
 import { generateProgram, planSessionWith, type PlanOptions } from "./generate.js";
 import * as levelMod from "./level.js";
-import { volumeCeiling, volumeTarget } from "./level.js";
+import { deltHeadCeiling, volumeCeiling, volumeTarget } from "./level.js";
 import { classOf } from "./pool.js";
 import { freshProgress, progressExercise, type ExerciseProgress } from "./progression.js";
 import * as sessionMod from "./session.js";
@@ -25,7 +25,7 @@ import { adjustableEquipment, referenceEquipment, referenceProfile, sets as logS
 import * as timingMod from "./timing.js";
 import { setSeconds, setupSeconds } from "./timing.js";
 import type { Prescription, SessionPlan, Superset } from "./types.js";
-import { MUSCLES, hardSets, weeklyVolume } from "./volume.js";
+import { DELT_HEADS, MUSCLES, ceilingVolume, hardSets, weeklyDeltHeads, weeklyVolume } from "./volume.js";
 
 // ---------------------------------------------------------------------------------------------
 // New API, looked up loosely.
@@ -312,18 +312,23 @@ describe("1. weekly ceiling", () => {
     const failures: string[] = [];
     for (const pw of sweep()) {
       const ceiling = volumeCeiling(volumeLevelOf(pw.ctx));
-      const v = weeklyVolume(pw.sessions);
+      // Spec amendment (shoulder heads): past the novice stage, lateral raises count against the
+      // side head's own ceiling rather than the shoulders'.
+      const v = ceilingVolume(pw.sessions, volumeLevelOf(pw.ctx));
       for (const m of WORKED) if (v[m] > ceiling + 1e-9) failures.push(`${pw.scenario.label} week ${pw.week}: ${m} ${v[m]} > ${ceiling}`);
+      const heads = weeklyDeltHeads(pw.sessions);
+      const headCeiling = deltHeadCeiling(volumeLevelOf(pw.ctx));
+      for (const h of DELT_HEADS) if (heads[h] > headCeiling + 1e-9) failures.push(`${pw.scenario.label} week ${pw.week}: ${h} ${heads[h]} > ${headCeiling}`);
     }
     expect(failures).toEqual([]);
-  });
+  }, 60_000);
 
   it("a promoted novice is held to the intermediate ceiling (24), an unpromoted one to 15", () => {
     for (const logged of [0, 60]) {
       const ctx = ctxFor({ trainingHistory: "never", split: "full_body", daysPerWeek: 4, minutesPerSession: 60, goal: "strength_muscle" }, fullGym, logged);
       const ceiling = logged >= 60 ? 24 : 15;
       for (const week of [2, 3]) {
-        const v = weeklyVolume(planWeek(ctx, week));
+        const v = ceilingVolume(planWeek(ctx, week), logged >= 60 ? "intermediate" : "novice");
         for (const m of WORKED) expect(v[m], `logged ${logged} week ${week} ${m}`).toBeLessThanOrEqual(ceiling + 1e-9);
       }
     }
@@ -334,7 +339,8 @@ describe("1. weekly ceiling", () => {
       const profile = { ...referenceProfile, trainingHistory: "regular" as TrainingHistory, split, daysPerWeek: 5, minutesPerSession: 60 };
       const program = generateProgram({ profile, equipment: fullGym }, { weeks: 12, createdAt: "test" });
       expect(program.sessions.length).toBe(12 * program.template.length);
-      for (const m of WORKED) expect(program.weeklyVolume[m], `${split} ${m}`).toBeLessThanOrEqual(volumeCeiling("intermediate") + 1e-9);
+      const counted = ceilingVolume(program.sessions.filter((s) => s.week === 2), "intermediate");
+      for (const m of WORKED) expect(counted[m], `${split} ${m}`).toBeLessThanOrEqual(volumeCeiling("intermediate") + 1e-9);
     }
   });
 });
@@ -1009,7 +1015,7 @@ describe("10. rotation", () => {
     const e1rmByExercise = Object.fromEntries(ids.map((id) => [id, 50]));
     for (const w of [2, 7, 8]) {
       const week = planWeek(ctx, w, { e1rmByExercise });
-      const v = weeklyVolume(week);
+      const v = ceilingVolume(week, volumeLevelOf(ctx));
       for (const m of WORKED) expect(v[m], `week ${w} ${m}`).toBeLessThanOrEqual(volumeCeiling(volumeLevelOf(ctx)) + 1e-9);
       for (const s of strengthOf(week)) {
         expectUnevenSets(s, `e1rm week ${w} day ${s.dayIndex + 1}`);
@@ -1094,7 +1100,7 @@ describe("12. today's minutes", () => {
           for (const minutes of [10, 15, 60, 90]) {
             const today = planSessionWith(ctx, s.index, { minutes });
             const where = `${describeProfile(p)} week ${week} day ${d + 1} today=${minutes}`;
-            const v = weeklyVolume(normal.map((x, i) => (i === d ? today : x)));
+            const v = ceilingVolume(normal.map((x, i) => (i === d ? today : x)), volumeLevelOf(ctx));
             for (const m of WORKED) if (v[m] > ceiling + 1e-9) failures.push(`${where}: ${m} ${v[m]} > ${ceiling}`);
             if (minutes > p.minutesPerSession! && hardSets(today) < hardSets(s)) failures.push(`${where}: ${hardSets(today)} < ${hardSets(s)} hard sets`);
             if (today.estimatedMinutes > minutes * 1.05 + 1e-9) failures.push(`${where}: ${today.estimatedMinutes} min`);

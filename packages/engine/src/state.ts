@@ -1,6 +1,6 @@
 import { getExercise } from "@repcurve/exercises";
 import { prevOwnedLoad, roundDownToOwned } from "@repcurve/shared";
-import type { Exercise, SetLog } from "@repcurve/shared";
+import type { Exercise, SetLog, TrainingLevel } from "@repcurve/shared";
 import type { EngineContext } from "./context.js";
 import { cautionAreasFor, markCaution, type TrainingProfile } from "./profile.js";
 import { isLoaded, repRangeFor, startingLoadKg } from "./loads.js";
@@ -29,6 +29,10 @@ export interface TrainingState {
   exercises: Record<string, ExerciseProgress>;
   /** Strength sessions left in the current deload. */
   deloadRemaining: number;
+  /** Why the current deload started: recent sessions were grinds, or it was due. Absent outside a deload. */
+  deloadReason?: DeloadReason;
+  /** Strength sessions since the last deload or break. Absent in states saved before scheduled deloads (read as 0). */
+  sessionsSinceDeload?: number;
   /** Share of "grinder" sets (0 left in the tank, or below the rep range) in recent strength sessions. */
   strain: number[];
   strengthSessionsLogged: number;
@@ -40,6 +44,16 @@ export function initialTrainingState(): TrainingState {
 
 /** Days off after which the next strength session eases you back in. */
 export const COMEBACK_DAYS = 14;
+
+export type DeloadReason = "strain" | "scheduled";
+
+/**
+ * Weeks of training after which a planned lighter week is due, for lifters past the novice stage.
+ * Novices recover quickly and only deload when sessions turn into grinds. For trained lifters a
+ * light week every 4 to 8 weeks is common practice; the advanced interval matches the length of
+ * an exercise block. [verify]
+ */
+export const SCHEDULED_DELOAD_WEEKS: Record<TrainingLevel, number | null> = { novice: null, intermediate: 8, advanced: 6 };
 
 export function resolveExercise(state: TrainingState, programmedId: string): string {
   return state.substitutions[programmedId] ?? programmedId;
@@ -264,9 +278,15 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
   const used = new Set<string>();
   const usable = (id: string) => inPool.has(id) && !used.has(id);
 
-  /** The exercise for a slot: its substitute, else what was programmed, else another exercise of the same movement. */
+  /**
+   * The exercise for a slot: its substitute, else what was programmed, else another exercise of the
+   * same movement. In an alternate block, a swap or ladder move made on the slot's usual exercise
+   * carries over (unless the alternate has its own), so a block of variety never undoes a "do this
+   * instead" or drops someone back down a ladder they have climbed.
+   */
   const pick = (p: Prescription): string | null => {
-    const resolved = resolveExercise(state, p.exerciseId);
+    const carried = p.alternateOf !== undefined && state.substitutions[p.exerciseId] === undefined && state.substitutions[p.alternateOf] !== undefined;
+    const resolved = carried ? resolveExercise(state, p.alternateOf!) : resolveExercise(state, p.exerciseId);
     if (usable(resolved)) return resolved;
     if (usable(p.exerciseId)) return p.exerciseId;
     const pattern = getExercise(p.exerciseId).pattern;
@@ -296,7 +316,8 @@ export function applyState(session: SessionPlan, state: TrainingState, ctx: Engi
     })
     .filter((ss) => ss.items.length > 0);
   const finisher = session.finisher ? remap(session.finisher, session.finisher.sets) : null;
-  return fitToBudget({ ...session, supersets, finisher, deload, comeback });
+  const deloadReason = deload ? (state.deloadReason ?? "strain") : undefined;
+  return fitToBudget({ ...session, supersets, finisher, deload, comeback, ...(deloadReason ? { deloadReason } : {}) });
 }
 
 /** Why someone wants a different exercise; each wants different options first. */
@@ -473,7 +494,14 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
   if (session.deload) {
     next.deloadRemaining = Math.max(0, next.deloadRemaining - 1);
     deloadFinished = next.deloadRemaining === 0;
-  } else if (!session.comeback) {
+    if (deloadFinished) {
+      delete next.deloadReason;
+      next.sessionsSinceDeload = 0;
+    }
+  } else if (session.comeback) {
+    // A break of two weeks or more is rest enough; the count towards a planned light week restarts.
+    next.sessionsSinceDeload = 0;
+  } else {
     const byId = new Map(prescriptions.map((p) => [p.exerciseId, p]));
     const counted = logs.filter((l) => {
       const p = byId.get(l.exerciseId);
@@ -486,9 +514,14 @@ export function recordSession(state: TrainingState, session: SessionPlan, logs: 
       const grinders = counted.filter((l) => l.rir === 0 || (l.reps < byId.get(l.exerciseId)!.repRange[0] && canEase.get(l.exerciseId))).length;
       next.strain = [...next.strain, grinders / counted.length].slice(-6);
     }
+    next.sessionsSinceDeload = (next.sessionsSinceDeload ?? 0) + 1;
     const recent = next.strain.slice(-STRAINED_SESSIONS_FOR_DELOAD);
-    if (recent.length === STRAINED_SESSIONS_FOR_DELOAD && recent.every((s) => s >= STRAIN_THRESHOLD)) {
+    const dueWeeks = SCHEDULED_DELOAD_WEEKS[ctx.volumeLevel];
+    const strained = recent.length === STRAINED_SESSIONS_FOR_DELOAD && recent.every((s) => s >= STRAIN_THRESHOLD);
+    const due = dueWeeks !== null && next.sessionsSinceDeload >= dueWeeks * Math.max(1, ctx.strengthPerWeek);
+    if (strained || due) {
       next.deloadRemaining = Math.max(1, ctx.strengthPerWeek);
+      next.deloadReason = strained ? "strain" : "scheduled";
       next.strain = [];
       deloadStarted = true;
     }
