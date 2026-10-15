@@ -67,8 +67,9 @@ export default defineConfig(({ mode }) => {
               start_url: "./",
               scope: "./",
               display: "standalone",
-              background_color: "#eaf1fb",
-              theme_color: "#1e5b3b",
+              // The splash screen matches the icon's tile so the mark doesn't sit on a second colour.
+              background_color: test ? "#2a2e33" : "#ffffff",
+              theme_color: test ? "#2a2e33" : "#ffffff",
               icons: [
                 { src: icon("icon-192.png"), sizes: "192x192", type: "image/png" },
                 { src: icon("icon-512.png"), sizes: "512x512", type: "image/png" },
