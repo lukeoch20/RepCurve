@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { applyProfile, buildProfile, cautionAreasFor, swapSticks, type FeedbackSession } from "./profile.js";
-import { alternativesFor, initialTrainingState, prescriptionsOf, recordSession, swapPrescription } from "./state.js";
+import { applyProfile, bringBack, buildProfile, cautionAreasFor, clearPainChecks, resetWorkingWeight, swapSticks, type FeedbackSession } from "./profile.js";
+import { alternativesFor, applyState, initialTrainingState, preferExercise, prescriptionsOf, recordSession, resolveExercise, swapPrescription } from "./state.js";
 import type { SessionPlan } from "./types.js";
-import { referenceContext, sets } from "./testkit.js";
+import { logSession, onTarget, referenceContext, sets } from "./testkit.js";
 import { planSessionWith } from "./generate.js";
 
 const DAY = 86_400_000;
@@ -100,3 +100,86 @@ describe("cautions in swaps", () => {
     expect(cautionAreasFor(hurtBack, "db_bent_over_row")).toEqual(["Lower back"]);
   });
 });
+
+describe("corrections from the profile screen", () => {
+  const first = hurt(T0, "db_overhead_press", "Shoulder");
+
+  it("sets aside pain reported before the user said it's fine, but not pain after", () => {
+    const fineNow = { cautionsCleared: { Shoulder: T0 + DAY } };
+    expect(buildProfile(initialTrainingState(), [first], T0 + 2 * DAY, fineNow).cautions).toEqual([]);
+    const again = buildProfile(initialTrainingState(), [first, hurt(T0 + 3 * DAY, "db_overhead_press", "Shoulder")], T0 + 4 * DAY, fineNow);
+    expect(again.cautions).toMatchObject([{ area: "Shoulder", reports: 1, firstReportAt: T0 + 3 * DAY, active: true }]);
+    // Other areas are untouched.
+    expect(buildProfile(initialTrainingState(), [first, hurt(T0, "goblet_squat", "Knee")], T0 + DAY, fineNow).cautions.map((c) => c.area)).toEqual(["Knee"]);
+  });
+
+  it("forgets an exercise's swaps up to when the user asked", () => {
+    const swap = (at: number, reason: "hard" | "dislike"): FeedbackSession => ({
+      finishedAt: at, kind: "strength", sets: [], swaps: [{ slot: "A.1", from: "db_bulgarian_split_squat", to: "db_reverse_lunge", reason, permanent: reason === "dislike" }],
+    });
+    const before = buildProfile(initialTrainingState(), [swap(T0, "dislike"), swap(T0, "hard")], T0);
+    expect(before.preferences).toMatchObject({ disliked: ["db_bulgarian_split_squat"], tooHard: { db_bulgarian_split_squat: 1 }, swappedFor: { db_bulgarian_split_squat: "db_reverse_lunge" } });
+    const forgotten = { forgotten: { db_bulgarian_split_squat: T0 } };
+    const after = buildProfile(initialTrainingState(), [swap(T0, "dislike"), swap(T0, "hard")], T0, forgotten);
+    expect(after.preferences).toEqual({ disliked: [], tooHard: {}, unstable: {}, swappedFor: {} });
+    expect(swapSticks(after, "db_bulgarian_split_squat", "hard")).toBe(false);
+    expect(buildProfile(initialTrainingState(), [swap(T0, "hard"), swap(T0 + DAY, "hard")], T0 + DAY, forgotten).preferences.tooHard).toEqual({ db_bulgarian_split_squat: 1 });
+  });
+
+  it("brings a disliked exercise back where the swap put the other one", () => {
+    const state = preferExercise(initialTrainingState(), "goblet_squat", "db_reverse_lunge");
+    expect(resolveExercise(state, "goblet_squat")).toBe("db_reverse_lunge");
+    const back = bringBack(state, "goblet_squat", "db_reverse_lunge");
+    expect(resolveExercise(back, "goblet_squat")).toBe("goblet_squat");
+    // Swapped again since: it still comes back where it was programmed.
+    const moved = preferExercise(state, "db_reverse_lunge", "bodyweight_squat");
+    expect(resolveExercise(bringBack(moved, "goblet_squat", "db_reverse_lunge"), "goblet_squat")).toBe("goblet_squat");
+    // A slot on another ladder that happens to use the same exercise is left alone.
+    const other = { ...state, substitutions: { ...state.substitutions, db_floor_press: "db_reverse_lunge" } };
+    expect(bringBack(other, "goblet_squat", "db_reverse_lunge").substitutions).toEqual({ db_floor_press: "db_reverse_lunge" });
+    expect(bringBack(initialTrainingState(), "goblet_squat", "db_reverse_lunge")).toEqual(initialTrainingState());
+  });
+
+  it("re-tests a working weight with a benchmark set next time, until it's set again", () => {
+    const ctx = referenceContext();
+    let state = initialTrainingState();
+    const week1 = applyState(planSessionWith(ctx, 0), state, ctx);
+    state = recordSession(state, week1, logSession(week1, (p, i) => (p.benchmarkSet && i === 0 ? { reps: 12, rir: 2 } : onTarget(p))), ctx).state;
+    const later = applyState(planSessionWith(ctx, ctx.template.length), state, ctx);
+    const target = prescriptionsOf(later).find((p) => p.loadType !== "time" && state.exercises[p.exerciseId]?.calibrated)!;
+    expect(target.benchmarkSet).toBe(false);
+
+    const reset = resetWorkingWeight(state, target.exerciseId);
+    expect(reset.exercises[target.exerciseId]).toMatchObject({ calibrated: false, loadKg: state.exercises[target.exerciseId]!.loadKg });
+    const overrides = { rebenchmark: [target.exerciseId] };
+    const profile = buildProfile(reset, [], T0, overrides);
+    expect(profile.rebenchmark).toEqual([target.exerciseId]);
+    const planned = prescriptionsOf(applyProfile(applyState(planSessionWith(ctx, ctx.template.length), reset, ctx), profile));
+    expect(planned.filter((p) => p.benchmarkSet).map((p) => p.exerciseId)).toEqual([target.exerciseId]);
+    // Not in a lighter session.
+    const deload = applyProfile({ ...applyState(planSessionWith(ctx, ctx.template.length), reset, ctx), deload: true }, profile);
+    expect(prescriptionsOf(deload).some((p) => p.benchmarkSet)).toBe(false);
+
+    // The benchmark sets it again, and the re-test is over.
+    const retested = applyProfile(applyState(planSessionWith(ctx, ctx.template.length), reset, ctx), profile);
+    const after = recordSession(reset, retested, logSession(retested, (p, i) => (p.benchmarkSet && i === 0 ? { reps: 15, rir: 2 } : onTarget(p))), ctx);
+    expect(after.changes.find((c) => c.exerciseId === target.exerciseId)!.action).toBe("calibrated");
+    expect(buildProfile(after.state, [], T0, overrides).rebenchmark).toEqual([]);
+  });
+
+  it("'It's fine now' also ends the check-in on the exercise that hurt", () => {
+    const state = { ...initialTrainingState(), exercises: { db_overhead_press: { ...referenceProgress("db_overhead_press"), painCheck: true } } };
+    expect(clearPainChecks(state, [first], "Shoulder").exercises["db_overhead_press"]!.painCheck).toBe(false);
+    expect(clearPainChecks(state, [first], "Knee")).toBe(state);
+  });
+
+  it("keeps what the soreness check-ins said, per muscle group", () => {
+    const sore = (at: number, level: "none" | "bit" | "very"): FeedbackSession => ({ finishedAt: at, kind: "strength", sets: [], soreness: [{ group: "quads", level }] });
+    const p = buildProfile(initialTrainingState(), [sore(T0, "very"), sore(T0 + DAY, "none"), sore(T0 + 2 * DAY, "bit"), sore(T0 + 3 * DAY, "very")], T0 + 3 * DAY);
+    expect(p.soreness).toEqual([{ group: "quads", asked: 4, sore: 3, lastLevel: "very", lastAt: T0 + 3 * DAY, streak: 2 }]);
+  });
+});
+
+function referenceProgress(exerciseId: string) {
+  return { exerciseId, loadKg: 9, repRange: [8, 12] as [number, number], targetRir: 2 as const, targetReps: 8, stalls: 0, e1rmKg: null, bestE1rmKg: null, calibrated: true, timesPerformed: 3 };
+}

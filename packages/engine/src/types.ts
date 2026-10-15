@@ -27,6 +27,8 @@ export interface Prescription {
   painCheck?: boolean;
   /** The recently painful area this exercise loads (e.g. "Shoulder"), when the check-in is for that. */
   caution?: string;
+  /** Works a muscle group still very sore today: `setOff` when it does one set fewer for it. Held at its weight. */
+  sore?: { groups: Muscle[]; setOff: boolean };
   cue?: string;
 }
 

@@ -2,6 +2,7 @@ import { getExercise } from "@repcurve/exercises";
 import type { Injury, SetLog } from "@repcurve/shared";
 import type { Prescription, SessionPlan } from "./types.js";
 import type { SwapReason, TrainingState } from "./state.js";
+import type { SoreLevel, Soreness } from "./soreness.js";
 
 /**
  * Everything RepCurve has learned about a person, in one place: the per-exercise progress the
@@ -21,7 +22,39 @@ export interface TrainingProfile {
     tooHard: Record<string, number>;
     /** Times each exercise was swapped out because the user couldn't balance. */
     unstable: Record<string, number>;
+    /** What each exercise was last swapped out for, for good. */
+    swappedFor: Record<string, string>;
   };
+  /** What the "still sore" check-ins said, per muscle group asked about. */
+  soreness: SoreRecord[];
+  /** Exercises whose working weight is being re-tested: they get a benchmark set until it's set again. */
+  rebenchmark: string[];
+}
+
+/** One muscle group's check-in answers. */
+export interface SoreRecord {
+  group: Soreness["group"];
+  /** Check-ins that asked about it. */
+  asked: number;
+  /** Answers of "a bit" or "very". */
+  sore: number;
+  lastLevel: SoreLevel;
+  lastAt: number;
+  /** Check-ins in a row, up to the last, that found it still sore. */
+  streak: number;
+}
+
+/**
+ * Corrections the user made on the profile screen. Stored with their data and read every time the
+ * profile is built, so what was corrected stays corrected.
+ */
+export interface ProfileOverrides {
+  /** Areas the user said are fine now, with when: pain reported up to then no longer counts. */
+  cautionsCleared?: Record<string, number>;
+  /** Exercises whose swaps the user asked to forget, with when: swaps up to then no longer count. */
+  forgotten?: Record<string, number>;
+  /** Exercises whose working weight the user asked to re-test. */
+  rebenchmark?: string[];
 }
 
 export interface Caution {
@@ -31,6 +64,7 @@ export interface Caution {
   injury: Injury | null;
   /** Times it was flagged. */
   reports: number;
+  firstReportAt: number;
   lastReportAt: number;
   /** Strength sessions since the last report that trained this area without pain. */
   painFreeSessions: number;
@@ -53,6 +87,8 @@ export interface FeedbackSession {
   kind: "strength" | "cardio";
   sets: Pick<SetLog, "exerciseId" | "painFlag" | "painArea">[];
   swaps?: SwapEvent[];
+  /** The "still sore" check-in's answers before the session. */
+  soreness?: Soreness[];
 }
 
 /** Areas the pain sheet offers that match a joint exercises can be marked as hard on. */
@@ -72,12 +108,19 @@ const loadsArea = (exerciseId: string, injury: Injury): boolean => {
   }
 };
 
-/** Builds the profile from the training state and the finished sessions, oldest first. */
-export function buildProfile(state: TrainingState, sessions: FeedbackSession[], now: number): TrainingProfile {
+/**
+ * Builds the profile from the training state and the finished sessions, oldest first, with the
+ * user's corrections applied.
+ */
+export function buildProfile(state: TrainingState, sessions: FeedbackSession[], now: number, overrides: ProfileOverrides = {}): TrainingProfile {
   const cautions = new Map<string, Caution>();
   const tooHard: Record<string, number> = {};
   const unstable: Record<string, number> = {};
   const disliked = new Set<string>();
+  const swappedFor: Record<string, string> = {};
+  const sore = new Map<Soreness["group"], SoreRecord>();
+  const cleared = overrides.cautionsCleared ?? {};
+  const forgotten = overrides.forgotten ?? {};
 
   for (const s of sessions) {
     // Sessions that trained a cautioned area without pain count toward lifting the caution.
@@ -90,19 +133,36 @@ export function buildProfile(state: TrainingState, sessions: FeedbackSession[], 
     }
     for (const l of s.sets) {
       if (!l.painFlag || !l.painArea) continue;
+      // The user said this area is fine now: what was reported up to then is set aside.
+      if (s.finishedAt <= (cleared[l.painArea] ?? -Infinity)) continue;
       const c = cautions.get(l.painArea);
       if (c) {
         if (c.lastReportAt !== s.finishedAt) c.reports += 1;
         c.lastReportAt = s.finishedAt;
         c.painFreeSessions = 0;
       } else {
-        cautions.set(l.painArea, { area: l.painArea, injury: AREA_INJURY[l.painArea] ?? null, reports: 1, lastReportAt: s.finishedAt, painFreeSessions: 0, active: true });
+        cautions.set(l.painArea, {
+          area: l.painArea,
+          injury: AREA_INJURY[l.painArea] ?? null,
+          reports: 1,
+          firstReportAt: s.finishedAt,
+          lastReportAt: s.finishedAt,
+          painFreeSessions: 0,
+          active: true,
+        });
       }
     }
     for (const w of s.swaps ?? []) {
+      if (s.finishedAt <= (forgotten[w.from] ?? -Infinity)) continue;
       if (w.reason === "hard") tooHard[w.from] = (tooHard[w.from] ?? 0) + 1;
       if (w.reason === "balance") unstable[w.from] = (unstable[w.from] ?? 0) + 1;
       if (w.reason === "dislike" && w.permanent) disliked.add(w.from);
+      if (w.permanent) swappedFor[w.from] = w.to;
+    }
+    for (const a of s.soreness ?? []) {
+      const r = sore.get(a.group) ?? { group: a.group, asked: 0, sore: 0, lastLevel: "none" as SoreLevel, lastAt: 0, streak: 0 };
+      const isSore = a.level !== "none";
+      sore.set(a.group, { ...r, asked: r.asked + 1, sore: r.sore + (isSore ? 1 : 0), lastLevel: a.level, lastAt: s.finishedAt, streak: isSore ? r.streak + 1 : 0 });
     }
   }
 
@@ -112,7 +172,10 @@ export function buildProfile(state: TrainingState, sessions: FeedbackSession[], 
   return {
     exercises: state.exercises,
     cautions: [...cautions.values()].sort((a, b) => b.lastReportAt - a.lastReportAt),
-    preferences: { disliked: [...disliked], tooHard, unstable },
+    preferences: { disliked: [...disliked], tooHard, unstable, swappedFor },
+    soreness: [...sore.values()],
+    // Only while the exercise is still waiting for its new benchmark.
+    rebenchmark: (overrides.rebenchmark ?? []).filter((id) => state.exercises[id] !== undefined && !state.exercises[id]!.calibrated),
   };
 }
 
@@ -127,8 +190,12 @@ export function cautionFor(profile: TrainingProfile, exerciseId: string): Cautio
  * has had a few pain-free sessions.
  */
 export function applyProfile(session: SessionPlan, profile: TrainingProfile): SessionPlan {
-  if (session.kind !== "strength" || !profile.cautions.some((c) => c.active && c.injury)) return session;
-  const mark = (p: Prescription) => markCaution(p, profile);
+  const retest = new Set(profile.rebenchmark);
+  if (session.kind !== "strength" || (!profile.cautions.some((c) => c.active && c.injury) && retest.size === 0)) return session;
+  // A working weight being re-tested gets a benchmark set, outside lighter sessions; a caution wins over it.
+  const easier = session.deload || session.comeback;
+  const bench = (p: Prescription) => (!easier && retest.has(p.exerciseId) && p.loadType !== "time" && !p.painCheck ? { ...p, benchmarkSet: true } : p);
+  const mark = (p: Prescription) => markCaution(bench(p), profile);
   return {
     ...session,
     supersets: session.supersets.map((ss) => ({ ...ss, items: ss.items.map(mark) })),
@@ -158,4 +225,58 @@ export function swapSticks(profile: TrainingProfile, exerciseId: string, reason:
   if (reason === "hard") return (profile.preferences.tooHard[exerciseId] ?? 0) >= 1;
   if (reason === "balance") return (profile.preferences.unstable[exerciseId] ?? 0) >= 1;
   return false;
+}
+
+/**
+ * Re-test an exercise's working weight: it's no longer counted as set, so (with the exercise in the
+ * profile overrides' `rebenchmark`) its next session starts with a benchmark set from the current weight.
+ */
+export function resetWorkingWeight(state: TrainingState, exerciseId: string): TrainingState {
+  const p = state.exercises[exerciseId];
+  if (!p) return state;
+  return { ...state, exercises: { ...state.exercises, [exerciseId]: { ...p, calibrated: false, stalls: 0, topStreak: 0 } } };
+}
+
+/**
+ * Undo a for-good swap: the exercise swapped out comes back where it was programmed, and in slots on
+ * its ladder that the swap moved to the other exercise (unless they've been changed again since).
+ */
+export function bringBack(state: TrainingState, from: string, to: string): TrainingState {
+  let ladder: string | undefined;
+  try {
+    ladder = getExercise(from).ladder;
+  } catch {
+    return state;
+  }
+  const sameLadder = (id: string) => {
+    try {
+      return getExercise(id).ladder === ladder;
+    } catch {
+      return false;
+    }
+  };
+  const substitutions = { ...state.substitutions };
+  let changed = false;
+  for (const [k, v] of Object.entries(state.substitutions)) {
+    if (k !== from && (v !== to || !sameLadder(k))) continue;
+    changed = true;
+    if (k === from) delete substitutions[k];
+    else substitutions[k] = from;
+  }
+  return changed ? { ...state, substitutions } : state;
+}
+
+/** "It's fine now": exercises that hurt in this area stop waiting for a pain-free session. */
+export function clearPainChecks(state: TrainingState, sessions: FeedbackSession[], area: string): TrainingState {
+  const hurt = new Set(sessions.flatMap((s) => s.sets.filter((l) => l.painFlag && l.painArea === area).map((l) => l.exerciseId)));
+  const exercises = { ...state.exercises };
+  let changed = false;
+  for (const id of hurt) {
+    const p = exercises[id];
+    if (p?.painCheck) {
+      exercises[id] = { ...p, painCheck: false };
+      changed = true;
+    }
+  }
+  return changed ? { ...state, exercises } : state;
 }
