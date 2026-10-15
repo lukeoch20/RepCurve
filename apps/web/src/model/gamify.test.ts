@@ -1,4 +1,4 @@
-import type { Equipment, Profile } from "@repcurve/shared";
+import type { Equipment, Profile, Rir } from "@repcurve/shared";
 import { kgToLb, lbToKg } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { movedKg, newRecords } from "./celebrate";
@@ -230,7 +230,7 @@ function randomHistory(seed: number, n: number): SessionRecord[] {
       ...base,
       skipped: r() < 0.05,
       changes: r() < 0.08 ? [{ action: "ladder_up" } as SessionRecord["changes"][number]] : [],
-      sets: base.sets.map((s) => ({ ...s, rir: Math.floor(r() * 4), painFlag: r() < 0.05 })),
+      sets: base.sets.map((s) => ({ ...s, rir: Math.floor(r() * 4) as Rir, painFlag: r() < 0.05 })),
     });
   }
   // Out of order, as a restored history might be.

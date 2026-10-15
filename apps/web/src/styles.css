@@ -494,3 +494,22 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .level-chip { font-size: 0.78rem; font-weight: 700; color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
 .celebrate-like { text-align: center; margin-top: -8px; }
 @media (prefers-reduced-motion: reduce) { .new-badges .trophy { animation: none; } }
+
+/* Style previews (Settings, finish screen): each look in its own colours and fonts, from the
+   --pv-… values set on each pane, so the active look's rules never reach inside. */
+.look-preview { display: flex; gap: 6px; margin-bottom: 8px; }
+.look-preview span { color: inherit; font-size: inherit; }
+.look-preview .lp-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--pv-bg); color: var(--pv-ink); border: 1px solid var(--pv-line); border-radius: min(var(--pv-radius), 10px); font-family: var(--pv-body); font-size: 0.78rem; line-height: 1.2; }
+.look-preview .lp-head { display: block; padding: 6px 10px; background: var(--pv-head); color: var(--pv-head-ink); border-bottom: 1px solid var(--pv-line); font-family: var(--pv-display); font-weight: var(--pv-head-weight); text-transform: var(--pv-caps); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.look-preview .lp-page { display: block; padding: 8px; }
+.look-preview .lp-card { display: flex; align-items: center; gap: 8px; padding: 7px 8px; background: var(--pv-card); border: 1px solid var(--pv-line); border-radius: var(--pv-radius); }
+.look-preview .lp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; color: var(--pv-ink); font-size: inherit; }
+.look-preview .lp-title { color: var(--pv-ink); font-size: inherit; font-weight: 700; }
+.look-preview .lp-sub { color: var(--pv-muted); font-size: inherit; }
+.look-preview .lp-button { flex: none; padding: 4px 10px; background: var(--pv-button); color: var(--pv-button-ink); border: 1px solid var(--pv-button-edge); border-radius: var(--pv-button-radius); font-size: inherit; font-weight: 700; }
+.look-preview.two .lp-curve { display: none; }
+.choice button[aria-disabled="true"] .look-preview { opacity: 0.55; filter: saturate(0.5); }
+.choice .look-routes { display: flex; gap: 6px; align-items: baseline; margin-top: 6px; color: var(--ink); }
+.look-routes .look-lock { flex: none; transform: translateY(2px); }
+.look-preview.two .lp-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.share-preview { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
