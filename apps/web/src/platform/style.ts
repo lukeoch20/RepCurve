@@ -38,12 +38,12 @@ export interface StyleFamily {
 }
 
 export const FAMILIES: readonly StyleFamily[] = [
+  { id: "classic", name: "Classic", hint: "The original forest green and serif headings.", light: "classic-light", dark: "classic-dark", auto: "classic" },
   { id: "bluebird", name: "Bluebird", hint: "Cobalt headers, ivory cards and green buttons; deep navy in the dark.", light: "bluebird-light", dark: "bluebird-dark" },
   { id: "forge", name: "Fired Forge", hint: "Warm ash panels, charcoal headers and ember buttons; banked embers in the dark.", light: "forge-light", dark: "forge-dark" },
   { id: "pixel", name: "Pixel Press", hint: "Game-sprite pixels and grid lettering: violet on lavender, or violet and mint on indigo.", light: "pixel-light", dark: "pixel-dark" },
   { id: "gold", name: "Gold Plated", hint: "Champagne gold, faceted frames and Art Deco headings, on ivory or black enamel.", light: "gold-light", dark: "gold-dark" },
   { id: "diamond", name: "Cut Like a Diamond", hint: "Platinum frames, polished crystal and a brilliant-cut diamond, as white diamond or black crystal.", light: "diamond-light", dark: "diamond-dark" },
-  { id: "classic", name: "Classic", hint: "The original forest green and serif headings.", light: "classic-light", dark: "classic-dark", auto: "classic" },
 ];
 
 /** Every look-and-version, named for where one name is needed. */

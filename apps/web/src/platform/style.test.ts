@@ -103,3 +103,9 @@ describe("trying a look", () => {
     expect(versionLike(forge, "classic", false)).toBe("forge-light");
   });
 });
+
+describe("the list of looks", () => {
+  it("starts with Classic, the original look", () => {
+    expect(FAMILIES[0]!.id).toBe("classic");
+  });
+});
