@@ -140,9 +140,28 @@ export class Writer {
   }
 }
 
+/** Shown when the device has no room left for RepCurve's data; the app offers a backup beside it. */
+export const STORAGE_FULL = "Your phone is out of space for RepCurve's data. Save a backup, then free some space.";
+
+/**
+ * The browser refused a write because the device (or the browser's share of it) is full: a
+ * QuotaExceededError from IndexedDB or localStorage, Firefox's NS_ERROR_DOM_QUOTA_REACHED, or
+ * Safari's disk-full UnknownError. A failed IndexedDB transaction carries it as its error.
+ */
+export function isStorageFull(e: unknown, depth = 0): boolean {
+  if (!e || typeof e !== "object" || depth > 3) return false;
+  const { name, code, message, error, cause } = e as { name?: unknown; code?: unknown; message?: unknown; error?: unknown; cause?: unknown };
+  if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return true;
+  // Legacy DOMException codes: QUOTA_EXCEEDED_ERR, and Firefox's own.
+  if (e instanceof Error && (code === 22 || code === 1014)) return true;
+  if (typeof message === "string" && /quota|disk is full|database or disk|not enough space|out of space/i.test(message)) return true;
+  return isStorageFull(error, depth + 1) || isStorageFull(cause, depth + 1);
+}
+
 export function describeError(e: unknown): string {
   const code = (e as { code?: string })?.code;
   if (code === "quota_exceeded") return "Storage is full. Export a backup in Settings, then reset old history.";
+  if (isStorageFull(e)) return STORAGE_FULL;
   if (code === "revoked" || code === "not_granted") return "This page lost access to your saved data. Reload the page.";
   return "Couldn't save your latest change. RepCurve keeps retrying while the app is open; this message clears once it's saved.";
 }

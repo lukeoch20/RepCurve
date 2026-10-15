@@ -1,9 +1,19 @@
 import "fake-indexeddb/auto";
-import { createStore, set } from "idb-keyval";
+import { createStore, set, type UseStore } from "idb-keyval";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { newCore } from "../model/plan";
-import type { AppData, Core, SessionRecord } from "../model/types";
-import { claudePersistence, devicePersistence, Writer, type DB } from "./persistence";
+import { EMPTY_DATA, type AppData, type Core, type SessionRecord } from "../model/types";
+import {
+  claudePersistence,
+  ConflictError,
+  describeError,
+  devicePersistence,
+  isStorageFull,
+  memoryPersistence,
+  STORAGE_FULL,
+  Writer,
+  type DB,
+} from "./persistence";
 
 // ------------------------------------------------------------------ test doubles
 
@@ -280,5 +290,202 @@ describe("two copies of the app on one device", () => {
     await p.flush();
     expect((await devicePersistence(store).load()).core!.nextIndex).toBe(4);
     expect(await p.changedElsewhere()).toBe(false);
+  });
+
+  it("a restore in one copy makes the other's next save a conflict, not an overwrite", async () => {
+    const store = createStore(`t-${Math.random()}`, "data");
+    const tabA = devicePersistence(store);
+    const tabB = devicePersistence(store);
+    await tabA.load();
+    await tabB.load();
+    let conflicts = 0;
+    const errors: (string | null)[] = [];
+    tabB.onConflict(() => (conflicts += 1));
+    tabB.onError((m) => errors.push(m));
+    await tabA.replaceAll({ core: { ...baseCore(), nextIndex: 8 }, active: null, history: [record(7)] });
+    expect(await tabA.changedElsewhere()).toBe(false);
+    expect(await tabB.changedElsewhere()).toBe(true);
+    tabB.saveCore(baseCore());
+    await tabB.flush();
+    expect(conflicts).toBe(1);
+    // A conflict isn't a write failure: nothing to retry, no error shown.
+    expect(errors).toEqual([]);
+    const stored = await devicePersistence(store).load();
+    expect(stored.core!.nextIndex).toBe(8);
+    expect(stored.history.map((r) => r.id)).toEqual(["s7"]);
+  });
+
+  it("a reset leaves nothing behind", async () => {
+    const store = createStore(`t-${Math.random()}`, "data");
+    const p = devicePersistence(store);
+    await p.load();
+    p.saveCore(baseCore());
+    p.saveRecord(record(0));
+    await p.flush();
+    await p.replaceAll(EMPTY_DATA);
+    expect(await devicePersistence(store).load()).toEqual(EMPTY_DATA);
+    // Saving again after a reset works without a conflict.
+    let conflicts = 0;
+    p.onConflict(() => (conflicts += 1));
+    p.saveCore(baseCore());
+    await p.flush();
+    expect(conflicts).toBe(0);
+    expect((await devicePersistence(store).load()).core).not.toBeNull();
+  });
+});
+
+// ------------------------------------------------------------------ the write queue
+
+describe("the write queue", () => {
+  it("collapses a burst of changes into the latest and writes one document at a time", async () => {
+    const written: number[] = [];
+    let running = 0;
+    let most = 0;
+    const w = new Writer(() => {}, () => {}, instant);
+    for (let i = 1; i <= 5; i++) {
+      w.schedule("core", async () => {
+        running += 1;
+        most = Math.max(most, running);
+        await new Promise((r) => setTimeout(r, 5));
+        written.push(i);
+        running -= 1;
+      });
+    }
+    await w.flush();
+    // The first was already under way; the rest collapse into the last.
+    expect(written).toEqual([1, 5]);
+    expect(most).toBe(1);
+  });
+
+  it("hands a conflict to the page once, without retrying or reporting a save error", async () => {
+    let attempts = 0;
+    let conflicts = 0;
+    const reports: (string | null)[] = [];
+    const w = new Writer((m) => reports.push(m), () => (conflicts += 1), instant);
+    w.schedule("core", async () => {
+      attempts += 1;
+      throw new ConflictError();
+    });
+    await w.flush();
+    expect(attempts).toBe(1);
+    expect(conflicts).toBe(1);
+    expect(reports).toEqual([]);
+    expect(w.hasFailures()).toBe(false);
+  });
+});
+
+// ------------------------------------------------------------------ L3: storage full
+
+describe("L3: a full phone is named as such", () => {
+  it("recognises quota errors from IndexedDB, localStorage, Firefox and Safari", () => {
+    expect(isStorageFull(new DOMException("The quota has been exceeded.", "QuotaExceededError"))).toBe(true);
+    expect(isStorageFull({ name: "NS_ERROR_DOM_QUOTA_REACHED", message: "Persistent storage maximum size reached" })).toBe(true);
+    expect(isStorageFull(new DOMException("", "UnknownError"))).toBe(false);
+    expect(isStorageFull(new DOMException("Database or disk is full", "UnknownError"))).toBe(true);
+    // A failed IndexedDB transaction carries the quota error inside it.
+    expect(isStorageFull({ name: "AbortError", error: new DOMException("", "QuotaExceededError") })).toBe(true);
+    expect(isStorageFull(new Error("write failed", { cause: new DOMException("", "QuotaExceededError") }))).toBe(true);
+    expect(isStorageFull(new Error("network"))).toBe(false);
+    expect(isStorageFull(null)).toBe(false);
+    expect(isStorageFull("QuotaExceededError")).toBe(false);
+  });
+
+  it("says the phone is out of space, and keeps the account-storage message for the account", () => {
+    expect(describeError(new DOMException("", "QuotaExceededError"))).toBe(STORAGE_FULL);
+    expect(STORAGE_FULL).toBe("Your phone is out of space for RepCurve's data. Save a backup, then free some space.");
+    expect(describeError({ code: "quota_exceeded" })).toMatch(/Storage is full/);
+    expect(describeError(new Error("network"))).toMatch(/keeps retrying/);
+  });
+
+  it("reports a full phone on a device save, and clears it once there's room again", async () => {
+    // Only the retry timers: the stand-in IndexedDB runs its work on setImmediate.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const real = createStore(`t-${Math.random()}`, "data");
+      const disk = { full: true };
+      const store: UseStore = (mode, fn) =>
+        mode === "readwrite" && disk.full ? Promise.reject(new DOMException("The quota has been exceeded.", "QuotaExceededError")) : real(mode, fn);
+      const p = devicePersistence(store);
+      const errors: (string | null)[] = [];
+      p.onError((m) => errors.push(m));
+      await p.load();
+      p.saveRecord(record(0));
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(errors.at(-1)).toBe(STORAGE_FULL);
+      // Space is freed; the queued write goes through on the next retry and the message clears.
+      disk.full = false;
+      await vi.advanceTimersByTimeAsync(16_000);
+      await p.flush();
+      expect(errors.at(-1)).toBeNull();
+      expect((await devicePersistence(real).load()).history.map((r) => r.id)).toEqual(["s0"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects a restore that doesn't fit, leaving the old data in place", async () => {
+    const real = createStore(`t-${Math.random()}`, "data");
+    const before = devicePersistence(real);
+    await before.load();
+    before.saveCore(baseCore());
+    await before.flush();
+    const full: UseStore = (mode, fn) => (mode === "readwrite" ? Promise.reject(new DOMException("", "QuotaExceededError")) : real(mode, fn));
+    const p = devicePersistence(full);
+    await p.load();
+    const failed = await p.replaceAll({ core: { ...baseCore(), nextIndex: 5 }, active: null, history: [record(1)] }).catch((e: unknown) => e);
+    expect(isStorageFull(failed)).toBe(true);
+    expect((await devicePersistence(real).load()).core!.nextIndex).toBe(0);
+  });
+});
+
+// ------------------------------------------------------------------ nowhere
+
+describe("memory only", () => {
+  it("keeps this visit's data, says so, and never reports a conflict", async () => {
+    const p = memoryPersistence();
+    expect(p.warning).toMatch(/isn't letting RepCurve save/);
+    p.saveCore(baseCore());
+    p.saveRecord(record(0));
+    p.saveRecord({ ...record(0), name: "Edited" });
+    expect((await p.load()).history.map((r) => r.name)).toEqual(["Edited"]);
+    await p.replaceAll(EMPTY_DATA);
+    expect(await p.load()).toEqual(EMPTY_DATA);
+    expect(await p.changedElsewhere()).toBe(false);
+  });
+});
+
+// ------------------------------------------------------------------ account storage, more
+
+describe("account storage", () => {
+  it("a restore bumps the revision, so another device's stale save is refused", async () => {
+    const { db, docs } = fakeDb();
+    const phone = claudePersistence(db, "u1", instant);
+    const tablet = claudePersistence(db, "u1", instant);
+    await phone.load();
+    phone.saveCore(baseCore());
+    await phone.flush();
+    await tablet.load();
+    await phone.replaceAll({ core: { ...baseCore(), nextIndex: 4 }, active: null, history: [record(3)] });
+    let conflicts = 0;
+    tablet.onConflict(() => (conflicts += 1));
+    tablet.saveCore({ ...baseCore(), nextIndex: 1 });
+    await tablet.flush();
+    expect(conflicts).toBe(1);
+    expect((docs.get("data/users/u1/core")!["core"] as Core).nextIndex).toBe(4);
+    // The refused change isn't re-sent on the next load.
+    const again = claudePersistence(db, "u1", instant);
+    expect((await again.load()).core!.nextIndex).toBe(4);
+  });
+
+  it("notices a session started on another device", async () => {
+    const { db } = fakeDb();
+    const phone = claudePersistence(db, "u1", instant);
+    const tablet = claudePersistence(db, "u1", instant);
+    await phone.load();
+    await tablet.load();
+    expect(await tablet.changedElsewhere()).toBe(false);
+    phone.saveActive({ id: "a1" } as AppData["active"]);
+    await phone.flush();
+    expect(await tablet.changedElsewhere()).toBe(true);
   });
 });

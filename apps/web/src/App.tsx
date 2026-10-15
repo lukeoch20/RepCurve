@@ -12,9 +12,11 @@ import { TipsProvider } from "./ui/tips";
 import { CurveMark, Icon } from "./ui/common";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
-import { applyUpdate, onUpdateReady, updateReady } from "./platform/update";
+import { applyUpdate, onUpdateReady, updateOffered, updateReady } from "./platform/update";
 import { IS_TEST, storageKey } from "./platform/channel";
 import { StoreContext, useAppStore } from "./store/useAppStore";
+import { STORAGE_FULL } from "./store/persistence";
+import { BackupButton } from "./ui/Backup";
 
 type Tab = "today" | "plan" | "progress" | "settings";
 const TABS: { id: Tab; label: string }[] = [
@@ -107,7 +109,13 @@ export function App(): React.ReactElement {
       {store.saveError ? (
         <div className="toast banner stop" role="alert">
           {store.saveError}
+          {store.saveError === STORAGE_FULL ? <BackupButton label="Save a backup" /> : null}
           <button type="button" className="btn ghost" onClick={store.clearSaveError}>Dismiss</button>
+        </div>
+      ) : store.actionError ? (
+        <div className="toast banner stop" role="alert">
+          {store.actionError}
+          <button type="button" className="btn ghost" onClick={store.clearActionError}>Dismiss</button>
         </div>
       ) : store.notice ? (
         <div className="toast banner info" role="status">
@@ -118,10 +126,10 @@ export function App(): React.ReactElement {
       {store.storageWarning ? (
         <div className="banner stop storage-warning" role="alert">{store.storageWarning}</div>
       ) : null}
-      {update && !active ? (
+      {update && updateOffered(active !== null) ? (
         <div className="banner info storage-warning" role="status">
           <b>A new version of RepCurve is ready</b>
-          <button type="button" className="btn" onClick={applyUpdate}>Update now</button>
+          <button type="button" className="btn" onClick={() => applyUpdate(store.data.active !== null)}>Update now</button>
         </div>
       ) : null}
       <TipsProvider>
