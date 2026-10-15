@@ -15,8 +15,9 @@ function PrivacyNote(): React.ReactElement {
         <h3 className="eyebrow">What it keeps</h3>
         <ul className="howto-list">
           <li>Your profile: sex, age, height and body weight.</li>
-          <li>Injuries, and where things hurt when you flag pain on a set.</li>
+          <li>Injuries, where things hurt when you flag pain on a set, and how sore you said you were.</li>
           <li>Your training: your plan, every session you log, and your settings.</li>
+          <li>A short log of errors the app hit, on this device only, for you to copy if you report a problem.</li>
         </ul>
       </section>
       <section className="howto">
@@ -38,11 +39,11 @@ function PrivacyNote(): React.ReactElement {
       </section>
       <section className="howto">
         <h3 className="eyebrow">Delete everything</h3>
-        <p className="prose">Settings → Start over → Reset all data deletes your profile, injuries and training history.</p>
+        <p className="prose">Settings → Start over → Reset all data deletes your profile, injuries and training history, any copy saved to undo a restore, and the error log.</p>
         <p className="prose">
           {inClaude
-            ? "This browser also keeps small preferences, like your style, and any copy saved to undo a restore. Clearing this site's data in your browser deletes those."
-            : "This device also keeps small preferences, like your style, and any copy saved to undo a restore. Removing the app, or clearing this site's data in your browser, deletes those too."}
+            ? "This browser also keeps small preferences, like your style and which looks you have unlocked. Clearing this site's data in your browser deletes those."
+            : "This device also keeps small preferences, like your style and which looks you have unlocked. Removing the app, or clearing this site's data in your browser, deletes those too."}
         </p>
       </section>
       <section className="howto">

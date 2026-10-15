@@ -4,6 +4,7 @@ import { clock } from "../model/format";
 import { routesText } from "../model/looks";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core, type SessionRecord } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
+import { clearCrashLog } from "../platform/crashLog";
 import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
 import { applyStyle, FAMILIES, familyOf, loadStyle, saveStyle, type StyleFamily, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
@@ -230,7 +231,20 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
             Your profile, progress and every logged session will be gone. Export a backup first if you might want it.
             <div className="row" style={{ marginTop: 10 }}>
               <button type="button" className="btn" onClick={() => setConfirmReset(false)}>Cancel</button>
-              <button type="button" className="btn danger solid" onClick={() => void replaceWith(EMPTY_DATA, "Everything was deleted.")}>Delete everything</button>
+              <button
+                type="button"
+                className="btn danger solid"
+                onClick={() => {
+                  // The copy kept to undo a restore and the error log go too, so nothing is left behind.
+                  clearCrashLog();
+                  void dropSafetyCopy().then(() => {
+                    setUndo(null);
+                    return replaceWith(EMPTY_DATA, "Everything was deleted.");
+                  });
+                }}
+              >
+                Delete everything
+              </button>
             </div>
           </div>
         ) : (

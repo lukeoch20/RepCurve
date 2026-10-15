@@ -84,13 +84,14 @@ test.describe("in a desktop browser that offers its own install prompt", () => {
   });
 });
 
-test("in an app's built-in browser on iPhone, it says to open Safari", async ({ browser }) => {
+test("in an app's built-in browser on iPhone, it says to open Safari", async ({ browser, baseURL }) => {
   const ctx = await browser.newContext({
+    ...(baseURL ? { baseURL } : {}),
     viewport: { width: 390, height: 844 },
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 300.0.0",
   });
   const page = await ctx.newPage();
-  await page.goto("http://127.0.0.1:4173/");
+  await page.goto("./");
   await expect(page.getByRole("region", { name: "Install RepCurve" })).toContainText("Open this page in Safari");
   await ctx.close();
 });
