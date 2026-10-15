@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { parseBackup } from "../model/backup";
 import { clock } from "../model/format";
-import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core } from "../model/types";
+import { routesText } from "../model/looks";
+import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core, type SessionRecord } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
 import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
 import { applyStyle, FAMILIES, familyOf, loadStyle, saveStyle, type StyleFamily, type StyleId } from "../platform/style";
@@ -13,6 +14,7 @@ import { backUp } from "./Backup";
 import { ReminderSettings } from "./Reminders";
 import { PrivacySettings } from "./Privacy";
 import { ErrorLogSettings } from "./ErrorLog";
+import { Lock, LookPreview, useLooks } from "./Looks";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -127,7 +129,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         </div>
       </section>
 
-      <StyleSettings />
+      <StyleSettings history={data.history} core={core} />
 
       <TipsSettings />
 
@@ -239,13 +241,18 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
   );
 }
 
-/** The app's look, per device: Bluebird light (the default), Bluebird dark or Classic. */
-function StyleSettings(): React.ReactElement {
+/**
+ * The app's look, per device. Each look shows a small preview in its own colours and fonts;
+ * Bluebird and Classic are free, and the others are earned (all open in the test app).
+ */
+function StyleSettings(props: { history: SessionRecord[]; core: Core }): React.ReactElement {
   const [style, setStyle] = useState<StyleId>(loadStyle);
   const current = familyOf(style);
+  const looks = useLooks(props.history, props.core);
   // The look whose light and dark versions are showing, if any.
   const [open, setOpen] = useState<StyleFamily["id"] | null>(null);
   const choose = (id: StyleId) => {
+    if (!looks.get(familyOf(id).id)?.open) return;
     setStyle(id);
     saveStyle(id);
     applyStyle(id);
@@ -261,13 +268,29 @@ function StyleSettings(): React.ReactElement {
       {/* Each look is its own one-item list, so its versions row below it isn't styled as a list item. */}
       <div className="style-list" role="group" aria-label="Style">
         {FAMILIES.map((f) => {
-          const expanded = open === f.id;
+          const status = looks.get(f.id)!;
+          const locked = !status.open;
+          const expanded = open === f.id && !locked;
           return (
             <React.Fragment key={f.id}>
               <div className="choice">
-                <button type="button" aria-pressed={current.id === f.id} aria-expanded={expanded} onClick={() => setOpen(expanded ? null : f.id)}>
-                  <b>{f.name}</b>
+                <button
+                  type="button"
+                  aria-pressed={current.id === f.id}
+                  aria-expanded={locked ? undefined : expanded}
+                  aria-disabled={locked || undefined}
+                  onClick={() => {
+                    if (!locked) setOpen(expanded ? null : f.id);
+                  }}
+                >
+                  <LookPreview family={f} />
                   <span>{current.id === f.id ? `${f.hint} In use: ${versions(f).find((v) => v.value === style)!.label.toLowerCase()}.` : f.hint}</span>
+                  {status.earned ? null : (
+                    <span className="look-routes">
+                      {locked ? <Lock /> : null}
+                      {locked ? `Locked. Unlocks with: ${routesText(status)}.` : `Open in the test app. In RepCurve it unlocks with: ${routesText(status)}.`}
+                    </span>
+                  )}
                 </button>
               </div>
               {expanded ? (

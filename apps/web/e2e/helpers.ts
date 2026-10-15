@@ -1,8 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Set up a new user: 33-year-old man, never trained, 10–30 lb dumbbells, treadmill and ab roller. */
-export async function onboard(page: Page) {
-  await page.goto("/");
+/**
+ * Set up a new user: 33-year-old man, never trained, 10–30 lb dumbbells, treadmill and ab roller.
+ * In RepCurve by default, or in RepCurve Test with "/test/".
+ */
+export async function onboard(page: Page, app: "/" | "/test/" = "/") {
+  await page.goto(app);
   await page.getByRole("button", { name: "Set up my plan" }).click();
   await page.getByRole("group", { name: "Sex" }).getByRole("button", { name: "Male", exact: true }).click();
   await page.getByLabel("Age").fill("33");

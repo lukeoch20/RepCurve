@@ -60,16 +60,28 @@ function bests(record: SessionRecord): Map<string, { score: number; loadKg: numb
   return out;
 }
 
+/** The best so far per exercise, over the sessions added to it with addBests. */
+export type BestsSoFar = Map<string, { score: number; loaded: boolean }>;
+
+/** Adds a strength session's bests to a running record of bests. */
+export function addBests(before: BestsSoFar, record: SessionRecord): void {
+  for (const [id, b] of bests(record)) {
+    const cur = before.get(id);
+    if (!cur || b.score > cur.score) before.set(id, { score: b.score, loaded: b.loadKg !== null });
+  }
+}
+
 /** Exercises where this session beat every earlier session (done at least once before). */
 export function newRecords(record: SessionRecord, history: SessionRecord[]): Celebration["records"] {
-  const earlier = history.filter((r) => r.id !== record.id && r.kind === "strength" && !r.skipped && r.finishedAt <= record.finishedAt);
-  const before = new Map<string, { score: number; loaded: boolean }>();
-  for (const r of earlier) {
-    for (const [id, b] of bests(r)) {
-      const cur = before.get(id);
-      if (!cur || b.score > cur.score) before.set(id, { score: b.score, loaded: b.loadKg !== null });
-    }
+  const before: BestsSoFar = new Map();
+  for (const r of history) {
+    if (r.id !== record.id && r.kind === "strength" && !r.skipped && r.finishedAt <= record.finishedAt) addBests(before, r);
   }
+  return recordsAgainst(record, before);
+}
+
+/** Exercises where this session beat the bests so far. */
+export function recordsAgainst(record: SessionRecord, before: BestsSoFar): Celebration["records"] {
   const out: Celebration["records"] = [];
   for (const [id, b] of bests(record)) {
     const prev = before.get(id);
