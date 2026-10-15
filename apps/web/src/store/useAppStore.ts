@@ -1,14 +1,21 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { migrateData, savedByNewerVersion } from "../model/migrate";
 import { EMPTY_DATA, type AppData } from "../model/types";
-import { memoryPersistence, openPersistence, type Persistence, type StorageKind } from "./persistence";
-import { INITIAL, reducer, type Action, type AppState } from "./reducer";
+import { logCrash } from "../platform/crashLog";
+import { isStorageFull, memoryPersistence, openPersistence, STORAGE_FULL, type Persistence, type StorageKind } from "./persistence";
+import { INITIAL, safeReducer, type Action, type AppState } from "./reducer";
+
+/** Shown when a tap or timer step failed inside the app; nothing was changed. */
+export const ACTION_FAILED = "That didn't work, so nothing was changed. Try again, or reload the app if it keeps happening.";
 
 export interface AppStore extends AppState {
   dispatch: (a: Action) => void;
   storage: StorageKind | null;
   saveError: string | null;
   clearSaveError: () => void;
+  /** An action failed and changed nothing (ACTION_FAILED), until dismissed. */
+  actionError: string | null;
+  clearActionError: () => void;
   /** Data isn't going where the user expects (memory only, or device instead of account). */
   storageWarning: string | null;
   /** One-off notice, e.g. data reloaded after a change on another device. */
@@ -19,15 +26,25 @@ export interface AppStore extends AppState {
 }
 
 export function useAppStore(): AppStore {
-  const [state, dispatch] = useReducer(reducer, INITIAL);
+  const [state, dispatch] = useReducer(safeReducer, INITIAL);
   const [storage, setStorage] = useState<StorageKind | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const persistence = useRef<Persistence | null>(null);
   const saved = useRef<AppData>(EMPTY_DATA);
   const current = useRef<AppData>(EMPTY_DATA);
   current.current = state.data;
+
+  // An action threw and changed nothing: keep a note of it on the device and say so.
+  useEffect(() => {
+    const f = state.failure;
+    if (!f) return;
+    console.error(`RepCurve couldn't do "${f.action}"`, f.error);
+    logCrash(`action: ${f.action}`, f.error, f.at);
+    setActionError(ACTION_FAILED);
+  }, [state.failure]);
 
   /** Load from storage again and show it, e.g. after another device saved. */
   const reload = useCallback(async (message?: string) => {
@@ -119,6 +136,9 @@ export function useAppStore(): AppStore {
       if (!p) return;
       try {
         await p.replaceAll(data);
+      } catch (e) {
+        if (isStorageFull(e)) setSaveError(STORAGE_FULL);
+        throw e;
       } finally {
         // Show what storage actually holds, whether or not every write landed.
         await reload().catch(() => {
@@ -136,6 +156,8 @@ export function useAppStore(): AppStore {
     storage,
     saveError,
     clearSaveError: () => setSaveError(null),
+    actionError,
+    clearActionError: () => setActionError(null),
     storageWarning,
     notice,
     clearNotice: () => setNotice(null),
