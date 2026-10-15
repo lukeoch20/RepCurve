@@ -8,6 +8,8 @@ import { Lineup } from "./Lineup";
 import { previewProgram, previewProjection } from "../model/projection";
 import { ProjectionCard } from "./ProjectionCard";
 import { InstallCard } from "./Install";
+import { PlanExplanation } from "./PlanExplanation";
+import { PrivacyLink } from "./Privacy";
 import { APP_NAME } from "../platform/channel";
 import { parseBackup } from "../model/backup";
 import type { AppData, Location, Locations } from "../model/types";
@@ -211,7 +213,7 @@ export function Onboarding(props: {
         </div>
       ) : null}
 
-      {step === "welcome" ? <Welcome /> : null}
+      {step === "welcome" ? <Welcome onStart={next} /> : null}
 
       {step === "you" ? (
         <section className="stack-lg">
@@ -305,7 +307,7 @@ export function Onboarding(props: {
           </div>
           <div className="field">
             <span className="label">Minutes per session</span>
-            <Seg label="Minutes per session" value={d.minutes} onChange={(minutes) => up({ minutes })} options={[10, 15, 20, 25, 30, 45].map((n) => ({ value: n, label: String(n) }))} />
+            <Seg label="Minutes per session" value={d.minutes} onChange={(minutes) => up({ minutes })} options={[10, 15, 20, 25, 30, 45, 60].map((n) => ({ value: n, label: String(n) }))} />
           </div>
           <p className="meta">
             That's <b className="num">{d.days * d.minutes} minutes</b> a week.{" "}
@@ -411,24 +413,26 @@ export function Onboarding(props: {
 
       {youMissing ? <p className="meta small">Fill in sex, age, height and weight to continue.</p> : null}
 
-      <div className="footer-actions">
-        {i > 0 || props.onCancel ? (
-          <button type="button" className="btn" onClick={back}>
-            {i === 0 ? "Cancel" : "Back"}
+      {step === "welcome" ? null : (
+        <div className="footer-actions">
+          {i > 0 || props.onCancel ? (
+            <button type="button" className="btn" onClick={back}>
+              {i === 0 ? "Cancel" : "Back"}
+            </button>
+          ) : null}
+          <button type="button" className="btn primary" onClick={next} disabled={!canNext}>
+            {step === "review" ? (editing ? "Save changes" : "Start training") : "Next"}
           </button>
-        ) : null}
-        <button type="button" className="btn primary" onClick={next} disabled={!canNext}>
-          {step === "welcome" ? "Set up my plan" : step === "review" ? (editing ? "Save changes" : "Start training") : "Next"}
-        </button>
-      </div>
+        </div>
+      )}
     </main>
   );
 }
 
-function Welcome(): React.ReactElement {
+/** The first screen: the promise and the way in come first, then installing, an example and restoring. */
+function Welcome(props: { onStart: () => void }): React.ReactElement {
   return (
     <section className="stack-lg">
-      <InstallCard beforeSetup />
       <div className="brand">
         <CurveMark size={34} />
         <span>{APP_NAME}</span>
@@ -436,9 +440,15 @@ function Welcome(): React.ReactElement {
       <header className="stack">
         <h1 className="title" style={{ fontSize: "2.7rem" }}>Real training in the minutes you have</h1>
         <p className="meta">
-          Tell RepCurve what equipment you own and how long you've got. It builds short, dense workouts, picks every weight and rep for you, and adjusts each session from how the last one felt.
+          Workouts that fit your time and your equipment, and get harder as you do. RepCurve picks every weight and rep for you, and adjusts each session from how the last one felt.
         </p>
       </header>
+      <div className="footer-actions">
+        <button type="button" className="btn primary" onClick={props.onStart}>
+          Set up my plan
+        </button>
+      </div>
+      <InstallCard beforeSetup />
       <svg className="hero-curve" viewBox="0 0 320 120" role="img" aria-label="A strength curve rising quickly at first, then levelling off">
         <line x1="8" y1="108" x2="312" y2="108" stroke="var(--line)" strokeWidth="1" />
         <path d="M8 104 C 70 96, 110 60, 160 42 S 260 20, 312 16 L312 108 L8 108 Z" fill="var(--chart-wash)" />
@@ -471,6 +481,9 @@ function Welcome(): React.ReactElement {
         <p className="meta small">Pairs of exercises alternate, so one muscle rests while the other works. That's how a real workout fits in 20 minutes.</p>
       </div>
       <RestoreBackup />
+      <footer className="row" style={{ justifyContent: "center" }}>
+        <PrivacyLink />
+      </footer>
     </section>
   );
 }
@@ -560,11 +573,7 @@ function Review(props: { profile: Profile; equipment: Equipment; logged: number 
         </h1>
       </header>
       <ProjectionCard projection={projection} units={props.profile.units} compact />
-      <div className="stack">
-        {program.explanation.map((p, k) => (
-          <p key={k} className="prose">{p}</p>
-        ))}
-      </div>
+      <PlanExplanation lines={program.explanation} />
       {first ? (
         <div className="card stack">
           <div className="spread">

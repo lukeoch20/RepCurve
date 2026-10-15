@@ -110,7 +110,7 @@ describe("today's time choices", () => {
     expect(choices[0]).toBe(10);
     // Past the week's volume ceiling a longer session adds nothing, so it isn't offered.
     expect(choices[choices.length - 1]).toBeGreaterThan(20);
-    expect(choices[choices.length - 1]).toBeLessThanOrEqual(40);
+    expect(choices[choices.length - 1]).toBeLessThanOrEqual(60);
     expect(choices).toContain(20);
   });
 
@@ -125,5 +125,31 @@ describe("today's time choices", () => {
   it("keep an unusual usual length, such as 45 minutes", () => {
     const core = newCore({ ...profile, minutesPerSession: 45 }, equipment, T);
     expect(timeChoices(core, [], T)).toContain(45);
+  });
+
+  it("reach past 40 minutes when longer sessions still add work", () => {
+    const regular: Profile = { ...profile, trainingHistory: "regular", goal: "strength_muscle", daysPerWeek: 3, minutesPerSession: 30 };
+    const choices = timeChoices(newCore(regular, equipment, T), [], T);
+    expect(choices[choices.length - 1]).toBeGreaterThan(40);
+  });
+});
+
+describe("hour-long sessions", () => {
+  const gym: Equipment = { ...equipment, pullupBar: true, bench: true };
+  const profiles: Profile[] = [
+    { ...profile, minutesPerSession: 60 },
+    { ...profile, minutesPerSession: 60, daysPerWeek: 3, trainingHistory: "regular", goal: "strength_muscle", split: "upper_lower" },
+    { ...profile, minutesPerSession: 60, daysPerWeek: 5, trainingHistory: "lapsed", goal: "fitness", sex: "female", bodyweightKg: 62, heightCm: 165 },
+    { ...profile, minutesPerSession: 60, daysPerWeek: 6, trainingHistory: "regular", goal: "strength_muscle", split: "ppl", injuries: ["knee"] },
+  ];
+  it("fit in the hour, and keep weekly volume near the useful range rather than growing with the time", () => {
+    for (const p of profiles) {
+      for (const eq of [equipment, gym]) {
+        const program = currentProgram(newCore(p, eq, 0));
+        for (const s of program.sessions) expect(s.estimatedMinutes).toBeLessThanOrEqual(63);
+        for (const m of ["quads", "chest", "back"] as const) expect(program.weeklyVolume[m]).toBeLessThanOrEqual(program.volumeTarget[1] + 8);
+        expect(program.explanation[0]).toContain("about 60 minutes");
+      }
+    }
   });
 });

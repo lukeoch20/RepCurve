@@ -28,7 +28,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   // Re-plan at least hourly so "days since your last session" (and a comeback) stays current.
   const hour = Math.floor(now / 3_600_000);
   const plan = useMemo(() => todayPlan(core, history, hour * 3_600_000, minutes), [core, history, minutes, hour]);
-  // Today's time, from 10 to 40 minutes, stepping only through lengths that change the session.
+  // Today's time, from 10 to 60 minutes, stepping only through lengths that change the session.
   const usual = core.profile.minutesPerSession;
   const choices = useMemo(() => timeChoices(core, history, hour * 3_600_000), [core, history, hour]);
   const chosen = minutes ?? usual;
@@ -190,7 +190,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
             incDisabled={more === undefined}
           />
         </div>
-        {more === undefined && chosen < 40 ? <p className="meta small" style={{ textAlign: "center" }}>That's everything today's session can add.</p> : null}
+        {more === undefined && chosen < 60 ? <p className="meta small" style={{ textAlign: "center" }}>That's everything today's session can add.</p> : null}
         {skipAsk ? (
           <div className="banner adjust">
             <b>Skip this session?</b>
