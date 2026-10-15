@@ -9,14 +9,13 @@ const dist = resolve(root, "dist-artifact");
 const css = readFileSync(resolve(dist, "app.css"), "utf8");
 const js = readFileSync(resolve(dist, "app.js"), "utf8").replace(/<\/script/gi, "<\\/script");
 
-const fonts =
-  "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Archivo+Narrow:wght@600;700&family=Cinzel:wght@600;700&family=Manrope:wght@400;600;700&family=Bodoni+Moda:opsz,wght@6..96,600;6..96,700&family=Hanken+Grotesk:wght@400;600;700&display=swap";
+// Fonts are bundled: the artifact build inlines them into app.css as data URIs (vite.config.ts), so the page
+// asks no font service for anything. Stop if any asset was left as a separate file the page could not load.
+const loose = [...css.matchAll(/url\((?!["']?data:)[^)]*\)/g)].map((m) => m[0]);
+if (loose.length) throw new Error(`app.css points at files that are not inline: ${loose.join(", ")}`);
 
 const html = `<title>RepCurve</title>
 <meta name="description" content="Short home workouts that pick your weights and adapt every session.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="${fonts}">
 <style>
 ${css}
 </style>

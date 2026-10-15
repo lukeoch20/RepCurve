@@ -1,0 +1,61 @@
+/* Every typeface ships with the app (from the @fontsource-variable packages, SIL Open Font License),
+   so no page asks a font service for anything: nobody's IP address goes to a third party, and the
+   app looks the same offline. Latin only, one variable file per family. The family names are the
+   ones the styles ask for (styles.css, forge.css, gold.css, diamond.css). */
+
+/* Classic: Newsreader headings (with optical sizes) over Inter */
+@font-face {
+  font-family: "Inter";
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Forge: narrow headings where the device has no narrow sans of its own */
+@font-face {
+  font-family: "Archivo Narrow";
+  src: url("@fontsource-variable/archivo-narrow/files/archivo-narrow-latin-wght-normal.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Gold: Cinzel over Manrope */
+@font-face {
+  font-family: "Cinzel";
+  src: url("@fontsource-variable/cinzel/files/cinzel-latin-wght-normal.woff2") format("woff2");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Diamond: Bodoni Moda (with optical sizes) over Hanken Grotesk */
+@font-face {
+  font-family: "Bodoni Moda";
+  src: url("@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-opsz-normal.woff2") format("woff2");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("@fontsource-variable/hanken-grotesk/files/hanken-grotesk-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
