@@ -98,7 +98,12 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       </section>
 
       {plan.deload ? (
-        <div className="banner info"><b>Deload week</b>Recent sessions were grinders. This week is lighter so you come back stronger.</div>
+        <div className="banner info">
+          <b>Deload week</b>
+          {plan.deloadReason === "scheduled"
+            ? "You've trained hard for a couple of months. This week is lighter so your body catches up, and you come back stronger."
+            : "Recent sessions were grinders. This week is lighter so you come back stronger."}
+        </div>
       ) : null}
       {away !== null ? (
         <div className="banner good">

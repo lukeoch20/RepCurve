@@ -109,7 +109,8 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
         {active.plan.deload ? (
           <div className="banner info">
             <b>Deload week</b>
-            Your last few sessions were grinders, so this week is lighter: one round fewer and a dumbbell down. Progress resumes next week.
+            {active.plan.deloadReason === "scheduled" ? "A planned light week after a long run of training" : "Your last few sessions were grinders"}, so this week is
+            lighter: one round fewer and a dumbbell down. Progress resumes next week.
           </div>
         ) : null}
         {active.plan.comeback ? (

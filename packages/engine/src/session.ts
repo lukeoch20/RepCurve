@@ -1,8 +1,8 @@
 import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor } from "@repcurve/shared";
 import type { Equipment, Exercise, Muscle, Pattern, Profile, Split, TrainingLevel } from "@repcurve/shared";
-import { volumeCeiling, volumeTarget } from "./level.js";
-import { MUSCLES, emptyVolume } from "./volume.js";
+import { deltHeadCeiling, deltHeadTarget, volumeCeiling, volumeTarget } from "./level.js";
+import { DELT_HEADS, MUSCLES, deltHeadSets, emptyVolume, isDeltRaise, type DeltHead } from "./volume.js";
 import { repRangeFor, startingLoadKg, startingTargetReps } from "./loads.js";
 import { pickExercise } from "./pool.js";
 import { TARGET_RIR, buildPrescription, defaultTargetReps } from "./prescribe.js";
@@ -225,6 +225,8 @@ export interface StrengthSessionInput {
    * furthest below the weekly target, and keeps each muscle's week within the ceiling.
    */
   weekOthers?: Record<Muscle, number>;
+  /** Hard sets per shoulder head the rest of the week already has, and how many were lateral raises. */
+  weekOthersHeads?: Record<DeltHead | "delt_raises", number>;
   /**
    * Only the session's main structure: its opening pairs at the planned rounds, time allowing. The
    * week keeps room for this when it plans the sessions before it.
@@ -244,12 +246,14 @@ interface Chosen {
   /** Reps (or seconds) each set is planned at; sets are timed from this. */
   targetReps: number;
   slot: string;
+  /** The exercise this slot uses outside an alternate block, when it differs. */
+  alternateOf?: string;
 }
 
-function choose(exercise: Exercise, slot: string, input: StrengthSessionInput): Chosen {
+function choose(exercise: Exercise, slot: string, input: StrengthSessionInput, alternateOf?: string): Chosen {
   const repRange = repRangeFor(exercise, input.level);
   const targetReps = input.e1rmByExercise[exercise.id] ? startingTargetReps(repRange) : defaultTargetReps(repRange, exercise.loadType);
-  return { exercise, repRange, targetReps, slot };
+  return { exercise, repRange, targetReps, slot, ...(alternateOf ? { alternateOf } : {}) };
 }
 
 const timed = (c: Chosen) => ({ exercise: c.exercise, repRange: c.repRange, reps: c.targetReps });
@@ -258,7 +262,7 @@ function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchma
   const e1rm = input.e1rmByExercise[c.exercise.id];
   const loadKg = startingLoadKg(c.exercise, input.profile, input.equipment, input.level, c.repRange, TARGET_RIR, e1rm);
   const targetReps = c.targetReps;
-  return buildPrescription({
+  const p = buildPrescription({
     exercise: c.exercise,
     slot: c.slot,
     sets,
@@ -268,6 +272,8 @@ function prescribe(c: Chosen, input: StrengthSessionInput, sets: number, benchma
     benchmarkSet: benchmark && c.exercise.loadType !== "time" && !e1rm,
     units: loadUnitsFor(input.profile, input.equipment),
   });
+  if (c.alternateOf) p.alternateOf = c.alternateOf;
+  return p;
 }
 
 /**
@@ -284,11 +290,18 @@ const FALLBACK_PATTERNS: Pattern[] = ["row", "horizontal_push", "squat", "hinge"
 /** The core finisher rotates through the trunk's jobs: resisting extension, flexing, resisting side-bending and rotation. */
 const CORE_FAMILIES = ["anti_extension", "trunk_flexion", "anti_lateral", "anti_rotation"];
 
+/** Hard sets per muscle and per shoulder head, and the shoulder sets that are lateral raises. */
+type Tally = Record<Muscle | DeltHead | "delt_raises", number>;
+const emptyTally = (): Tally => ({ ...emptyVolume(), side_delts: 0, rear_delts: 0, delt_raises: 0 });
+
 /** Adds `sets` sets of each exercise to a per-muscle tally: 1 for a prime mover, 0.5 for an assisting muscle. */
-function addVolume(volume: Record<Muscle, number>, exercises: Exercise[], sets: number): void {
+function addVolume(volume: Tally, exercises: Exercise[], sets: number): void {
   for (const e of exercises) {
     for (const m of e.primary) volume[m] += sets;
     for (const m of e.secondary) volume[m] += sets * 0.5;
+    const heads = deltHeadSets(e);
+    for (const h of DELT_HEADS) volume[h] += heads[h] * sets;
+    if (isDeltRaise(e)) volume.delt_raises += sets;
   }
 }
 
@@ -340,22 +353,28 @@ function choosePair(
     (!strictSplit || !variant.fills || e.primary.some((m) => variant.fills![m] !== undefined));
   // A movement already in the session comes from another ladder (dumbbell press after push-ups, not an easier push-up).
   // An isolation slot must be its family (a curl is not a lateral raise); for compound movements the family is a preference.
+  // In an alternate block, the exercise each alternate stands in for, by the alternate's id.
+  const bases = new Map<string, string>();
+  const pickFor = (pattern: Pattern, variantIndex: number, offset: number, accept: (e: Exercise) => boolean, family?: string): Exercise | null => {
+    let base: string | null = null;
+    const ex = pickExercise(input.pool, pattern, input.level, variantIndex, offset, used, bodyweightBoost(input), accept, family, input.alternate === true, (b) => {
+      base = b.id;
+    });
+    if (ex && base) bases.set(ex.id, base);
+    return ex;
+  };
+  const chooseAt = (ex: Exercise, slot: string) => choose(ex, slot, input, bases.get(ex.id));
   const pick = (pattern: Pattern, offset: number, family?: string) =>
-    pickExercise(
-      input.pool,
+    pickFor(
       pattern,
-      input.level,
       input.strengthIndex + (taken.has(pattern) ? 1 : 0),
       offset,
-      used,
-      bodyweightBoost(input),
       (e) =>
         (pattern !== "isolation" || !family || e.family === family) &&
         (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))) &&
         stationOk(e) &&
         ladderOk(e),
       family,
-      input.alternate === true,
     );
   pair.forEach((spec, i) => {
     const pattern = specPattern(spec);
@@ -365,7 +384,7 @@ function choosePair(
     // A pair of the same movement (two arm exercises) needs two slot names.
     const name = specName(spec);
     const slot = specName(pair[0]) === specName(pair[1]) ? `${slotKey}.${name}${i + 1}` : `${slotKey}.${name}`;
-    chosen.push(choose(ex, slot, input));
+    chosen.push(chooseAt(ex, slot));
   });
   if (chosen.length === 0) {
     // Nothing in the pair fits the equipment (no pull-up bar, no machine): the day still gets a
@@ -375,7 +394,7 @@ function choosePair(
       const ex = pick(pattern, 0);
       if (!ex) continue;
       used.add(ex.id);
-      chosen.push(choose(ex, `${slotKey}.${pattern}.alt`, input));
+      chosen.push(chooseAt(ex, `${slotKey}.${pattern}.alt`));
       break;
     }
   }
@@ -391,22 +410,16 @@ function choosePair(
       for (const pattern of order) {
         if (inPair.includes(pattern) && !variant.fallback) continue;
         const ex = shareOk
-          ? pickExercise(input.pool, pattern, input.level, input.strengthIndex, 0, used, bodyweightBoost(input), (e) => stationOk(e) && ladderOk(e) && kindOk(e), undefined, input.alternate === true)
-          : pickExercise(
-              input.pool,
+          ? pickFor(pattern, input.strengthIndex, 0, (e) => stationOk(e) && ladderOk(e) && kindOk(e))
+          : pickFor(
               pattern,
-              input.level,
               input.strengthIndex + (taken.has(pattern) ? 1 : 0),
               0,
-              used,
-              bodyweightBoost(input),
               (e) => (variant.allowShared === true || chosen.every((c) => !sharesPrimeMover(c.exercise, e))) && stationOk(e) && ladderOk(e) && kindOk(e),
-              undefined,
-              input.alternate === true,
             );
         if (!ex) continue;
         used.add(ex.id);
-        chosen.push(choose(ex, `${slotKey}.${pattern}.alt`, input));
+        chosen.push(chooseAt(ex, `${slotKey}.${pattern}.alt`));
         return true;
       }
       return false;
@@ -450,6 +463,12 @@ const MUSCLE_WEIGHT: Record<Muscle, number> = {
   quads: 1, glutes: 1, hamstrings: 1, chest: 1, back: 1, shoulders: 1, triceps: 0.6, biceps: 0.6, calves: 0.4, core: 0,
 };
 
+/** How much each shoulder head counts, on top of what the set already gives the shoulders. */
+const HEAD_WEIGHT = 1;
+
+/** The slot that trains each tracked shoulder head directly. */
+const HEAD_SLOT: Record<DeltHead, SlotSpec> = { side_delts: iso("lateral_raise"), rear_delts: iso("rear_delt") };
+
 /**
  * Worth of a week's hard sets for one muscle: full value up to the bottom of the target, half to
  * the top, a little more to the ceiling, nothing past it (the dose-response flattens).
@@ -477,6 +496,9 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const target = volumeTarget(volumeLevel);
   const ceiling = volumeCeiling(volumeLevel);
   const others = input.weekOthers ?? emptyVolume();
+  const othersHeads = input.weekOthersHeads ?? { side_delts: 0, rear_delts: 0, delt_raises: 0 };
+  const headTarget = deltHeadTarget(volumeLevel);
+  const headCeiling = deltHeadCeiling(volumeLevel);
 
   // The core finisher is planned first so its real length, not a flat reservation, comes off the budget.
   let finisher: Prescription | null = null;
@@ -514,17 +536,22 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const usedSec = () => warmupMin * 60 + finisherSec + supersets.reduce((sum, _, i) => sum + supersetSec(i), 0);
 
   /** Hard sets per muscle in the session so far (1 for a prime mover, 0.5 for an assisting muscle). */
-  const sessionVolume = (): Record<Muscle, number> => {
-    const v = emptyVolume();
+  const sessionVolume = (): Tally => {
+    const v = emptyTally();
     if (finisher) addVolume(v, [getExercise(finisher.exerciseId)], finisher.sets);
     supersets.forEach((ss, i) => ss.items.forEach((p, j) => addVolume(v, [pairsChosen[i]![j]!.exercise], p.sets)));
     return v;
   };
-  const weekValue = (v: Record<Muscle, number>) =>
-    MUSCLES.reduce((sum, m) => sum + MUSCLE_WEIGHT[m] * setsValue(others[m] + v[m], target, ceiling), 0);
+  const weekValue = (v: Tally) =>
+    MUSCLES.reduce((sum, m) => sum + MUSCLE_WEIGHT[m] * setsValue(others[m] + v[m], target, ceiling), 0) +
+    (headTarget ? DELT_HEADS.reduce((sum, h) => sum + HEAD_WEIGHT * setsValue(othersHeads[h] + v[h], headTarget, headCeiling), 0) : 0);
+  /** A muscle's week as the ceiling counts it: past the novice stage, lateral raises count against the side head's own ceiling instead. */
+  const towardCeiling = (v: Tally, m: Muscle) => others[m] + v[m] - (m === "shoulders" && headTarget ? othersHeads.delt_raises + v.delt_raises : 0);
   /** Muscles a change would take past the week's ceiling (only muscles it adds to count). */
-  const overCeiling = (before: Record<Muscle, number>, after: Record<Muscle, number>): Muscle[] =>
-    MUSCLES.filter((m) => m !== "core" && after[m] > before[m] + 1e-9 && others[m] + after[m] > ceiling + 1e-9);
+  const overCeiling = (before: Tally, after: Tally): Muscle[] => [
+    ...MUSCLES.filter((m) => m !== "core" && towardCeiling(after, m) > towardCeiling(before, m) + 1e-9 && towardCeiling(after, m) > ceiling + 1e-9),
+    ...(DELT_HEADS.some((h) => after[h] > before[h] + 1e-9 && othersHeads[h] + after[h] > headCeiling + 1e-9) ? ["shoulders" as Muscle] : []),
+  ];
   /** Muscles held back by the ceiling while time was left, for the note. */
   const heldBack = new Set<Muscle>();
 
@@ -797,7 +824,8 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
     supersets.forEach((_, i) => {
       for (const o of growOptions(i)) if (o) consider(o.gain, o.secs, o.over, o.apply);
     });
-    if (supersets.length < MAX_SUPERSETS) {
+    /** Pairs added for the `width` muscles the week most needs (and the shoulder heads it is short on). */
+    const pairPass = (width: number) => {
       const vNow = sessionVolume();
       // Muscles that most need sets this week, for pairs added on their account.
       const slope = (m: Muscle) => {
@@ -810,9 +838,19 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
         (a, b) => slope(b) - slope(a) || others[a] + vNow[a] - (others[b] + vNow[b]) || MUSCLES.indexOf(a) - MUSCLES.indexOf(b),
       );
       const candidates: { pair: Pair; bonus: number; key: string; id?: string }[] = designed.filter((d) => !designedDone.has(d.id));
-      for (const m of needy.slice(0, 3)) {
-        for (const partner of needy.filter((x) => x !== m).slice(0, 3)) {
+      for (const m of needy.slice(0, width)) {
+        for (const partner of needy.filter((x) => x !== m).slice(0, width)) {
           for (const spec of fillSlots[m]!.slice(0, 2)) candidates.push({ pair: [spec, fillSlots[partner]![0]!], bonus: 1, key: `${variant.key}.fill` });
+        }
+      }
+      // The side of the shoulder when the week is short on it and the day trains it (lateral raises
+      // on push and upper days), even while pressing has the shoulders covered.
+      for (const h of DELT_HEADS) {
+        const spec = HEAD_SLOT[h];
+        const x = othersHeads[h] + vNow[h];
+        if (!headTarget || x >= headTarget[1] || !fillSlots.shoulders?.some((f) => JSON.stringify(f) === JSON.stringify(spec))) continue;
+        for (const partner of needy.filter((m) => m !== "shoulders").slice(0, width)) {
+          candidates.push({ pair: [spec, fillSlots[partner]![0]!], bonus: 1, key: `${variant.key}.fill` });
         }
       }
       const ladders = sessionLadders();
@@ -820,6 +858,12 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
       for (const cand of candidates) {
         for (const o of pairOptions(cand, ladders, families)) consider(o.gain, o.secs, o.over, o.apply, cand.bonus);
       }
+    };
+    if (supersets.length < MAX_SUPERSETS) {
+      pairPass(3);
+      // The neediest muscles may have nothing left to add today (every row already in): any muscle
+      // still short is better than spare time.
+      if (!best) pairPass(MUSCLES.length);
     }
     if (!best) break;
     (best as Option).apply();
@@ -831,7 +875,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   if (!input.baselineOnly && estimatedMinutes <= budget - 3) {
     const spare = "A walk or easy cardio is a good use of the spare minutes.";
     const week = sessionVolume();
-    const full = [...heldBack].filter((m) => others[m] + week[m] >= 0.9 * ceiling - 1e-9);
+    const full = [...heldBack].filter((m) => towardCeiling(week, m) >= 0.9 * ceiling - 1e-9);
     if (full.length > 0) {
       notes.push(
         `About ${Math.round(estimatedMinutes)} of your ${budget} minutes, on purpose: your ${listMuscles(full)} already get close to ${ceiling} hard sets this week, the most that helps at your stage, and more would add soreness rather than strength. ${spare}`,

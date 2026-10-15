@@ -3,7 +3,7 @@ export { generateProgram, missingPatterns, planSession, planSessionWith, weekAnd
 export type { PlanOptions } from "./generate.js";
 export { makeContext } from "./context.js";
 export type { EngineContext, ContextHistory } from "./context.js";
-export { trainingLevel, progressedLevel, volumeTarget, volumeCeiling, PROMOTION_SESSIONS } from "./level.js";
+export { trainingLevel, progressedLevel, volumeTarget, volumeCeiling, deltHeadTarget, deltHeadCeiling, PROMOTION_SESSIONS } from "./level.js";
 export { weeklyTemplate, strengthDaysPerWeek, effectiveSplit, SPLIT_MIN_STRENGTH_DAYS } from "./template.js";
 export { buildPool, pickExercise, hasGymEquipment, classOf } from "./pool.js";
 export { coverageNotes, needsRampSet, needsRack, MAX_SUPERSETS } from "./session.js";
@@ -33,12 +33,14 @@ export {
   COMEBACK_DAYS,
   STRAIN_THRESHOLD,
   STRAINED_SESSIONS_FOR_DELOAD,
+  SCHEDULED_DELOAD_WEEKS,
 } from "./state.js";
-export type { TrainingState, ApplyOptions, ExerciseChange, RecordResult } from "./state.js";
+export type { TrainingState, ApplyOptions, ExerciseChange, RecordResult, DeloadReason } from "./state.js";
 export { judgedSets, recordSessionWithExtras } from "./extra.js";
 export { adviseNextSet } from "./advice.js";
 export type { SetAdvice } from "./advice.js";
-export { weeklyVolume, hardSets, MUSCLES } from "./volume.js";
+export { weeklyVolume, hardSets, MUSCLES, ceilingVolume, weeklyDeltHeads, deltHeadSets, isDeltRaise, DELT_HEADS } from "./volume.js";
+export type { DeltHead } from "./volume.js";
 export { startingLoadKg, repRangeFor, isLoaded } from "./loads.js";
 export { TARGET_RIR, defaultTargetReps } from "./prescribe.js";
 export { setSeconds, supersetSeconds, TRANSITION_SEC, RAMP_SET_SEC } from "./timing.js";

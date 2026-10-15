@@ -1,12 +1,12 @@
 import { buildCardioSession } from "./cardio.js";
 import { makeContext, type EngineContext } from "./context.js";
 import { explain } from "./explain.js";
-import { volumeCeiling, volumeTarget } from "./level.js";
+import { deltHeadCeiling, volumeCeiling, volumeTarget } from "./level.js";
 import { buildStrengthSession, rampOf, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
 import type { Muscle, Pattern } from "@repcurve/shared";
 import type { CardioActivity, GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
-import { MUSCLES, emptyVolume, hardSets, weeklyVolume } from "./volume.js";
+import { DELT_HEADS, MUSCLES, ceilingVolume, emptyVolume, hardSets, weeklyDeltHeads, weeklyVolume } from "./volume.js";
 
 export const BASE_ROUNDS = 3;
 
@@ -82,8 +82,8 @@ function weekChain(ctx: EngineContext, week: number, opts: PlanOptions): (Sessio
   const fewest = ctx.template.map((kind, d) =>
     kind === "strength" ? weeklyVolume([buildStrengthSession({ ...input(d), baselineOnly: true, rounds: Math.min(2, BASE_ROUNDS) })]) : null,
   );
-  const plannedTotal = emptyVolume();
-  planned.forEach((v) => v && addInto(plannedTotal, v));
+  // As the ceiling counts it (lateral raises count against the side head instead).
+  const plannedTotal = ceilingVolume(plannedPlans.filter((p): p is SessionPlan => p !== null), weekLevel(ctx, week));
   const ceiling = volumeCeiling(weekLevel(ctx, week));
   const baselines = planned.map((v, d) => {
     if (!v) return null;
@@ -100,8 +100,10 @@ function weekChain(ctx: EngineContext, week: number, opts: PlanOptions): (Sessio
     const others = emptyVolume();
     finals.forEach((f) => f && addInto(others, weeklyVolume([f])));
     for (let j = d + 1; j < n; j++) if (baselines[j]) addInto(others, baselines[j]!);
+    // Shoulder heads: what the days before planned, and the main pairs of the days after.
+    const weekOthersHeads = weeklyDeltHeads([...finals, ...plannedPlans.slice(d + 1)].filter((s): s is SessionPlan => s !== null));
     const weekPatterns = [...finals.flatMap(patternsOf), ...plannedPlans.slice(d + 1).flatMap(patternsOf)];
-    finals.push(buildStrengthSession({ ...input(d), weekOthers: others, weekPatterns }));
+    finals.push(buildStrengthSession({ ...input(d), weekOthers: others, weekOthersHeads, weekPatterns }));
   });
   byCtx.set(key, finals);
   return finals;
@@ -182,13 +184,17 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
   chain.forEach((s, d) => s && d !== dayIndex && addInto(others, weeklyVolume([done.get(d) ?? s])));
   const today = opts.minutes !== undefined && opts.minutes !== ctx.profile.minutesPerSession;
   const ceiling = volumeCeiling(weekLevel(ctx, week));
-  const mine = weeklyVolume([steady]);
-  const overWeek = MUSCLES.some((m) => m !== "core" && others[m] + mine[m] > ceiling + 1e-9);
+  const weekPlans = chain.flatMap((s, d) => (s ? [d === dayIndex ? steady : (done.get(d) ?? s)] : []));
+  const asCounted = ceilingVolume(weekPlans, weekLevel(ctx, week));
+  const heads = weeklyDeltHeads(weekPlans);
+  const headCeiling = deltHeadCeiling(weekLevel(ctx, week));
+  const overWeek = MUSCLES.some((m) => m !== "core" && asCounted[m] > ceiling + 1e-9) || DELT_HEADS.some((h) => heads[h] > headCeiling + 1e-9);
   if (today || overWeek) {
     // Today's time differs, or a longer day earlier in the week left less room: this session fits
     // around the rest of the week.
     const weekPatterns = chain.flatMap((s, d) => (s && d !== dayIndex ? (done.get(d) ?? s).supersets.flatMap((ss) => ss.items.map((p) => p.pattern)) : []));
-    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekPatterns };
+    const weekOthersHeads = weeklyDeltHeads(chain.flatMap((s, d) => (s && d !== dayIndex ? [done.get(d) ?? s] : [])));
+    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekOthersHeads, weekPatterns };
     // A longer day is the usual session plus more (when the usual session still fits the week and
     // today's time); otherwise the session is planned afresh.
     const extend = today && opts.minutes! > ctx.profile.minutesPerSession && !overWeek && steady.estimatedMinutes <= opts.minutes!;
