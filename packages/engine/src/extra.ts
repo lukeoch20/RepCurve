@@ -28,9 +28,16 @@ function bestE1rm(sets: SetLog[]): number | null {
  * recordSession for a session that may have added sets: progression judges the planned sets
  * only, and the added ones still count toward the strength estimate and the best ever.
  */
-export function recordSessionWithExtras(state: TrainingState, session: SessionPlan, logs: SetLog[], ctx: EngineContext): RecordResult {
+export function recordSessionWithExtras(
+  state: TrainingState,
+  session: SessionPlan,
+  logs: SetLog[],
+  ctx: EngineContext,
+  /** How the judged sets are recorded (e.g. holding exercises done while very sore). */
+  record: typeof recordSession = recordSession,
+): RecordResult {
   const judged = judgedSets(logs);
-  const result = recordSession(state, session, judged, ctx);
+  const result = record(state, session, judged, ctx);
   if (judged.length === logs.length) return result;
   const exercises = { ...result.state.exercises };
   for (const id of new Set(logs.filter((l) => l.extra).map((l) => l.exerciseId))) {

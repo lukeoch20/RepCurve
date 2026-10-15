@@ -1,6 +1,8 @@
+import { getExercise } from "@repcurve/exercises";
 import type { SetLog } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { judgedSets, recordSessionWithExtras } from "./extra.js";
+import { recordSoreSession } from "./soreness.js";
 import { planSessionWith } from "./generate.js";
 import { applyState, initialTrainingState, prescriptionsOf, recordSession, type TrainingState } from "./state.js";
 import { logSession, onTarget, referenceContext } from "./testkit.js";
@@ -70,5 +72,21 @@ describe("added sets", () => {
     const { state, plan, logs, p } = setup();
     const r = recordSessionWithExtras(state, plan, [...logs.filter((l) => l.exerciseId !== p.exerciseId), extra(p, {})], ctx);
     expect(r.changes.find((c) => c.exerciseId === p.exerciseId)!.action).not.toBe("skipped");
+  });
+
+  it("combine with a very sore exercise: it is held at its weight, and its added sets still count toward the best lift", () => {
+    const { state, plan, logs, p } = setup();
+    const sorePlan: SessionPlan = {
+      ...plan,
+      supersets: plan.supersets.map((ss) => ({ ...ss, items: ss.items.map((x) => (x.exerciseId === p.exerciseId ? { ...x, sore: { groups: [...getExercise(x.exerciseId).primary], setOff: false } } : x)) })),
+    };
+    // Reps well above target would move the weight up if the exercise weren't held.
+    const strong = logs.map((l) => (l.exerciseId === p.exerciseId ? { ...l, reps: p.repRange[1] + 3, rir: 4 as const } : l));
+    const heavy = extra(p, { loadKg: p.loadKg! * 1.5, reps: p.repRange[1] + 2, rir: 4 });
+    const r = recordSessionWithExtras(state, sorePlan, [...strong, heavy], ctx, recordSoreSession);
+    const after = r.state.exercises[p.exerciseId]!;
+    expect(after.loadKg).toBe(state.exercises[p.exerciseId]?.loadKg ?? p.loadKg);
+    const plain = recordSessionWithExtras(state, sorePlan, strong, ctx, recordSoreSession).state.exercises[p.exerciseId]!;
+    expect(after.bestE1rmKg ?? 0).toBeGreaterThan(plain.bestE1rmKg ?? 0);
   });
 });

@@ -8,8 +8,22 @@ export { weeklyTemplate, strengthDaysPerWeek, effectiveSplit, SPLIT_MIN_STRENGTH
 export { buildPool, pickExercise, hasGymEquipment, classOf } from "./pool.js";
 export { coverageNotes, needsRampSet, needsRack, MAX_SUPERSETS } from "./session.js";
 export { cardioOptions } from "./cardio.js";
-export { buildProfile, applyProfile, markCaution, cautionAreasFor, cautionFor, swapSticks, CAUTION_CLEAR_SESSIONS, CAUTION_MAX_DAYS } from "./profile.js";
-export type { TrainingProfile, Caution, SwapEvent, FeedbackSession } from "./profile.js";
+export {
+  buildProfile,
+  applyProfile,
+  markCaution,
+  cautionAreasFor,
+  cautionFor,
+  swapSticks,
+  resetWorkingWeight,
+  bringBack,
+  clearPainChecks,
+  CAUTION_CLEAR_SESSIONS,
+  CAUTION_MAX_DAYS,
+} from "./profile.js";
+export type { TrainingProfile, Caution, SwapEvent, FeedbackSession, ProfileOverrides, SoreRecord } from "./profile.js";
+export { applySoreness, primeMovers, recordSoreSession, sessionMuscles, soreQuestion, sorenessSummary, verySore, SORE_GROUP_NAME, SORE_WINDOW_HOURS } from "./soreness.js";
+export type { RecentSession, SoreLevel, Soreness, SoreQuestion } from "./soreness.js";
 export {
   progressExercise,
   calibrate,

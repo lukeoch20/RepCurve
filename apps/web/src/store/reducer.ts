@@ -1,9 +1,10 @@
-import type { SwapReason } from "@repcurve/engine";
-import type { Equipment, Profile } from "@repcurve/shared";
+import type { SoreLevel, SwapReason } from "@repcurve/engine";
+import type { Equipment, Muscle, Profile } from "@repcurve/shared";
 import { addActivity, removeActivity } from "../model/activity";
 import { atLocation } from "../model/equipment";
 import { newCore, rescheduled } from "../model/plan";
-import { profileFor } from "../model/profile";
+import { cautionFine, forgetSwaps, profileFor, retest, settleRetests } from "../model/profile";
+import { answerSoreness } from "../model/soreness";
 import {
   addSet,
   adjustTimer,
@@ -55,6 +56,12 @@ export type Action =
   | { type: "settings"; settings: Partial<Settings> }
   | { type: "addActivity"; activity: ExtraActivity }
   | { type: "removeActivity"; at: number }
+  /** "Still sore?" before the next session: `level` for the groups picked out of those asked about. */
+  | { type: "soreness"; asked: Muscle[]; level: SoreLevel; picked: Muscle[]; now: number }
+  /** Corrections on the "What RepCurve knows" screen. */
+  | { type: "cautionFine"; area: string; now: number }
+  | { type: "forgetSwaps"; exerciseId: string; now: number }
+  | { type: "retest"; exerciseId: string }
   | { type: "start"; now: number; minutes: number | null }
   | { type: "log"; ref: SetRef; values: SetValues; now: number }
   | { type: "edit"; slot: string; setIndex: number; values: SetValues }
@@ -127,6 +134,14 @@ export function reducer(s: AppState, a: Action): AppState {
       return core ? { ...s, data: { ...s.data, core: addActivity(core, a.activity) } } : s;
     case "removeActivity":
       return core ? { ...s, data: { ...s.data, core: removeActivity(core, a.at) } } : s;
+    case "soreness":
+      return core && !active ? { ...s, data: { ...s.data, core: answerSoreness(core, a.asked, a.level, a.picked, a.now) } } : s;
+    case "cautionFine":
+      return core && !active ? { ...s, data: { ...s.data, core: cautionFine(core, history, a.area, a.now) } } : s;
+    case "forgetSwaps":
+      return core && !active ? { ...s, data: { ...s.data, core: forgetSwaps(core, history, a.exerciseId, a.now) } } : s;
+    case "retest":
+      return core && !active ? { ...s, data: { ...s.data, core: retest(core, a.exerciseId) } } : s;
     case "start":
       if (!core || active) return s;
       return { ...s, data: { ...s.data, active: startSession(core, history, a.now, a.minutes) } };
@@ -183,7 +198,7 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, data: { ...s.data, active: null } };
     case "finish": {
       const r = finishSession(active, core, a.now, a.cardio, a.at);
-      return { ...s, data: { core: r.core, active: null, history: [...history, r.record] }, finished: r.record };
+      return { ...s, data: { core: settleRetests(r.core), active: null, history: [...history, r.record] }, finished: r.record };
     }
     default:
       return s;

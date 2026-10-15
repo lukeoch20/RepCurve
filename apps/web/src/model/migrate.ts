@@ -6,6 +6,8 @@ import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Rir, TrainingHi
 import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
 import { MAX_ADDED_SETS } from "./session";
+import { migrateOverrides } from "./profile";
+import { migrateSoreCheck, migrateSoreness } from "./soreness";
 import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type LoggedSet, type Locations, type SessionRecord, type Settings } from "./types";
 
 /**
@@ -247,7 +249,17 @@ export function migrateCore(c: unknown): Core | null {
   }
   // The programme position never goes before the first session.
   if (isNum(c["positionOffset"])) core.positionOffset = Math.max(-nextIndex, Math.min(1e6, Math.floor(c["positionOffset"])));
-  return core;
+  return withValid(core, { profileOverrides: migrateOverrides(c["profileOverrides"]), soreCheck: migrateSoreCheck(c["soreCheck"]) });
+}
+
+/** `o` with each of these fields set when valid and removed when not. */
+function withValid<T extends object>(o: T, fields: { [K in keyof T]?: T[K] | undefined }): T {
+  const out = { ...o };
+  for (const [k, v] of Object.entries(fields) as [keyof T, T[keyof T] | undefined][]) {
+    if (v === undefined) delete out[k];
+    else out[k] = v;
+  }
+  return out;
 }
 
 /** A prescription the session screens and the engine can read. */
@@ -311,7 +323,7 @@ export function migrateRecord(r: unknown): SessionRecord | null {
   if (!isObj(r) || typeof r["id"] !== "string" || !isNum(r["index"]) || !isNum(r["finishedAt"])) return null;
   if (r["kind"] !== "strength" && r["kind"] !== "cardio") return null;
   const c = r["cardio"];
-  return {
+  return withValid<SessionRecord>({
     ...(r as unknown as SessionRecord),
     index: Math.max(0, Math.floor(r["index"])),
     name: typeof r["name"] === "string" ? r["name"] : r["kind"] === "cardio" ? "Cardio" : "Strength",
@@ -329,7 +341,7 @@ export function migrateRecord(r: unknown): SessionRecord | null {
     comeback: r["comeback"] === true,
     skipped: r["skipped"] === true,
     ...migrateSwaps(r["swaps"]),
-  };
+  }, { soreness: migrateSoreness(r["soreness"]) });
 }
 
 /** Sets added per slot: whole numbers from 1 up to the most that can be added. */
@@ -351,7 +363,7 @@ export function migrateActive(a: unknown): ActiveSession | null {
     isObj(x) ? (Object.fromEntries(Object.entries(x).filter(([, v]) => isObj(v) && ok(v))) as Record<string, T>) : {};
   const { extraSets: _, ...rest } = a;
   const extraSets = migrateExtraSets(a["extraSets"]);
-  return {
+  return withValid<ActiveSession>({
     ...(rest as unknown as ActiveSession),
     ...(extraSets ? { extraSets } : {}),
     pausedMs: isNum(a["pausedMs"]) ? Math.max(0, a["pausedMs"]) : 0,
@@ -365,7 +377,7 @@ export function migrateActive(a: unknown): ActiveSession | null {
     nextSet: entries(a["nextSet"], (v) => isNum(v["reps"]) && (v["loadKg"] === null || isNum(v["loadKg"]))),
     skippedSlots: strings(a["skippedSlots"]),
     ...migrateSwaps(a["swaps"]),
-  };
+  }, { soreness: migrateSoreness(a["soreness"]) });
 }
 
 export function migrateData(raw: unknown): AppData {
