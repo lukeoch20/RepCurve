@@ -6,6 +6,7 @@ import type { Units } from "@repcurve/shared";
 import { celebrate } from "../model/celebrate";
 import { equivalent, levelUps, newBadges } from "../model/gamify";
 import { Medal } from "./Trophies";
+import { LookUnlocked } from "./Looks";
 import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { useTip } from "./tips";
@@ -87,6 +88,8 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
           </div>
         </section>
       ) : null}
+
+      <LookUnlocked record={r} history={props.history} core={props.core} />
 
       {levels.length > 0 ? (
         <section className="card stack" style={{ gap: 8 }}>

@@ -19,8 +19,9 @@ async function expectChosen(page: Page, name: string, v: "Light" | "Dark" | "Mat
   await expect(version(page, name, v)).toHaveAttribute("aria-pressed", "true");
 }
 
+// Every look, in RepCurve Test: there they're all open, while in RepCurve most are earned (looks.spec.ts).
 test("Bluebird light is the default look; Settings lists each look once and asks light or dark", async ({ page }) => {
-  await onboard(page);
+  await onboard(page, "/test/");
   await expect(page.locator("html")).toHaveAttribute("data-style", "bluebird");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect(await background(page)).toBe("rgb(234, 241, 251)");

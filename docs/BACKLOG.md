@@ -121,6 +121,10 @@ dumbbell lifts.
 
 ## B4. Style previews in Settings
 
+**Built.** The preview table is `PREVIEWS` in `platform/style.ts` (checked against the stylesheets by
+`style.test.ts`); the preview itself is `LookPreview` in `ui/Looks.tsx`. Non-Classic looks show their
+light version.
+
 **The problem.** Every option in Settings → Style is drawn in the style that's active now, so with Pixel
 Press on, "Classic" shows up in pixel lettering on lavender and tells you nothing about Classic.
 
@@ -143,6 +147,19 @@ stylesheets, so a preview can't drift from the look it shows.
 ---
 
 ## B5. Looks as rewards
+
+**Built** (first four rungs: Fired Forge, Pixel Press, Gold Plated, Cut Like a Diamond). The decisions taken:
+1. Free set: Bluebird light and dark, and Classic.
+2. Any one route unlocks a look.
+3. Look 3 isn't commissioned yet, so that rung is skipped for now; its badges (50 workouts, level 10,
+   12-week streak, a monthly challenge) already exist, ready for when it arrives.
+
+Also: light and dark unlock together; the style in use when this shipped stays unlocked, recorded once
+per device next to the style setting (`keptLooks` in `platform/style.ts`), and that same list keeps any
+look used or earned on the device, so a look never locks again even if the history that earned it is
+reset. In RepCurve Test every look is open (Settings still says how each is earned in RepCurve). New
+badges for the routes: "Getting stronger" (a first record and a first harder move), "Three full weeks"
+and "Level 15". The rules are `LADDER` in `model/looks.ts`.
 
 **The idea.** Some looks are earned. Each one unlocks through whichever comes first of three routes:
 showing up, getting stronger, or staying consistent. Every route is a badge, so there's one system:
@@ -207,5 +224,6 @@ first two rungs need. Higher rungs as new looks arrive.
 2. **B2:** the soreness check-in as the first new input to the profile.
 3. **B1 screen:** "What RepCurve knows about you", with corrections.
 4. **B3:** research pass for reference tables, then push-up percentiles, then the rest.
-5. **B4:** style previews in Settings.
-6. **B5:** looks as rewards, first two rungs (Fired Forge and Pixel Press), once the open decisions are made.
+5. ~~**B4:** style previews in Settings.~~ Done.
+6. ~~**B5:** looks as rewards, first two rungs (Fired Forge and Pixel Press), once the open decisions are made.~~
+   Done, with Gold Plated and Cut Like a Diamond too; look 3 waits for its art.

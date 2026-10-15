@@ -36,7 +36,45 @@ export async function saveTextFile(filename: string, text: string): Promise<"sav
   }
 }
 
-export const backupFilename = (now = new Date()): string => `repcurve-backup-${now.toISOString().slice(0, 10)}.json`;
+/** Whether this browser's share sheet takes a file like this one. */
+export function canShareFile(file: File): boolean {
+  try {
+    return typeof navigator.share === "function" && !!navigator.canShare?.({ files: [file] });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Give the user a file such as an image: through the share sheet where it takes files, else
+ * as a browser download. Call it straight from a tap, as the share sheet needs one.
+ */
+export async function shareOrSaveFile(file: File, title: string): Promise<"saved" | "downloaded" | "declined" | "failed"> {
+  if (canShareFile(file)) {
+    try {
+      await navigator.share({ files: [file], title });
+      return "saved";
+    } catch (e) {
+      if ((e as { name?: string })?.name === "AbortError") return "declined";
+      // fall back to a download
+    }
+  }
+  // Inside claude.ai a page can't start a download of its own.
+  if (insideClaude()) return "failed";
+  try {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return "downloaded";
+  } catch {
+    return "failed";
+  }
+}
+
+export const backupFilename =(now = new Date()): string => `repcurve-backup-${now.toISOString().slice(0, 10)}.json`;
 
 /** The share sheet with the file attached, on touch devices that can share files. */
 async function shareFile(filename: string, text: string): Promise<"saved" | "declined" | "unavailable"> {
