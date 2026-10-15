@@ -175,6 +175,8 @@ export function pickExercise(
    * so they only swap within a rung.
    */
   alternate = false,
+  /** Told the exercise the slot would use outside an alternate block, when the alternate differs. */
+  onBase?: (base: Exercise) => void,
 ): Exercise | null {
   const ladders = ladderPreferenceCached(pool, pattern, variant, level, family);
   const target = (candidates: Exercise[]) =>
@@ -187,7 +189,11 @@ export function pickExercise(
     const t = target(candidates);
     let best: Exercise | null = null;
     for (const c of candidates) if (c.ladderLevel <= t) best = c;
-    if (best) return alternate ? alternateFor(best, ladder, ladders, options, target) : best;
+    if (!best) continue;
+    if (!alternate) return best;
+    const alt = alternateFor(best, ladder, ladders, options, target);
+    if (alt.id !== best.id) onBase?.(best);
+    return alt;
   }
   // Otherwise the easiest exercise left on the most preferred ladder.
   for (const ladder of ladders) {
@@ -195,6 +201,6 @@ export function pickExercise(
     if (candidates.length > 0) return candidates[0]!;
   }
   // No vertical pull fits the equipment: a row still trains the back.
-  if (pattern === "vertical_pull") return pickExercise(pool, "row", level, variant + 1, levelOffset, exclude, bodyweightBoost, accept, undefined, alternate);
+  if (pattern === "vertical_pull") return pickExercise(pool, "row", level, variant + 1, levelOffset, exclude, bodyweightBoost, accept, undefined, alternate, onBase);
   return null;
 }

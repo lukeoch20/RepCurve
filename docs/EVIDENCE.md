@@ -96,6 +96,8 @@ Sessions are filled toward what the week is short on (generate.ts `weekChain`, s
 
 **Built:** a different trigger. When at least half the sets in each of the last 3 strength sessions were grinders (0 RIR, or below the range when an easier option exists), the next week's strength sessions drop one round and one dumbbell step. Pain overrides a deload or comeback. Projections do not discount deload weeks.
 
+**Built (planned deloads):** past the novice stage, a light week is also due after 8 weeks of training for intermediates and 6 for advanced lifters (one per exercise block), counted in strength sessions. Inside Bell 2024's 5.6 ± 2.3 weeks and the 8–10 week option above. Novices stay reactive only, as nothing shows scheduled deloads help them. A reactive deload, or a break of 14+ days, restarts the count. The banner tells a planned week apart from a reactive one.
+
 ## 10. Novices progress on almost anything; double progression
 **Verdict: supported.**
 **Numbers:** Currier 2023 (178 strength studies, n=5,097): every prescription beat control. Plotkin 2022: adding reps and adding load gave similar results (muscle thickness +6.7–12.9% in both groups; strength difference 2.0 kg with a CI crossing 0). ACSM 2009: raise the load 2–10% when the lifter exceeds the target by 1–2 reps in two consecutive sessions.

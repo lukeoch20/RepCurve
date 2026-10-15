@@ -27,6 +27,11 @@ export interface Prescription {
   painCheck?: boolean;
   /** The recently painful area this exercise loads (e.g. "Shoulder"), when the check-in is for that. */
   caution?: string;
+  /**
+   * In an alternate block, the exercise this slot uses in the other blocks. Swaps and ladder moves
+   * the person made on that exercise carry over here.
+   */
+  alternateOf?: string;
   cue?: string;
 }
 
@@ -91,6 +96,8 @@ export interface SessionPlan {
   cardio: CardioPlan | null;
   /** Lighter session: part of a deload, or the first session back after a break. */
   deload: boolean;
+  /** Why a deload session is lighter: recent grinds, or a planned light week. Set only when `deload` is. */
+  deloadReason?: "strain" | "scheduled";
   comeback: boolean;
   /** Plain-language notes about compromises in this session, e.g. settings that leave little room. */
   notes?: string[];
