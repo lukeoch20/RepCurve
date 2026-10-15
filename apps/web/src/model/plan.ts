@@ -106,9 +106,9 @@ export function currentProgram(core: Core): Program {
   );
 }
 
-/** Candidate lengths for today: 10 to 40 minutes in fives, plus the user's usual length. */
+/** Candidate lengths for today: 10 to 60 minutes in fives, plus the user's usual length. */
 export function timeSteps(usual: number): number[] {
-  const steps = new Set([10, 15, 20, 25, 30, 35, 40, usual]);
+  const steps = new Set([10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, usual]);
   return [...steps].sort((a, b) => a - b);
 }
 
