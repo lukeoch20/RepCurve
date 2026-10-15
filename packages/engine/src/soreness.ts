@@ -74,7 +74,9 @@ export interface SoreQuestion {
 
 /**
  * Whether to ask about soreness before today's session: only a strength session that works a muscle
- * group one of the last three days' sessions also worked. Null when there's nothing to ask.
+ * group one of the last three days' sessions also worked. Core alone doesn't count: a short core
+ * finisher ends most sessions and rarely leaves much soreness, so asking every time would nag.
+ * Null when there's nothing to ask.
  */
 export function soreQuestion(plan: SessionPlan, recent: RecentSession[], now: number): SoreQuestion | null {
   if (plan.kind !== "strength") return null;
@@ -88,7 +90,7 @@ export function soreQuestion(plan: SessionPlan, recent: RecentSession[], now: nu
     shared.forEach((m) => groups.add(m));
     since = Math.max(since, r.finishedAt);
   }
-  return groups.size > 0 ? { groups: inOrder(groups), since } : null;
+  return [...groups].some((m) => m !== "core") ? { groups: inOrder(groups), since } : null;
 }
 
 /** The groups answered "very" sore. */
@@ -137,10 +139,10 @@ export function sorenessSummary(plan: SessionPlan): string | null {
   if (sore.length === 0) return null;
   const groups = inOrder(sore.flatMap((p) => p.sore!.groups)).map((m) => SORE_GROUP_NAME[m].toLowerCase());
   const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
-  const fewer = sore.filter((p) => p.sore!.setOff).map((p) => p.name.toLowerCase());
+  const fewer = sore.filter((p) => p.sore!.setOff).map((p) => p.name);
   const named = list(groups);
   const lead = `${named.charAt(0).toUpperCase()}${named.slice(1)} still very sore`;
-  const all = sore.map((p) => p.name.toLowerCase());
+  const all = sore.map((p) => p.name);
   const same = `${list(all)} ${all.length === 1 ? "stays" : "stay"} at the same weight today`;
   if (fewer.length === 0) return `${lead}: ${same}.`;
   if (fewer.length === all.length) return `${lead}: one set fewer of ${list(all)}, at the same weight today.`;

@@ -90,7 +90,7 @@ test("Still sore: asked before a session that works the same muscles, and very s
   await expect(rdl).toContainText("2 ×");
 
   await check.getByRole("group", { name: "How sore" }).getByRole("button", { name: "Very" }).click();
-  await expect(check.getByRole("status")).toHaveText(/Glutes still very sore: one set fewer of dumbbell romanian deadlift, at the same weight today\./);
+  await expect(check.getByRole("status")).toHaveText(/Glutes still very sore: one set fewer of Dumbbell Romanian deadlift, at the same weight today\./);
   await expect(rdl).toContainText("1 ×");
   // Other exercises are as planned.
   await expect(lineup.locator(".lineup-item", { hasText: "Dumbbell curl" })).toContainText("2 ×");

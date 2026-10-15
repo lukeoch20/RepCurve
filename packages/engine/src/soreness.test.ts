@@ -39,6 +39,10 @@ describe("the still-sore question", () => {
     expect(soreQuestion(planSessionWith(ctx, 2), [legs], T0 + HOUR)).toBeNull();
     expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: ["standing_calf_raise"] }], T0 + HOUR)).toBeNull();
     expect(soreQuestion(plan, [], T0)).toBeNull();
+    // Core alone (the finisher) doesn't ask; with another muscle it's included.
+    const core = prescriptionsOf(plan).find((p) => primeMovers(p.exerciseId).includes("core"))!.exerciseId;
+    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core] }], T0 + HOUR)).toBeNull();
+    expect(soreQuestion(plan, [{ finishedAt: T0, exerciseIds: [core, "goblet_squat"] }], T0 + HOUR)!.groups).toEqual(["quads", "glutes", "core"]);
   });
 });
 
@@ -127,7 +131,7 @@ describe("very sore", () => {
 
   it("says what changed", () => {
     const after = applySoreness(planSessionWith(ctx, 4), very("quads"));
-    expect(sorenessSummary(after)).toBe("Quads still very sore: one set fewer of goblet squat, at the same weight today.");
+    expect(sorenessSummary(after)).toBe("Quads still very sore: one set fewer of Goblet squat, at the same weight today.");
     expect(sorenessSummary(planSessionWith(ctx, 4))).toBeNull();
   });
 });
