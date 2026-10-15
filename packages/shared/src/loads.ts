@@ -19,6 +19,12 @@ const range = (from: number, to: number, step: number): number[] => {
   return out;
 };
 
+/** The empty bar in the user's units: its own weight in kg, or the nearest 5 lb (a 20 kg bar is a 45 lb bar). */
+export function barWeight(barKg: number | undefined, units: Units): number {
+  const kg = barKg ?? 20;
+  return units === "lb" ? Math.max(5, Math.round(kgToLb(kg) / 5) * 5) : kg;
+}
+
 /**
  * Settings you can choose for a load type, in kg, ascending: owned dumbbells; a barbell loaded in
  * the smallest common plate steps from the empty bar; or a machine or cable stack. Gym loads step
@@ -31,10 +37,8 @@ export function availableLoadsKg(e: { loadType: LoadType; barKg?: number }, eq: 
     case "single_dumbbell":
       return availableDumbbellLoadsKg(eq.dumbbells);
     case "barbell": {
-      const barKg = e.barKg ?? 20;
-      if (!lb) return range(barKg, 300, 2.5);
-      const barLb = Math.max(5, Math.round(kgToLb(barKg) / 5) * 5);
-      return range(barLb, 650, 5).map(lbToKg);
+      const bar = barWeight(e.barKg, units);
+      return lb ? range(bar, 650, 5).map(lbToKg) : range(bar, 300, 2.5);
     }
     case "machine":
       return lb ? range(10, 500, 10).map(lbToKg) : range(5, 250, 5);

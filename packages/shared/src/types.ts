@@ -240,6 +240,8 @@ export interface SetLog {
   reps: number;
   rir: Rir;
   painFlag?: boolean;
+  /** A set added beyond the plan: it counts like any other, but progression judges the planned sets. */
+  extra?: boolean;
   /** Where it hurt, when the user said: "knee", "low_back", "shoulder", "wrist", "elbow", "hip", "neck" or "other". */
   painArea?: string;
 }
