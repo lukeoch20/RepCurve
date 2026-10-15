@@ -12,6 +12,7 @@ import { InstallCard } from "./Install";
 import { backUp } from "./Backup";
 import { ReminderSettings } from "./Reminders";
 import { PrivacySettings } from "./Privacy";
+import { ErrorLogSettings } from "./ErrorLog";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -215,6 +216,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
       </section>
 
       <PrivacySettings />
+      <ErrorLogSettings />
 
       <section className="card stack">
         <h2 className="h3">Start over</h2>

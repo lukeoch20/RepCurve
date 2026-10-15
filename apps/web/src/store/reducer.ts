@@ -36,6 +36,14 @@ export interface AppState {
   ready: boolean;
   /** The session just finished, shown as a summary until dismissed. */
   finished: SessionRecord | null;
+  /** The last action that threw, which changed nothing (see safeReducer). */
+  failure?: ActionFailure;
+}
+
+export interface ActionFailure {
+  action: Action["type"];
+  error: unknown;
+  at: number;
 }
 
 export type Action =
@@ -74,6 +82,19 @@ export type Action =
   | { type: "dismissFinished" };
 
 export const INITIAL: AppState = { data: { core: null, active: null, history: [] }, ready: false, finished: null };
+
+/**
+ * The reducer the app runs: an action that throws (an engine error on data it didn't expect)
+ * leaves everything as it was and records the failure, so the app can say so and carry on
+ * instead of going blank.
+ */
+export function safeReducer(s: AppState, a: Action): AppState {
+  try {
+    return reducer(s, a);
+  } catch (error) {
+    return { ...s, failure: { action: a.type, error, at: Date.now() } };
+  }
+}
 
 export function reducer(s: AppState, a: Action): AppState {
   const { core, active, history } = s.data;
