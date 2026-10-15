@@ -13,6 +13,9 @@ import { ShareBars, TrendChart } from "./charts";
 import { useTip } from "./tips";
 import { CalendarCard, ChallengeCard, LifetimeCard, RecordsWall, TrophyShelf } from "./Trophies";
 import { monthChallenge } from "../model/gamify";
+import { NextLook } from "./Looks";
+import { shareCard, type ShareCard as ShareCardData } from "../model/share";
+import { ShareSheet } from "./ShareCard";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -27,6 +30,7 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   const statsTip = useTip("progress.charts");
   const [liftId, setLiftId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [sharing, setSharing] = useState<ShareCardData | null>(null);
   const lift = lifts.find((l) => l.id === liftId) ?? lifts[0] ?? null;
   const done = history.filter((r) => !r.skipped);
   const minutes = done.reduce((n, r) => n + r.activeMinutes, 0);
@@ -38,9 +42,17 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
   return (
     <div className="stack-lg">
       <header className="stack" style={{ gap: 6 }}>
-        <p className="eyebrow">Progress</p>
+        <div className="spread">
+          <p className="eyebrow">Progress</p>
+          {done.length > 0 ? (
+            <button type="button" className="btn small" onClick={() => setSharing(shareCard(history, lift, units, now))}>
+              Share
+            </button>
+          ) : null}
+        </div>
         <h1 className="title">Your curve so far</h1>
       </header>
+      {sharing ? <ShareSheet card={sharing} onClose={() => setSharing(null)} /> : null}
 
       <Seg
         label="Time range"
@@ -73,6 +85,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
       <ChallengeCard challenge={monthChallenge(history, core, now)} />
 
       <TrophyShelf core={core} history={history} />
+
+      <NextLook core={core} history={history} />
 
       <LifetimeCard history={history} units={units} />
 
