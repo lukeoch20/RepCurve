@@ -81,12 +81,23 @@ describe("data from another version of the app", () => {
     expect(migrateCore(JSON.parse(JSON.stringify(core)))!.version).toBe(DATA_VERSION);
   });
 
-  it("refuses a profile with an unknown goal or training history, and a dumbbell step that makes thousands of weights", () => {
+  it("plans cautiously for a goal or training history it doesn't know, and drops dumbbells the editor couldn't have made", () => {
     const core = newCore(profile, equipment, T);
-    expect(migrateCore({ ...core, profile: { ...core.profile, goal: "muscle" } })).toBeNull();
-    expect(migrateCore({ ...core, profile: { ...core.profile, trainingHistory: "lots" } })).toBeNull();
-    expect(migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 100, step: 0.0001, unit: "lb" } } })).toBeNull();
-    expect(migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" } } })).not.toBeNull();
+    expect(migrateCore({ ...core, profile: { ...core.profile, goal: "muscle" } })!.profile.goal).toBe("both");
+    expect(migrateCore({ ...core, profile: { ...core.profile, trainingHistory: "lots" } })!.profile.trainingHistory).toBe("never");
+    const thousands = migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 100, step: 0.0001, unit: "lb" } } })!;
+    expect(thousands.equipment.dumbbells).toEqual({ kind: "none" });
+    const fine = migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" } } })!;
+    expect(fine.equipment.dumbbells).toEqual({ kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb", pairs: true });
+  });
+
+  it("refuses setup data it can't repair: no sex, age, height or weight, or no equipment list", () => {
+    const core = newCore(profile, equipment, T);
+    expect(migrateCore({ ...core, profile: { ...core.profile, sex: "x" } })).toBeNull();
+    expect(migrateCore({ ...core, profile: { ...core.profile, age: "33" } })).toBeNull();
+    expect(migrateCore({ ...core, profile: { ...core.profile, bodyweightKg: null } })).toBeNull();
+    expect(migrateCore({ ...core, equipment: "dumbbells" })).toBeNull();
+    expect(migrateCore({ ...core, equipment: { nope: 1 } })).toBeNull();
   });
 });
 
