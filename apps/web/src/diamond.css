@@ -1,0 +1,308 @@
+/* Cut Like a Diamond (RepCurve Signature Collection, the maximum level): white diamond or black
+   crystal. Emerald-cut platinum frames with a 3px reflected bevel, polished charcoal or platinum
+   actions with 8px cuts, quiet 4px controls, Bodoni Moda headings over Hanken Grotesk text, and a
+   brilliant-cut diamond as the insignia (the header tile, the success badge, earned medals).
+   Paint only: layout, spacing, tap sizes, wording and icons are unchanged. */
+:root[data-style="diamond"] {
+  --bg: #f0f2f3;
+  --card: #ffffff;
+  --sunk: #e2e7eb;
+  --ink: #171e25;
+  --muted: #55636f;
+  --line: #cbd3d9;
+  --accent: #293a49;
+  --accent-strong: #18242f;
+  --accent-ink: #ffffff;
+  --accent-wash: #e4ecf2;
+  --accent-line: #6f8294;
+  --chart: #365d7f;
+  --warn: #82530f;
+  --warn-wash: #fff0d7;
+  --stop: #a1344a;
+  --stop-wash: #f9e6ea;
+  --shadow: 0 4px 14px rgb(20 35 48 / 0.1);
+  --font-display: "Bodoni Moda", Georgia, serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --radius: 0px;
+  --radius-sm: 4px;
+  --tap: 48px;
+  /* Cut Like a Diamond's own: the black-crystal header, control edges, focus, link text, the
+     polished action planes, the platinum bevel and the diamond art */
+  --chrome: #151c24;
+  --chrome-ink: #f4f8fc;
+  --control-line: #71818d;
+  --focus: #365d7f;
+  --accent-text: #293f53;
+  --button-hi: #445361;
+  --button-lo: #18212a;
+  --facet-hi: #ffffff;
+  --facet-low: #91a5b6;
+  --fire: #d9d6ed;
+  --dm-gem: url("data:image/webp;base64,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");
+  --dm-crest: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 94%22 stroke=%22%23A5BACB%22 stroke-width=%220.4%22%3E%3Cpolygon points=%2220,0 80,0 66,8 34,8%22 fill=%22%23DCE8F0%22/%3E%3Cpolygon points=%2220,0 34,8 26,22 0,28%22 fill=%22%2395ACBE%22/%3E%3Cpolygon points=%2280,0 100,28 74,22 66,8%22 fill=%22%23C0D4E3%22/%3E%3Cpolygon points=%2234,8 66,8 74,22 26,22%22 fill=%22%23FCFEFF%22/%3E%3Cpolygon points=%220,28 26,22 22,28%22 fill=%22%23F5FCFF%22/%3E%3Cpolygon points=%2226,22 74,22 78,28 22,28%22 fill=%22%23B8CBDC%22/%3E%3Cpolygon points=%2274,22 100,28 78,28%22 fill=%22%23F1F9FF%22/%3E%3Cpolygon points=%220,28 22,28 26,52%22 fill=%22%23D9E9F4%22/%3E%3Cpolygon points=%2222,28 50,28 50,58 26,52%22 fill=%22%23718DA4%22/%3E%3Cpolygon points=%2250,28 78,28 74,52 50,58%22 fill=%22%23F5FBFF%22/%3E%3Cpolygon points=%2278,28 100,28 74,52%22 fill=%22%23AEC7DB%22/%3E%3Cpolygon points=%220,28 26,52 50,94%22 fill=%22%239EB7CB%22/%3E%3Cpolygon points=%2226,52 50,58 50,94%22 fill=%22%23E4F4FF%22/%3E%3Cpolygon points=%2250,58 74,52 50,94%22 fill=%22%238DA8C0%22/%3E%3Cpolygon points=%2274,52 100,28 50,94%22 fill=%22%23CADFEE%22/%3E%3Cpath d=%22M20 0H80L100 28L50 94L0 28Z M0 28H100%22 fill=%22none%22 stroke=%22%23DCEEFF%22 stroke-width=%220.4%22/%3E%3C/svg%3E");
+  --dm-mark: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 10%22%3E%3Cpath d=%22M6 5h20M38 5h20%22 stroke=%22%23171e25%22 stroke-width=%221.2%22/%3E%3Cpath d=%22M32 1l4 4-4 4-4-4z%22 fill=%22%23171e25%22/%3E%3C/svg%3E");
+  color-scheme: light;
+}
+:root[data-style="diamond"][data-theme="dark"] {
+  --bg: #080c11;
+  --card: #121a23;
+  --sunk: #0b1118;
+  --ink: #f4f8fc;
+  --muted: #adbdc9;
+  --line: #344351;
+  --accent: #dae7f0;
+  --accent-strong: #f4f9fc;
+  --accent-ink: #101a24;
+  --accent-wash: #253542;
+  --accent-line: #91acbf;
+  --chart: #b5daef;
+  --warn: #f3ca90;
+  --warn-wash: #3b2c19;
+  --stop: #f5acba;
+  --stop-wash: #3a242e;
+  --shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  --chrome: #0d141d;
+  --chrome-ink: #f4f8fc;
+  --control-line: #7e96a9;
+  --focus: #cfebfc;
+  --accent-text: #d8ebf5;
+  --button-hi: #fafcfe;
+  --button-lo: #b9c9d6;
+  --facet-hi: #e7f5ff;
+  --facet-low: #516a7e;
+  --dm-mark: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 10%22%3E%3Cpath d=%22M6 5h20M38 5h20%22 stroke=%22%23f4f8fc%22 stroke-width=%221.2%22/%3E%3Cpath d=%22M32 1l4 4-4 4-4-4z%22 fill=%22%23f4f8fc%22/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
+
+/* type: Bodoni Moda headings (600; 700 for page titles), Hanken Grotesk everywhere else, tabular figures */
+[data-style="diamond"] :is(.title, .h2, .h3, .block-name, .session-row .name, .brand, .choice b) { font-family: var(--font-display); font-optical-sizing: auto; }
+[data-style="diamond"] .title { font-weight: 700; letter-spacing: 0; }
+[data-style="diamond"] :is(.h2, .h3, .block-name, .session-row .name, .brand, .choice b) { font-weight: 600; }
+[data-style="diamond"] :is(.stat b, .hero-num, .runner-clock, .ring .t, .stepper .value b, .week-day .k, .num) { font-family: var(--font-body); font-weight: 700; font-variant-numeric: tabular-nums; }
+[data-style="diamond"] .eyebrow { font-weight: 600; letter-spacing: 0.06em; }
+[data-style="diamond"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* links and selected marks use the link shade */
+[data-style="diamond"] :is(.eyebrow.accent, .link-btn, .session-row.current .when, .set.current .set-row .n, .suggestion .icon, .dock-label, .segment.hard .m, .change.up .arrow, .change.cal .arrow, .tile[aria-checked="true"] svg, .howto .eyebrow, .sources a, .streak, .level-chip, .lineup-tag, .block-tag) { color: var(--accent-text); }
+[data-style="diamond"] :is(.howto-steps li, .howto-list li)::marker { color: var(--accent-text); }
+[data-style="diamond"] .exercise-link { text-decoration-color: var(--accent-line); }
+[data-style="diamond"] .exercise-link:hover { text-decoration-color: var(--accent-text); }
+
+/* cut corners on the paint layer only (the box, padding and tap area are unchanged): a 1px edge that
+   follows the cuts, and the fill inside it. --fill-image, --edge, --trim and --cut set each one; the
+   defaults sit at low specificity, so each kind of frame below can set its own */
+[data-style="diamond"] :where(.card:not(.flat), .block, .stat, .banner, .suggestion, .choice button, .tile, .dock-inner, .btn.primary, .btn.go, .dock-actions button.go, .chip[aria-pressed="true"], .seg button[aria-pressed="true"]) {
+  --cut: 12px;
+  --edge: var(--control-line);
+  --fill: var(--card);
+  --fill-image: linear-gradient(var(--fill), var(--fill));
+  --trim: linear-gradient(transparent, transparent);
+}
+[data-style="diamond"] :is(.card:not(.flat), .block, .stat, .banner, .suggestion, .choice button, .tile, .dock-inner, .btn.primary, .btn.go, .dock-actions button.go, .chip[aria-pressed="true"], .seg button[aria-pressed="true"]) {
+  --corner: transparent 50%, var(--edge) 50% calc(50% + 1px), transparent calc(50% + 1px);
+  border-color: transparent;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, var(--corner)) top left / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(225deg, var(--corner)) top right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(315deg, var(--corner)) bottom right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(45deg, var(--corner)) bottom left / var(--cut) var(--cut) no-repeat border-box,
+    var(--trim) padding-box,
+    var(--fill-image) padding-box,
+    linear-gradient(var(--edge), var(--edge)) border-box;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+/* a focused cut control shows its whole focus ring rather than clipping it at the cuts */
+[data-style="diamond"] :is(.choice button, .tile, .btn.primary, .btn.go, .dock-actions button.go, .chip, .seg button):focus-visible { clip-path: none; }
+
+/* emerald-cut platinum frames: cards, exercise blocks and stat tiles get a 3px reflected bevel
+   (bright at the top left, recessed at the bottom right) around a flat reading surface. (:root lifts
+   this above the cut-frame rule, whose :is() list counts as its most specific entry.) */
+:root[data-style="diamond"] :is(.card:not(.flat, .tint), .block, .stat) {
+  --bevel: 3px;
+  background:
+    linear-gradient(135deg, transparent 50%, var(--facet-hi) 50% calc(50% + var(--bevel)), transparent calc(50% + var(--bevel))) top left / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(225deg, transparent 50%, color-mix(in srgb, var(--facet-hi), var(--facet-low)) 50% calc(50% + var(--bevel)), transparent calc(50% + var(--bevel))) top right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(315deg, transparent 50%, var(--facet-low) 50% calc(50% + var(--bevel)), transparent calc(50% + var(--bevel))) bottom right / var(--cut) var(--cut) no-repeat border-box,
+    linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--facet-hi), var(--facet-low)) 50% calc(50% + var(--bevel)), transparent calc(50% + var(--bevel))) bottom left / var(--cut) var(--cut) no-repeat border-box,
+    var(--trim) border-box,
+    linear-gradient(var(--fill), var(--fill)) center / calc(100% - 2 * var(--bevel)) calc(100% - 2 * var(--bevel)) no-repeat border-box,
+    linear-gradient(125deg, var(--facet-hi), var(--facet-low)) border-box;
+}
+/* a reflected edge: a short platinum glint along the top, as polished stone catches the light */
+[data-style="diamond"] :is(.card:not(.flat, .tint), .block) { --trim: linear-gradient(var(--facet-hi), var(--facet-hi)) top 1px left calc(var(--cut) + 4px) / 28px 1px no-repeat; }
+[data-style="diamond"] .stat { --cut: 10px; --bevel: 2px; }
+[data-style="diamond"] .card.tint { --fill: var(--accent-wash); --edge: var(--accent-line); }
+/* a card's heading is engraved: Bodoni over a quiet rule */
+[data-style="diamond"] .card:not(.tint, .flat) > :is(.eyebrow, .h3):first-child,
+[data-style="diamond"] .card:not(.tint, .flat) > :is(.card-head, .spread:has(> .h3, > .eyebrow)):first-child {
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  background: linear-gradient(var(--line), var(--line)) bottom / 100% 1px no-repeat;
+}
+[data-style="diamond"] .card:not(.tint, .flat) > .eyebrow:first-child,
+[data-style="diamond"] .card:not(.tint, .flat) > :first-child > .eyebrow { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em; color: var(--ink); }
+
+/* buttons: quiet 4px controls with a visible edge; primary actions are polished planes with 8px cuts */
+[data-style="diamond"] .btn,
+[data-style="diamond"] .icon-btn,
+[data-style="diamond"] .chip,
+[data-style="diamond"] .dock-actions button {
+  border-radius: var(--radius-sm);
+  border-color: var(--control-line);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: none;
+}
+[data-style="diamond"] :is(.btn, .chip) { font-weight: 600; }
+[data-style="diamond"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { transform: none; background: var(--sunk); }
+[data-style="diamond"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
+  --cut: 8px;
+  --edge: var(--facet-low);
+  --fill-image: linear-gradient(110deg, var(--button-lo), var(--button-hi) 42%, var(--accent));
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+/* the widest actions (start a session, log a set) carry the diamond at their left */
+[data-style="diamond"] :is(.btn.big, .btn.go.grow):is(.primary, .go) { --trim: var(--dm-crest) left 18px center / 18px 17px no-repeat; }
+/* pressed: the stronger plane, a fine inset top edge, the label 1px lower */
+[data-style="diamond"] :is(.btn.primary, .btn.go, .dock-actions button.go):active {
+  --fill-image: linear-gradient(var(--accent-strong), var(--accent-strong));
+  --trim: linear-gradient(var(--facet-low), var(--facet-low)) top 2px center / calc(100% - 16px) 1px no-repeat;
+  padding-top: 1px;
+}
+/* a chosen chip or segment: a small polished plane with a short underbar, so the choice never rests on colour */
+[data-style="diamond"] :is(.chip[aria-pressed="true"], .seg button[aria-pressed="true"]) {
+  --cut: 8px;
+  --edge: var(--facet-low);
+  --fill-image: linear-gradient(110deg, var(--button-lo), var(--button-hi) 42%, var(--accent));
+  --trim: linear-gradient(var(--accent-ink), var(--accent-ink)) bottom 5px center / 16px 2px no-repeat;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+[data-style="diamond"] :is(.btn.outline, .btn.ghost) { background: transparent; box-shadow: none; color: var(--accent-text); }
+[data-style="diamond"] .btn.outline { border-color: var(--accent-line); }
+[data-style="diamond"] .btn.ghost { border-color: transparent; }
+[data-style="diamond"] .btn.danger { color: var(--stop); }
+[data-style="diamond"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: var(--card); }
+/* disabled: flat, no polish (the [disabled] outranks the cut frame) */
+[data-style="diamond"] :is(.btn, .chip, .icon-btn)[disabled]:disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--control-line); border-radius: var(--radius-sm); box-shadow: none; clip-path: none; }
+[data-style="diamond"] .btn.ghost[disabled]:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
+
+/* segmented control: a recessed 4px track */
+[data-style="diamond"] .seg { background: var(--sunk); border: 1px solid var(--control-line); border-radius: var(--radius-sm); padding: 2px; }
+[data-style="diamond"] .seg button { border-radius: var(--radius-sm); color: var(--muted); }
+[data-style="diamond"] .seg.quiet button[aria-pressed="true"] { --fill-image: linear-gradient(var(--card), var(--card)); --trim: linear-gradient(var(--ink), var(--ink)) bottom 5px center / 16px 2px no-repeat; color: var(--ink); }
+
+/* choices and tiles: cut, with a clear edge; chosen ones get the cool wash, edge and a 3px stripe */
+[data-style="diamond"] .choice button[aria-pressed="true"] { --fill: var(--accent-wash); --edge: var(--accent-line); box-shadow: inset 4px 0 0 var(--accent); }
+[data-style="diamond"] .choice b { font-size: 1.12rem; }
+[data-style="diamond"] .tile { --cut: 10px; }
+[data-style="diamond"] .tile[aria-checked="true"] { --fill: var(--accent-wash); --edge: var(--accent-line); box-shadow: none; }
+[data-style="diamond"] .tile .badge { background: var(--accent); color: var(--accent-ink); }
+
+/* fields, steppers, switches: quiet 4px shapes; the switch thumb is a diamond */
+[data-style="diamond"] .input { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="diamond"] .stepper { border-color: var(--control-line); border-radius: var(--radius-sm); }
+[data-style="diamond"] .stepper button { border: 1px solid var(--control-line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); font-weight: 700; }
+[data-style="diamond"] .stepper button:active { background: var(--sunk); }
+[data-style="diamond"] .stepper button:disabled { opacity: 1; color: var(--muted); background: var(--sunk); }
+[data-style="diamond"] .switch { border-radius: var(--radius-sm); background: var(--sunk); border: 1px solid var(--control-line); }
+[data-style="diamond"] .switch::after { top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 1px; background: var(--card); border: 1.5px solid var(--control-line); box-sizing: border-box; box-shadow: none; transform: rotate(45deg); }
+[data-style="diamond"] .switch:checked { background: var(--accent-wash); border-color: var(--accent-line); }
+[data-style="diamond"] .switch:checked::after { background: var(--accent); border-color: var(--accent-line); transform: translateX(20px) rotate(45deg); }
+/* a check on the "on" side, a dash on the "off" side */
+[data-style="diamond"] .switch::before { content: ""; position: absolute; box-sizing: border-box; left: 32px; top: 13px; width: 9px; height: 2px; background: var(--muted); }
+[data-style="diamond"] .switch:checked::before { left: 7px; top: 9px; width: 10px; height: 6px; background: none; border-left: 2px solid var(--accent-text); border-bottom: 2px solid var(--accent-text); transform: rotate(-45deg); }
+
+/* tab bar: the card surface; the current tab is a cool plate under a line-and-diamond mark */
+[data-style="diamond"] .tabbar { background: var(--card); border-top: 1px solid var(--line); backdrop-filter: none; }
+[data-style="diamond"] .tabbar button { color: var(--muted); }
+[data-style="diamond"] .tabbar button[aria-current="page"] {
+  background: var(--dm-mark) top center / 64px 10px no-repeat, linear-gradient(var(--accent-wash), var(--accent-wash)) bottom / 100% calc(100% - 8px) no-repeat;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* the session header: black crystal under a fine platinum rule with the diamond at its centre */
+[data-style="diamond"] .runner-head {
+  background: var(--dm-crest) top 1px center / 12px 11px no-repeat, linear-gradient(var(--facet-low), var(--facet-low)) top 6px center / 100% 1px no-repeat, var(--chrome);
+  color: var(--chrome-ink);
+  border-bottom-color: var(--facet-low);
+  backdrop-filter: none;
+}
+[data-style="diamond"] .runner-head :is(.eyebrow, .meta, .title, .runner-clock, .muted) { color: var(--chrome-ink); }
+[data-style="diamond"] .runner-head .meta { color: color-mix(in srgb, var(--chrome-ink) 82%, transparent); }
+[data-style="diamond"] .runner-head .progress-track { background: color-mix(in srgb, var(--chrome-ink) 18%, transparent); }
+
+/* Today's session tile carries the crest: the brilliant-cut diamond on black crystal, framed in platinum */
+[data-style="diamond"] .page-head .glyph {
+  border-radius: 0;
+  background: var(--dm-gem) center / 44px 44px no-repeat, linear-gradient(var(--chrome), var(--chrome)) center / calc(100% - 4px) calc(100% - 4px) no-repeat, linear-gradient(125deg, var(--facet-hi), var(--facet-low));
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+}
+[data-style="diamond"] .page-head .glyph > * { visibility: hidden; }
+
+/* the success badge becomes a cut diamond, with its check kept */
+[data-style="diamond"] .celebrate-badge svg { background: var(--dm-gem) center / contain no-repeat; overflow: visible; }
+[data-style="diamond"] .celebrate-badge svg circle { display: none; }
+[data-style="diamond"] .celebrate-check { stroke: #171e25; }
+
+/* the rest timer: a cut plate; a fine rim with the arc in chart blue and one diamond at the top */
+[data-style="diamond"] .dock-inner { --edge: var(--accent-line); box-shadow: none; }
+[data-style="diamond"] .ring circle { stroke: var(--sunk); }
+[data-style="diamond"] .ring circle + circle { stroke: var(--chart); }
+[data-style="diamond"] .ring::after { content: ""; position: absolute; top: -3px; left: 50%; width: 13px; height: 12px; transform: translateX(-50%); background: var(--dm-crest) center / contain no-repeat; pointer-events: none; }
+[data-style="diamond"] .dock.go .dock-inner { --fill: var(--accent); --edge: var(--accent-line); color: var(--accent-ink); }
+[data-style="diamond"] .dock.go :is(.dock-label, .dock-next, .ring, .ring .l) { color: var(--accent-ink); }
+[data-style="diamond"] .dock.go .ring circle { stroke: color-mix(in srgb, var(--accent-ink) 30%, transparent); }
+[data-style="diamond"] .dock.go .ring circle + circle { stroke: var(--accent-ink); }
+
+/* banners: cut, edged in their own colour */
+[data-style="diamond"] :is(.banner.info, .banner.good) { --fill: var(--accent-wash); --edge: var(--accent-line); }
+[data-style="diamond"] :is(.banner.info, .banner.good) b { color: var(--ink); }
+[data-style="diamond"] .banner.adjust { --fill: var(--warn-wash); --edge: var(--warn); }
+[data-style="diamond"] .banner.adjust b { color: var(--warn); }
+[data-style="diamond"] .banner.stop { --fill: var(--stop-wash); --edge: var(--stop); }
+[data-style="diamond"] .banner.stop b { color: var(--stop); }
+[data-style="diamond"] .suggestion { --fill: var(--accent-wash); --edge: var(--accent-line); }
+[data-style="diamond"] .suggestion.adjust { --fill: var(--warn-wash); --edge: var(--warn); }
+[data-style="diamond"] .suggestion.stop { --fill: var(--stop-wash); --edge: var(--stop); }
+
+/* small shapes: 4px corners and fine edges */
+[data-style="diamond"] :is(.challenge-bar, .trophy-bar) { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
+[data-style="diamond"] :is(.streak, .level-chip) { border: 1px solid var(--accent-line); border-radius: var(--radius-sm); background: var(--accent-wash); color: var(--ink); }
+[data-style="diamond"] .example-tag { border-color: var(--control-line); }
+[data-style="diamond"] .glyph { border-radius: var(--radius-sm); border: 1px solid var(--control-line); background: var(--sunk); }
+[data-style="diamond"] :is(.lineup-tag, .block-tag) { border-color: var(--control-line); color: var(--ink); }
+[data-style="diamond"] .week-day .k { border-color: var(--ink); }
+[data-style="diamond"] .week-day.done .k { background: var(--accent-wash); color: var(--ink); border-color: var(--accent-line); }
+[data-style="diamond"] .week-day.next .k { border-color: var(--accent); }
+[data-style="diamond"] .week-day.upcoming .k { border-color: var(--control-line); }
+[data-style="diamond"] .cal-day { border-radius: var(--radius-sm); }
+[data-style="diamond"] .cal-day.cardio { box-shadow: inset 0 0 0 1px var(--accent); }
+[data-style="diamond"] .sheet { border-radius: 0; border-top: 2px solid var(--facet-low); }
+[data-style="diamond"] .scrim { background: rgb(0 0 0 / 0.5); }
+[data-style="diamond"] .tip-spot { border-radius: 0; outline-color: var(--focus); box-shadow: 0 0 0 200vmax rgb(0 0 0 / 0.62); }
+[data-style="diamond"] .chart-tip { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-weight: 700; }
+
+/* medals: an earned medal is a cut diamond with its mark on a plate in the tier's metal; a locked one
+   is the outline of a diamond with its mark */
+[data-style="diamond"] .medal :is(.ribbon, .disc, .rim, .mark) { display: none; }
+[data-style="diamond"] .medal .dm { display: inline; }
+[data-style="diamond"] .medal:not(.locked) { background: var(--dm-gem) center top 2px / 46px 46px no-repeat; }
+[data-style="diamond"] .medal:not(.locked) .dm-outline { display: none; }
+[data-style="diamond"] .medal .dm-plate { fill: var(--tier); stroke: #171e25; stroke-opacity: 0.35; stroke-width: 0.8; }
+[data-style="diamond"] .medal .dm-mark { fill: #171e25; font-family: var(--font-body); }
+[data-style="diamond"] .medal.bronze { --tier: #dbb593; }
+[data-style="diamond"] .medal.silver { --tier: #d9e2e9; }
+[data-style="diamond"] .medal.gold { --tier: #e5d39a; }
+[data-style="diamond"] .medal.platinum { --tier: #d9effa; }
+[data-style="diamond"] .medal.locked .dm-outline { fill: var(--sunk); stroke: var(--control-line); stroke-width: 1; stroke-linejoin: round; }
+[data-style="diamond"] .medal.locked .dm-plate { fill: var(--card); stroke: var(--control-line); stroke-opacity: 1; }
+[data-style="diamond"] .medal.locked .dm-mark { fill: var(--muted); }
+
+/* confetti: platinum white, ice blue, a pale spectral sliver and ink */
+[data-style="diamond"] .confetti i.c0 { background: #f4f8fc; box-shadow: 0 0 0 1px var(--facet-low); }
+[data-style="diamond"] .confetti i.c1 { background: #b5daef; }
+[data-style="diamond"] .confetti i.c2 { background: var(--fire); }

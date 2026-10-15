@@ -458,7 +458,7 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 }
 
 /* gamification */
-.medal .px, .celebrate-check-px { display: none; }
+.medal .px, .medal .dm, .celebrate-check-px { display: none; }
 .medal .ribbon { fill: color-mix(in srgb, var(--accent) 70%, var(--card)); }
 .medal .disc { fill: var(--tier); }
 .medal .rim { stroke: color-mix(in srgb, white 45%, var(--tier)); stroke-width: 1.5; }

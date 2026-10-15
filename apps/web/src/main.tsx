@@ -8,6 +8,7 @@ import "./bluebird.css";
 import "./forge.css";
 import "./pixel.css";
 import "./gold.css";
+import "./diamond.css";
 
 declare const __RUNTIME__: "pwa" | "artifact";
 

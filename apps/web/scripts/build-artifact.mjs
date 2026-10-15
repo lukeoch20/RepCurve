@@ -10,7 +10,7 @@ const css = readFileSync(resolve(dist, "app.css"), "utf8");
 const js = readFileSync(resolve(dist, "app.js"), "utf8").replace(/<\/script/gi, "<\\/script");
 
 const fonts =
-  "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Archivo+Narrow:wght@600;700&family=Cinzel:wght@600;700&family=Manrope:wght@400;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Archivo+Narrow:wght@600;700&family=Cinzel:wght@600;700&family=Manrope:wght@400;600;700&family=Bodoni+Moda:opsz,wght@6..96,600;6..96,700&family=Hanken+Grotesk:wght@400;600;700&display=swap";
 
 const html = `<title>RepCurve</title>
 <meta name="description" content="Short home workouts that pick your weights and adapt every session.">
