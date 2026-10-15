@@ -16,6 +16,7 @@ import { monthChallenge } from "../model/gamify";
 import { NextLook } from "./Looks";
 import { shareCard, type ShareCard as ShareCardData } from "../model/share";
 import { ShareSheet } from "./ShareCard";
+import { KnowsLink } from "./Knows";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -101,6 +102,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
       ) : null}
 
       <ProjectionCard projection={projection} units={core.profile.units} />
+
+      <KnowsLink card />
 
       <section className="card">
         <h2 className="h3" style={{ marginBottom: 6 }}>History</h2>

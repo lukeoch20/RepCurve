@@ -4,6 +4,7 @@ import {
   preferExercise,
   prescriptionsOf,
   recordSessionWithExtras,
+  recordSoreSession,
   swapPrescription,
   type ExerciseChange,
   type Prescription,
@@ -15,6 +16,7 @@ import {
 import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
 import { contextFor, todayPlan } from "./plan";
+import { currentSoreness } from "./soreness";
 import type { ActiveSession, CardioProgress, CardioResult, Core, LoggedSet, SessionRecord, TimerState } from "./types";
 
 /** Rest between sets of the core finisher. */
@@ -432,7 +434,9 @@ export function cardioMinutesDone(active: ActiveSession, now: number): number {
 
 export function startSession(core: Core, history: SessionRecord[], now: number, minutes: number | null): ActiveSession {
   const plan = todayPlan(core, history, now, minutes);
+  const soreness = plan.kind === "strength" ? currentSoreness(core, now) : undefined;
   return {
+    ...(soreness ? { soreness } : {}),
     id: `s${core.nextIndex + 1}-${now.toString(36)}`,
     index: core.nextIndex,
     plan,
@@ -473,6 +477,7 @@ function baseRecord(active: ActiveSession, now: number, end = now): Omit<Session
     deload: active.plan.deload,
     comeback: active.plan.comeback,
     ...(active.swaps && active.swaps.length > 0 ? { swaps: active.swaps } : {}),
+    ...(active.soreness ? { soreness: active.soreness } : {}),
   };
 }
 
@@ -484,7 +489,8 @@ export function finishSession(active: ActiveSession, core: Core, now: number, ca
   let state = core.state;
   let changes: ExerciseChange[] = [];
   if (active.plan.kind === "strength") {
-    const result = recordSessionWithExtras(core.state, active.plan, active.sets, contextFor(core));
+    // Added sets aren't judged, and exercises done while very sore are held at their weight.
+    const result = recordSessionWithExtras(core.state, active.plan, active.sets, contextFor(core), recordSoreSession);
     state = result.state;
     changes = result.changes;
   }

@@ -1,4 +1,5 @@
 import {
+  applySoreness,
   applyState,
   generateProgram,
   initialTrainingState,
@@ -11,6 +12,7 @@ import {
 } from "@repcurve/engine";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { withProfile } from "./profile";
+import { currentSoreness } from "./soreness";
 import { DATA_VERSION, DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -141,12 +143,12 @@ export function doneThisWeek(core: Core, history: SessionRecord[]): SessionPlan[
   return history.filter((r) => r.kind === "strength" && !r.skipped && r.plan.kind === "strength" && r.plan.week === week).map((r) => r.plan);
 }
 
-/** The next session, personalised from the training state. */
+/** The next session, personalised from the training state, the training profile and today's "still sore" answers. */
 export function todayPlan(core: Core, history: SessionRecord[], now: number, minutes?: number | null): SessionPlan {
   const ctx = contextFor(core);
   const days = daysSinceLastStrength(history, now);
   const plan = applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history), doneThisWeek(core, history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
-  return withProfile(plan, core, history, now);
+  return applySoreness(withProfile(plan, core, history, now), currentSoreness(core, now));
 }
 
 export interface WeekSlot {

@@ -32,6 +32,8 @@ export interface Prescription {
    * the person made on that exercise carry over here.
    */
   alternateOf?: string;
+  /** Works a muscle group still very sore today: `setOff` when it does one set fewer for it. Held at its weight. */
+  sore?: { groups: Muscle[]; setOff: boolean };
   cue?: string;
 }
 
