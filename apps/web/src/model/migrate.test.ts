@@ -101,3 +101,17 @@ describe("reminder settings", () => {
     expect(bad.settings.cardioActivity).toBeUndefined();
   });
 });
+
+describe("deload state", () => {
+  it("keeps a planned deload's reason and the count towards the next, and drops values it doesn't know", () => {
+    const core = JSON.parse(JSON.stringify(newCore(profile, equipment, 0)));
+    core.state = { ...core.state, deloadRemaining: 2, deloadReason: "scheduled", sessionsSinceDeload: 7 };
+    const kept = migrateCore(core)!.state;
+    expect(kept.deloadReason).toBe("scheduled");
+    expect(kept.sessionsSinceDeload).toBe(7);
+    core.state = { ...core.state, deloadReason: "bored", sessionsSinceDeload: "lots" };
+    const cleaned = migrateCore(core)!.state;
+    expect("deloadReason" in cleaned).toBe(false);
+    expect(cleaned.sessionsSinceDeload).toBe(0);
+  });
+});

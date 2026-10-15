@@ -4,10 +4,10 @@ import type { Equipment, Muscle, Profile, Split, TrainingHistory } from "@repcur
 import { describe, expect, it } from "vitest";
 import { makeContext } from "./context.js";
 import { planSessionWith } from "./generate.js";
-import { volumeCeiling } from "./level.js";
+import { deltHeadCeiling, volumeCeiling } from "./level.js";
 import { referenceEquipment, referenceProfile } from "./testkit.js";
 import type { SessionPlan } from "./types.js";
-import { MUSCLES, weeklyVolume } from "./volume.js";
+import { DELT_HEADS, MUSCLES, ceilingVolume, weeklyDeltHeads, weeklyVolume } from "./volume.js";
 
 const gym: Equipment = {
   ...referenceEquipment,
@@ -37,10 +37,15 @@ describe("the weekly volume ceiling", () => {
           for (const daysPerWeek of [2, 3, 4, 5, 6])
             for (const minutesPerSession of [10, 20, 30, 45]) {
               const profile = { trainingHistory, split, daysPerWeek, minutesPerSession };
-              const ceiling = volumeCeiling(makeContext({ ...referenceProfile, ...profile }, equipment).level);
+              const level = makeContext({ ...referenceProfile, ...profile }, equipment).level;
+              const ceiling = volumeCeiling(level);
               for (const week of [1, 2, 3]) {
-                const v = weeklyVolume(weekOf(profile, equipment, week));
+                // Past the novice stage, lateral raises count against the side head's own ceiling.
+                const sessions = weekOf(profile, equipment, week);
+                const v = ceilingVolume(sessions, level);
                 for (const m of worked(v)) expect(v[m], `${JSON.stringify(profile)} week ${week} ${m}`).toBeLessThanOrEqual(ceiling + 1e-9);
+                const heads = weeklyDeltHeads(sessions);
+                for (const h of DELT_HEADS) expect(heads[h], `${JSON.stringify(profile)} week ${week} ${h}`).toBeLessThanOrEqual(deltHeadCeiling(level) + 1e-9);
               }
             }
   });

@@ -109,15 +109,23 @@ function migrateState(s: unknown): TrainingState {
       exercises[id] = { ...(p as unknown as TrainingState["exercises"][string]), exerciseId: id };
     }
   }
+  const { deloadReason, ...rest } = s;
   return {
     ...base,
-    ...s,
+    ...rest,
     substitutions,
     exercises,
     deloadRemaining: isNum(s["deloadRemaining"]) ? Math.max(0, s["deloadRemaining"]) : 0,
     strain: Array.isArray(s["strain"]) ? (s["strain"] as unknown[]).filter(isNum) : [],
     strengthSessionsLogged: isNum(s["strengthSessionsLogged"]) ? s["strengthSessionsLogged"] : 0,
+    ...deloadReasonOf(deloadReason),
+    sessionsSinceDeload: isNum(s["sessionsSinceDeload"]) ? Math.max(0, s["sessionsSinceDeload"]) : 0,
   };
+}
+
+/** A stored deload reason, if it is one we know; otherwise none (an unknown value is dropped, not copied). */
+function deloadReasonOf(v: unknown): { deloadReason?: "strain" | "scheduled" } {
+  return v === "strain" || v === "scheduled" ? { deloadReason: v } : {};
 }
 
 const SPLITS: Split[] = ["full_body", "push_pull", "upper_lower", "ppl"];
