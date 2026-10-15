@@ -42,6 +42,15 @@ export function Medal(props: { badge: Pick<Badge, "mark" | "tier" | "earned">; s
       <text className="mark" x="24" y="33.5" textAnchor="middle" fontSize={props.badge.mark.length > 2 ? 9 : 12} fontWeight="700">
         {props.badge.mark}
       </text>
+      {/* Cut Like a Diamond: the mark on a plate in the tier's metal, over a cut diamond (drawn by the
+          style) when earned, or over this outline while locked. */}
+      <g className="dm">
+        <path className="dm-outline" d="M13 9h22l10 12-21 24L3 21z M3 21h42 M13 9l5 12 6 24 6-24 5-12 M18 21l6-12 6 12" />
+        <rect className="dm-plate" x={props.badge.mark.length > 2 ? 10 : 13} y="24" width={props.badge.mark.length > 2 ? 28 : 22} height="13" rx="3" />
+        <text className="dm-mark" x="24" y="34" textAnchor="middle" fontSize={props.badge.mark.length > 2 ? 9 : 11} fontWeight="700">
+          {props.badge.mark}
+        </text>
+      </g>
       {/* The Pixel Press sprite: shown instead of the round medal in that style. */}
       <g className="px" shapeRendering="crispEdges">
         <path className="px-ribbon" d={PX_RIBBON} />

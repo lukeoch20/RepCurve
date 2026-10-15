@@ -172,7 +172,7 @@ is stored.
 | Pixel Press | 25 workouts | Level 5 on any lift (about 25% stronger) | Every planned session in a week, 3 times |
 | New look 3 | 50 workouts | Level 10 on any lift | 12-week streak, or a monthly challenge met |
 | Gold Plated (look 4) | 100 workouts | 50 personal records | Half a year of weekly training |
-| New look 5 | 250 workouts | Level 15 on any lift | A whole year, or coming back after a break 5 times |
+| Cut Like a Diamond (look 5, the highest) | 250 workouts | Level 15 on any lift | A whole year, or coming back after a break 5 times |
 
 The first workout gets an immediate small win that isn't a look (a curve colour or a finish-screen
 celebration), so the looks stay meaningful.
@@ -189,9 +189,9 @@ is earned, or it's the style in use when this ships (kept in the per-device styl
 **Open decisions.**
 1. Is the free set right: Bluebird light and dark, and Classic? (Suggested: yes.)
 2. Any one route unlocks a look, or do some looks need all three? (Suggested: any one.)
-3. Three looks can be locked today: Fired Forge, Pixel Press and Gold Plated (built; open to everyone in
-   the test app until this ships). Commission the remaining two from the artist
-   (the theme kit already covers what they'd need), or fill the top rungs with smaller cosmetics for now
+3. Four looks can be locked today: Fired Forge, Pixel Press, Gold Plated and Cut Like a Diamond (built;
+   open to everyone in the test app until this ships). Commission the remaining one (look 3) from the
+   artist (the theme kit already covers what it needs), or fill that rung with smaller cosmetics for now
    (curve colours, celebration effects, a title on Progress)?
 
 **Build.** First slice: B4's previews plus locks on Fired Forge and Pixel Press, with the new badges the

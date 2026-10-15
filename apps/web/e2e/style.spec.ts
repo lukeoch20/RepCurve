@@ -27,7 +27,7 @@ test("Bluebird light is the default look; Settings lists each look once and asks
 
   await page.getByRole("button", { name: "Settings" }).click();
   // One entry per look, each opening to its versions.
-  await expect(styleGroup(page).getByRole("button")).toHaveCount(5);
+  await expect(styleGroup(page).getByRole("button")).toHaveCount(6);
   await expectChosen(page, "Bluebird", "Light");
 
   // Dark: applies at once and survives a reload.
@@ -78,6 +78,23 @@ test("Bluebird light is the default look; Settings lists each look once and asks
   await pick(page, "Gold Plated", "Dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect(await background(page)).toBe("rgb(16, 17, 15)");
+
+  // Cut Like a Diamond, light and dark: Bodoni headings, emerald-cut frames, the diamond crest.
+  await pick(page, "Cut Like a Diamond", "Light");
+  await expect(page.locator("html")).toHaveAttribute("data-style", "diamond");
+  expect(await background(page)).toBe("rgb(240, 242, 243)");
+  expect(await page.getByRole("heading", { name: "Make it yours" }).evaluate((h) => getComputedStyle(h).fontFamily)).toContain("Bodoni Moda");
+  await pick(page, "Cut Like a Diamond", "Dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(await background(page)).toBe("rgb(8, 12, 17)");
+  await page.getByRole("button", { name: "Today" }).click();
+  // The session tile carries the diamond, and cards wear the platinum bevel.
+  expect(await page.locator(".page-head .glyph").evaluate((el) => getComputedStyle(el).backgroundImage)).toContain("data:image/webp");
+  expect(await page.locator(".card > .eyebrow").filter({ hasText: "Today" }).locator("..").evaluate((el) => getComputedStyle(el).clipPath)).toContain("polygon");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
+  await expectChosen(page, "Cut Like a Diamond", "Dark");
 
   // Classic: light or dark whatever the phone says, or matching the phone.
   await pick(page, "Classic", "Light");
