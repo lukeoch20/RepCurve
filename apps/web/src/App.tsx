@@ -14,6 +14,7 @@ import { CurveMark, Icon } from "./ui/common";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
 import { applyUpdate, onUpdateReady, updateOffered, updateReady } from "./platform/update";
+import { dropSafetyCopy } from "./platform/safetyCopy";
 import { IS_TEST, storageKey } from "./platform/channel";
 import { StoreContext, useAppStore } from "./store/useAppStore";
 import { STORAGE_FULL } from "./store/persistence";
@@ -142,7 +143,15 @@ export function App(): React.ReactElement {
         </div>
       ) : null}
       <TipsProvider>
-        <ErrorBoundary data={store.data} onReset={() => store.replaceAll(EMPTY_DATA)}>
+        <ErrorBoundary
+          data={store.data}
+          onReset={async () => {
+            // As in Settings: the copy kept to undo a restore goes too, so the data can't come back.
+            // The error log stays, in case the person still wants to report the crash.
+            await dropSafetyCopy();
+            await store.replaceAll(EMPTY_DATA);
+          }}
+        >
           {body}
         </ErrorBoundary>
       </TipsProvider>

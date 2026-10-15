@@ -98,6 +98,10 @@ export function LookUnlocked(props: { record: SessionRecord; history: SessionRec
     return lookUnlocks(r.id, badges(all, props.core), kept);
   }, [r, props.history, props.core, kept]);
   const [on, setOn] = useState<LookId | null>(null);
+  // A look announced here is kept straight away, so a restore or undo later can't lock it again.
+  useEffect(() => {
+    if (looks.length > 0) keepLooks(looks.map((l) => l.id));
+  }, [looks]);
   if (looks.length === 0) return null;
   return (
     <section className="card stack look-unlocked" style={{ gap: 10 }} aria-label="New look">

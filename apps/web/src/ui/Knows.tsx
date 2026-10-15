@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { whatRepCurveKnows } from "../model/knows";
 import { plural } from "../model/format";
 import type { Core, SessionRecord } from "../model/types";
@@ -30,8 +30,21 @@ export function KnowsLink(props: { card?: boolean }): React.ReactElement {
 
 export function Knows(props: { core: Core; history: SessionRecord[]; onClose: () => void }): React.ReactElement {
   const { core, history } = props;
-  const { dispatch } = useStore();
-  const [msg, setMsg] = useState<string | null>(null);
+  const { dispatch, actionError } = useStore();
+  // A confirmation waits for the change to land in the saved setup; a refused or failed change shows none.
+  const [pending, setPending] = useState<{ msg: string; core: Core; error: string | null } | null>(null);
+  const [msg, setShown] = useState<string | null>(null);
+  const setMsg = (m: string) => setPending({ msg: m, core, error: actionError });
+  useEffect(() => {
+    if (!pending) return;
+    if (core !== pending.core) {
+      setShown(pending.msg);
+      setPending(null);
+    } else if (actionError && actionError !== pending.error) {
+      setShown(null);
+      setPending(null);
+    }
+  }, [core, actionError, pending]);
   const day = Math.floor(Date.now() / 86_400_000);
   // Rebuilt when the data changes, and at least daily (cautions lapse with time).
   const k = useMemo(() => whatRepCurveKnows(core, history, day * 86_400_000), [core, history, day]);

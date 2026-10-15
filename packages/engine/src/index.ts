@@ -22,7 +22,7 @@ export {
   CAUTION_MAX_DAYS,
 } from "./profile.js";
 export type { TrainingProfile, Caution, SwapEvent, FeedbackSession, ProfileOverrides, SoreRecord } from "./profile.js";
-export { applySoreness, primeMovers, recordSoreSession, sessionMuscles, soreQuestion, sorenessSummary, verySore, SORE_GROUP_NAME, SORE_WINDOW_HOURS } from "./soreness.js";
+export { applySoreness, primeMovers, recordSoreSession, sessionMuscles, soreQuestion, sorenessSummary, verySore, SORE_GROUP_NAME, SORE_MIN_HOURS, SORE_WINDOW_HOURS } from "./soreness.js";
 export type { RecentSession, SoreLevel, Soreness, SoreQuestion } from "./soreness.js";
 export {
   progressExercise,

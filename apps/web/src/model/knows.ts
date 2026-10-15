@@ -130,7 +130,7 @@ export function whatRepCurveKnows(core: Core, history: SessionRecord[], now: num
         exerciseId: p.exerciseId,
         name: e.name,
         now: `${load}${reps}${e.unilateral ? " per side" : ""} · range ${p.repRange[0]}–${p.repRange[1]}`,
-        trend: isRetesting ? "Re-testing next time" : (TREND[lastChange.get(p.exerciseId)?.action ?? "hold"] ?? "Holding steady"),
+        trend: isRetesting ? "Re-testing on your next full session" : (TREND[lastChange.get(p.exerciseId)?.action ?? "hold"] ?? "Holding steady"),
         retesting: isRetesting,
         canRetest: e.loadType !== "time" && !isRetesting,
       };

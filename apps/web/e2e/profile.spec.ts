@@ -48,14 +48,14 @@ test("What RepCurve knows: what hurt, what was swapped and working weights, each
   const name = (await retest.getAttribute("aria-label"))!.replace(/^Re-test /, "");
   await retest.click();
   await expect(page.getByRole("status")).toContainText(`Next time, ${name} starts with a test set.`);
-  await expect(weights).toContainText("Re-testing next time");
+  await expect(weights).toContainText("Re-testing on your next full session");
   await expect(weights.getByRole("button", { name: `Re-test ${name}` })).toHaveCount(0);
 
   // The corrections are saved: they're still there after a reload.
   await page.reload();
   await page.getByRole("button", { name: "What RepCurve knows about you" }).click();
   await expect(page.getByRole("region", { name: "Pain" })).toContainText("Nothing flagged right now.");
-  await expect(page.getByRole("region", { name: "Working weights" })).toContainText("Re-testing next time");
+  await expect(page.getByRole("region", { name: "Working weights" })).toContainText("Re-testing on your next full session");
 
   // Back, and in from Progress too.
   await page.getByRole("button", { name: "Back" }).click();
@@ -68,6 +68,8 @@ test("What RepCurve knows: what hurt, what was swapped and working weights, each
 });
 
 test("Still sore: asked before a session that works the same muscles, and very sore means a set fewer", async ({ page }) => {
+  // Soreness takes hours to come on, so the next session is the next morning.
+  await page.clock.install({ time: new Date("2026-10-05T07:00:00") });
   await onboard(page);
   // No session yet: nothing to ask.
   await expect(page.getByRole("heading", { name: /Still sore/ })).toHaveCount(0);
@@ -77,9 +79,14 @@ test("Still sore: asked before a session that works the same muscles, and very s
   await page.getByRole("button", { name: "Done · set 1" }).first().click();
   await finish(page);
 
-  // Pull day's deadlift works the glutes again.
+  // Pull day's deadlift works the glutes again. Nothing is asked straight after the session...
   await expect(page.getByRole("heading", { name: "Pull day" })).toBeVisible();
-  const check = page.getByRole("region", { name: "Still sore from your earlier session today?" });
+  await expect(page.getByRole("heading", { name: /Still sore/ })).toHaveCount(0);
+  // ...but the next morning it is.
+  await page.clock.fastForward("24:00:00");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Today" }).click();
+  const check = page.getByRole("region", { name: "Still sore from yesterday's session?" });
   await expect(check).toContainText("Today works your glutes again.");
   const lineup = page.locator(".lineup");
   const rdl = lineup.locator(".lineup-item", { hasText: "Romanian deadlift" });

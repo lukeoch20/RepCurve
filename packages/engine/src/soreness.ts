@@ -78,13 +78,17 @@ export interface SoreQuestion {
  * finisher ends most sessions and rarely leaves much soreness, so asking every time would nag.
  * Null when there's nothing to ask.
  */
+/** Hours after a session before asking whether it left you sore (soreness builds over the next day). */
+export const SORE_MIN_HOURS = 6;
+
 export function soreQuestion(plan: SessionPlan, recent: RecentSession[], now: number): SoreQuestion | null {
   if (plan.kind !== "strength") return null;
   const today = new Set(sessionMuscles(prescriptionsOf(plan).map((p) => p.exerciseId)));
   const groups = new Set<Muscle>();
   let since = -Infinity;
   for (const r of recent) {
-    if (r.finishedAt > now || now - r.finishedAt > SORE_WINDOW_HOURS * HOUR_MS) continue;
+    // Soreness takes hours to come on: a session that just ended isn't asked about yet.
+    if (now - r.finishedAt < SORE_MIN_HOURS * HOUR_MS || now - r.finishedAt > SORE_WINDOW_HOURS * HOUR_MS) continue;
     const shared = sessionMuscles(r.exerciseIds).filter((m) => today.has(m));
     if (shared.length === 0) continue;
     shared.forEach((m) => groups.add(m));
@@ -116,7 +120,9 @@ export function applySoreness(plan: SessionPlan, soreness: Soreness[] | undefine
       if (sore.length === 0) return p;
       changed = true;
       const sets = !easier && p.sets === ss.rounds && ss.rounds > 1 ? ss.rounds - 1 : p.sets;
-      return { ...p, sets, sore: { groups: sore, setOff: sets < p.sets } };
+      // No benchmark (a first one or a re-test) on a very sore day: a sore set would set the
+      // working weight too low. It waits for a day the muscle has recovered.
+      return { ...p, sets, benchmarkSet: false, sore: { groups: sore, setOff: sets < p.sets } };
     });
     // When every exercise sits out the last round, the round goes.
     const rounds = items.length > 0 ? Math.max(...items.map((p) => p.sets)) : ss.rounds;
@@ -126,7 +132,7 @@ export function applySoreness(plan: SessionPlan, soreness: Soreness[] | undefine
   if (finisher && soreOf(finisher).length > 0) {
     changed = true;
     const sets = !easier && finisher.sets > 1 ? finisher.sets - 1 : finisher.sets;
-    finisher = { ...finisher, sets, sore: { groups: soreOf(finisher), setOff: sets < finisher.sets } };
+    finisher = { ...finisher, sets, benchmarkSet: false, sore: { groups: soreOf(finisher), setOff: sets < finisher.sets } };
   }
   // Fewer sets only ever shorten the session; re-fitting brings the timings up to date.
   return changed ? fitToBudget({ ...plan, supersets, finisher }) : plan;
@@ -197,7 +203,7 @@ export function recordSoreSession(state: TrainingState, session: SessionPlan, lo
       exerciseId: id,
       nextExerciseId: id,
       action: "hold",
-      reason: "Still very sore today, so the weight stays put. Same again next time.",
+      reason: "Done while very sore, so the weight stayed where it was. Same again next time.",
       next: { loadKg: next.loadKg, targetReps: next.targetReps, repRange: next.repRange },
     });
   }

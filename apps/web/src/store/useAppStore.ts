@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { migrateData, savedByNewerVersion } from "../model/migrate";
-import { EMPTY_DATA, type AppData } from "../model/types";
+import { DATA_VERSION, EMPTY_DATA, type AppData } from "../model/types";
 import { logCrash } from "../platform/crashLog";
 import { isStorageFull, memoryPersistence, openPersistence, STORAGE_FULL, type Persistence, type StorageKind } from "./persistence";
 import { INITIAL, safeReducer, type Action, type AppState } from "./reducer";
@@ -61,9 +61,12 @@ export function useAppStore(): AppStore {
     void (async () => {
       let p: Persistence;
       let data: AppData;
+      let behind = false;
       try {
         p = await openPersistence();
-        data = migrateData(await p.load());
+        const raw = await p.load();
+        data = migrateData(raw);
+        behind = storedVersionBehind(raw);
       } catch {
         p = memoryPersistence("Couldn't open your saved data, so changes this visit won't be kept. Reload to try again.");
         data = EMPTY_DATA;
@@ -79,6 +82,9 @@ export function useAppStore(): AppStore {
       });
       persistence.current = p;
       saved.current = data;
+      // Saved by an older version: write the setup back once at this version, so an older copy of
+      // the app open elsewhere sees it and warns, instead of misreading newer data (added sets).
+      if (behind && data.core) p.saveCore(data.core);
       setStorage(p.kind);
       setStorageWarning(
         p.warning ??
@@ -188,4 +194,13 @@ export function useStore(): AppStore {
   const s = React.useContext(StoreContext);
   if (!s) throw new Error("StoreContext missing");
   return s;
+}
+
+/** Whether stored data was last saved by an older version than this one. */
+function storedVersionBehind(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const core = (raw as { core?: unknown }).core;
+  if (typeof core !== "object" || core === null) return false;
+  const v = (core as { version?: unknown }).version;
+  return typeof v !== "number" || v < DATA_VERSION;
 }
