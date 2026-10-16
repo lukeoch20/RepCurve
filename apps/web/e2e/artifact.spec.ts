@@ -54,7 +54,10 @@ test.beforeEach(async ({ page: p }) => {
   await p.route("**/*.js", (route) => (route.request().url().startsWith("http://artifact.test/") ? route.continue() : route.abort()));
   await p.route("http://artifact.test/**", (route) => route.fulfill({ contentType: "text/html", body: doc }));
   await p.addInitScript(fakeClaude);
-  await p.addInitScript(() => localStorage.setItem("repcurve.tips", JSON.stringify({ off: true, seen: [] })));
+  await p.addInitScript(() => {
+    localStorage.setItem("repcurve.tips", JSON.stringify({ off: true, seen: [] }));
+    localStorage.setItem("repcurve.pats", "off");
+  });
 });
 
 test("the claude.ai page loads no third-party scripts", () => {

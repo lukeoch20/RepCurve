@@ -4,6 +4,7 @@ import { clock } from "../model/format";
 import { routesText } from "../model/looks";
 import { EMPTY_DATA, REST_CHOICES, TRANSITION_CHOICES, type AppData, type Core, type SessionRecord } from "../model/types";
 import { markBackedUp } from "../platform/backupReminder";
+import { patsOn, setPatsOn } from "../platform/pats";
 import { clearCrashLog } from "../platform/crashLog";
 import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
 import { applyStyle, FAMILIES, familyOf, loadStyle, saveStyle, type StyleFamily, type StyleId } from "../platform/style";
@@ -128,6 +129,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
           <Toggle id="sound" label="Beep when rest is over" checked={s.sound} onChange={(sound) => dispatch({ type: "settings", settings: { sound } })} />
           <Toggle id="awake" label="Keep the screen on during workouts" hint="Where your phone allows it" checked={s.keepAwake} onChange={(keepAwake) => dispatch({ type: "settings", settings: { keepAwake } })} />
           <Toggle id="haptics" label="Vibrate when you finish a set" hint="On iPhone, a light tap (iOS 18 or newer)" checked={s.haptics} onChange={(haptics) => dispatch({ type: "settings", settings: { haptics } })} />
+          <PatsToggle />
         </div>
       </section>
 
@@ -319,6 +321,23 @@ function StyleSettings(props: { history: SessionRecord[]; core: Core }): React.R
         })}
       </div>
     </section>
+  );
+}
+
+/** The pat on the back after each exercise: on or off, for this device. */
+function PatsToggle(): React.ReactElement {
+  const [on, setOn] = useState(patsOn);
+  return (
+    <Toggle
+      id="pats"
+      label="Pat on the back after each exercise"
+      hint="A quick cheer and a fun fact when you finish an exercise's sets"
+      checked={on}
+      onChange={(v) => {
+        setPatsOn(v);
+        setOn(v);
+      }}
+    />
   );
 }
 
