@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Tutorial tips are off in tests unless a test turns them on (e2e/tutorial.spec.ts), so a tip
-// never sits over what a test taps. Both apps' keys: RepCurve and RepCurve Test.
+// Tutorial tips and the pat on the back after each exercise are off in tests unless a test turns
+// them on (e2e/tutorial.spec.ts, e2e/pat.spec.ts), so neither sits over what a test taps. Both
+// apps' keys: RepCurve and RepCurve Test.
 const TIPS_OFF = JSON.stringify({ off: true, seen: [] });
 
 export default defineConfig({
@@ -23,6 +24,8 @@ export default defineConfig({
           localStorage: [
             { name: "repcurve.tips", value: TIPS_OFF },
             { name: "repcurve-test.tips", value: TIPS_OFF },
+            { name: "repcurve.pats", value: "off" },
+            { name: "repcurve-test.pats", value: "off" },
           ],
         },
       ],

@@ -1,8 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { onboard } from "./helpers";
 
-// A brand-new user: tips on (the other specs turn them off).
+// A brand-new user: tips on (the other specs turn them off). The pat on the back after each
+// exercise stays off here, so only tips appear as dialogs (e2e/pat.spec.ts covers it).
 test.use({ storageState: { cookies: [], origins: [] } });
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("repcurve.pats", "off"));
+});
 
 const tip = (page: Page) => page.getByRole("dialog");
 async function expectTip(page: Page, title: string) {

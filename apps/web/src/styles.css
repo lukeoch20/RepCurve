@@ -519,3 +519,43 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .look-routes .look-lock { flex: none; transform: translateY(2px); }
 .look-preview.two .lp-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .share-preview { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+
+/* Pat on the back: a cheer when an exercise is done. Colours come from the look in use. */
+.pat-scrim { align-items: center; padding: 16px; }
+.pat {
+  position: relative; overflow: hidden; width: 100%; max-width: 24rem; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 20px 20px;
+  animation: pat-in 320ms cubic-bezier(.2, .9, .3, 1.25) both;
+}
+.pat:focus { outline: none; }
+.pat-badge { width: 76px; height: 76px; position: relative; z-index: 1; animation: pat-spin 600ms ease-out both; }
+.pat-burst { fill: var(--accent); }
+.pat-tick { fill: none; stroke: var(--accent-ink); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: pat-draw 360ms 260ms ease-out forwards; }
+.pat-mark { fill: var(--accent-ink); }
+.pat-best .pat-burst { fill: var(--warn); }
+.pat-title { position: relative; z-index: 1; }
+.pat-line { margin: 0; color: var(--ink); line-height: 1.45; position: relative; z-index: 1; }
+.pat-stat { margin: 0; color: var(--muted); font-size: 0.95rem; position: relative; z-index: 1; }
+.pat-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; position: relative; z-index: 1; }
+.pat-actions .btn { width: 100%; }
+.pat-confetti { position: absolute; inset: 0; pointer-events: none; }
+.pat-confetti i {
+  position: absolute; top: -12px; left: calc(6% + var(--i) * 6.6%); width: 7px; height: 12px; border-radius: 2px;
+  background: var(--accent); opacity: 0;
+  animation: pat-fall 1400ms calc(var(--i) * 45ms) ease-in forwards;
+  transform: rotate(calc(var(--i) * 37deg));
+}
+.pat-confetti i:nth-child(3n) { background: var(--warn); }
+.pat-confetti i:nth-child(3n + 1) { background: var(--chart); }
+@keyframes pat-in { from { transform: scale(0.85) translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pat-spin { from { transform: scale(0.4) rotate(-40deg); } to { transform: none; } }
+@keyframes pat-draw { to { stroke-dashoffset: 0; } }
+@keyframes pat-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(calc(var(--i) * 37deg)); }
+  100% { opacity: 0; transform: translateY(320px) rotate(calc(var(--i) * 37deg + 220deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pat, .pat-badge { animation: none; }
+  .pat-tick { animation: none; stroke-dashoffset: 0; }
+  .pat-confetti { display: none; }
+}

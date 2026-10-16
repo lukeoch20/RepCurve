@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alternativesFor, cautionAreasFor, needsRampSet, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
+import { alternativesFor, cautionAreasFor, needsRampSet, prescriptionsOf, swapSticks, type Prescription, type SwapReason } from "@repcurve/engine";
 import { getExercise } from "@repcurve/exercises";
 import { loadUnitsFor, platesFor, plateText } from "@repcurve/shared";
 import type { Rir } from "@repcurve/shared";
+import { cheerFor, exerciseDone, type Cheer } from "../model/cheer";
 import { EFFORT_OPTIONS, clock, effortLabel, loadNumber, plural, repsUnit } from "../model/format";
 import { contextFor, exerciseCount } from "../model/plan";
 import { profileFor } from "../model/profile";
@@ -25,14 +26,16 @@ import { REST_CHOICES, type ActiveSession, type Core } from "../model/types";
 import { whyThisLoad } from "../model/why";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { haptic } from "../platform/haptics";
+import { patsOn } from "../platform/pats";
 import { useNow, useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 import { ExerciseInfo, TIER_LABEL } from "./ExerciseInfo";
+import { PatOnTheBack } from "./PatOnTheBack";
 import { useTip } from "./tips";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
-  const { dispatch } = useStore();
+  const { dispatch, data } = useStore();
   const now = useNow(true, 250);
   const up = nextUp(active);
   const { done, total } = progressSummary(active);
@@ -49,6 +52,26 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
     keepAwake(true);
     return () => keepAwake(false);
   }, [core.settings.keepAwake]);
+
+  // A pat on the back when an exercise's last planned set is logged. Exercises already done when
+  // the runner opens (a reload mid-session) aren't cheered again, and each is cheered once.
+  const [cheer, setCheer] = useState<Cheer | null>(null);
+  const cheered = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const done = prescriptionsOf(active.plan).filter((p) => exerciseDone(active, p)).map((p) => p.slot);
+    if (cheered.current === null) {
+      cheered.current = new Set(done);
+      return;
+    }
+    const fresh = done.filter((slot) => !cheered.current!.has(slot));
+    fresh.forEach((slot) => cheered.current!.add(slot));
+    // Only the exercise whose set was just logged, and only when pats are on for this device.
+    const latest = active.sets.length > 0 ? active.sets.reduce((a, b) => (b.at > a.at ? b : a)) : null;
+    const slot = latest && fresh.includes(latest.slot ?? "") ? latest.slot! : null;
+    if (!slot || !patsOn()) return;
+    const c = cheerFor(active, slot, data.history, loadUnitsFor(core.profile, core.equipment));
+    if (c) setCheer(c);
+  }, [active, data.history, core.profile, core.equipment]);
 
   // Finishing with sets still to do always asks first, so a stray tap can't end the workout.
   const finish = () => {
@@ -156,6 +179,17 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
       {active.timer ? <TimerDock core={core} active={active} now={now} /> : null}
 
       {leftOpen ? <LeftOpenSheet core={core} active={active} now={now} onKeepGoing={() => setLeftOpenAnswered(true)} /> : null}
+
+      {cheer && !leftOpen && !endOpen ? (
+        <PatOnTheBack
+          cheer={cheer}
+          onClose={() => setCheer(null)}
+          onFinish={() => {
+            setCheer(null);
+            finish();
+          }}
+        />
+      ) : null}
 
       {endOpen && !leftOpen ? (
         <Sheet title="End this session?" onClose={() => setEndOpen(false)}>
