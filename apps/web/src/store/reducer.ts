@@ -20,12 +20,14 @@ import {
   setTimerLength,
   skipSegment,
   skipSession,
+  skipSet,
   skipSlot,
   startCardio,
   startSession,
   swapExercise,
   tickCardio,
   toggleWarmup,
+  unskipSet,
   unskipSlot,
   type SetRef,
   type SetValues,
@@ -71,6 +73,8 @@ export type Action =
   | { type: "removeAddedSet"; slot: string }
   | { type: "painArea"; slot: string; setIndex: number; area: string | null }
   | { type: "skipSlot"; slot: string }
+  | { type: "skipSet"; slot: string; setIndex: number }
+  | { type: "unskipSet"; slot: string; setIndex: number }
   | { type: "unskipSlot"; slot: string }
   | { type: "swap"; slot: string; exerciseId: string; permanent: boolean; reason?: SwapReason; now?: number }
   | { type: "warmup"; name: string }
@@ -172,6 +176,10 @@ export function reducer(s: AppState, a: Action): AppState {
       return withActive(skipSlot(active, a.slot));
     case "unskipSlot":
       return withActive(unskipSlot(active, a.slot));
+    case "skipSet":
+      return withActive(skipSet(active, a.slot, a.setIndex));
+    case "unskipSet":
+      return withActive(unskipSet(active, a.slot, a.setIndex));
     case "swap": {
       const r = swapExercise(active, core, a.slot, a.exerciseId, a.permanent, a.reason, profileFor(core, s.data.history, a.now ?? Date.now()));
       return { ...s, data: { ...s.data, active: r.active, core: r.core } };

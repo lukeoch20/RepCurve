@@ -11,6 +11,7 @@ import {
   MAX_ADDED_SETS,
   addedSets,
   elapsedMs,
+  isSkippedSet,
   lastSetAt,
   loggedSet,
   looksLeftOpen,
@@ -418,6 +419,43 @@ function ExerciseBlock(props: {
         const label = done
           ? `Set ${setIndex + 1}: ${done.loadKg !== null ? `${loadNumber(done.loadKg, units)} ${units}, ` : ""}${done.reps}${unit === "s" ? " seconds" : " reps"}, ${effortLabel(done.rir)}${done.painFlag ? ", pain" : ""}`
           : `Set ${setIndex + 1}: ${benchmark ? "benchmark" : isUp ? "up next" : "to do"}`;
+        if (!done && isSkippedSet(active, p.slot, setIndex)) {
+          const shown = editing === setIndex;
+          return (
+            <div key={setIndex} className="set set-skipped">
+              <button
+                type="button"
+                className="set-row wide"
+                onClick={() => setEditing(shown ? null : setIndex)}
+                aria-expanded={shown}
+                aria-label={`Set ${setIndex + 1}: skipped`}
+                disabled={skipped}
+              >
+                <span className="n">{setIndex + 1}</span>
+                <span className="cell plan">Skipped</span>
+                <span className="tick" aria-hidden="true">–</span>
+              </button>
+              {shown ? (
+                <div className="editor">
+                  <p className="meta small" style={{ margin: 0 }}>
+                    Skipped for today. It doesn't count against you: {p.name} stays where it is next time, rather than being judged on fewer sets.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ alignSelf: "flex-start" }}
+                    onClick={() => {
+                      dispatch({ type: "unskipSet", slot: p.slot, setIndex });
+                      setEditing(null);
+                    }}
+                  >
+                    Undo skip
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          );
+        }
         return (
           <div key={setIndex} className={`set${done ? (done.painFlag ? " pain" : " done") : ""}${isUp ? " current" : ""}`} data-current={isUp || undefined}>
             <button
@@ -457,6 +495,14 @@ function ExerciseBlock(props: {
                   dispatch({ type: "remove", slot: p.slot, setIndex });
                   setEditing(null);
                 }}
+                onSkip={
+                  done
+                    ? undefined
+                    : () => {
+                        dispatch({ type: "skipSet", slot: p.slot, setIndex });
+                        setEditing(null);
+                      }
+                }
               />
             ) : null}
           </div>
@@ -492,6 +538,8 @@ function SetEditor(props: {
   existing: boolean;
   onSave: (v: { loadKg: number | null; reps: number; rir: Rir; painFlag?: boolean }) => void;
   onDelete: () => void;
+  /** Skip this set ("not feeling it"); only for a set not logged yet. */
+  onSkip?: (() => void) | undefined;
 }): React.ReactElement {
   const { core, active, p, setIndex } = props;
   const initial = prefill(active, p.slot, setIndex);
@@ -589,6 +637,11 @@ function SetEditor(props: {
           </button>
         )}
       </div>
+      {props.onSkip ? (
+        <button type="button" className="btn small ghost" style={{ alignSelf: "flex-start" }} onClick={props.onSkip} aria-label={`Skip set ${setIndex + 1}`}>
+          Skip this set
+        </button>
+      ) : null}
     </div>
   );
 }

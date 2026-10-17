@@ -88,8 +88,22 @@ export function setsForSlot(active: ActiveSession, slot: string): LoggedSet[] {
 
 export function pending(active: ActiveSession, sets = active.sets): SetRef[] {
   return setOrder(active.plan, active.extraSets).filter(
-    (r) => !active.skippedSlots.includes(r.slot) && !sets.some((s) => s.slot === r.slot && s.setIndex === r.setIndex),
+    (r) => !active.skippedSlots.includes(r.slot) && !isSkippedSet(active, r.slot, r.setIndex) && !sets.some((s) => s.slot === r.slot && s.setIndex === r.setIndex),
   );
+}
+
+const skipKey = (slot: string, setIndex: number) => `${slot}#${setIndex}`;
+
+/** Whether one set was skipped ("not feeling it"). */
+export function isSkippedSet(active: ActiveSession, slot: string, setIndex: number): boolean {
+  return active.skippedSets?.includes(skipKey(slot, setIndex)) ?? false;
+}
+
+/** How many of an exercise's planned sets were skipped one at a time. */
+export function skippedPlannedSets(active: ActiveSession, p: Prescription): number {
+  let n = 0;
+  for (let i = 0; i < p.sets; i++) if (isSkippedSet(active, p.slot, i) && !loggedSet(active, p.slot, i)) n++;
+  return n;
 }
 
 /** The set to do next, or null when everything is logged or skipped. */
@@ -222,7 +236,29 @@ export function removeAddedSet(active: ActiveSession, slot: string): ActiveSessi
   const n = addedSets(active, slot);
   if (n === 0 || loggedSet(active, slot, setCount(active, slot) - 1)) return active;
   const { [slot]: _, ...rest } = active.extraSets ?? {};
-  return retarget({ ...active, extraSets: n > 1 ? { ...rest, [slot]: n - 1 } : rest });
+  // A skipped added set goes with it.
+  const last = setCount(active, slot) - 1;
+  const without = isSkippedSet(active, slot, last) ? unskipSet(active, slot, last) : active;
+  return retarget({ ...without, extraSets: n > 1 ? { ...rest, [slot]: n - 1 } : rest });
+}
+
+/**
+ * Skip one set, for a set you're not feeling: it isn't logged, up next moves on (a running rest
+ * timer now counts down to the next set), and the exercise holds at its weight next time rather
+ * than being judged on fewer sets.
+ */
+export function skipSet(active: ActiveSession, slot: string, setIndex: number): ActiveSession {
+  if (!prescriptionAt(active.plan, slot) || active.skippedSlots.includes(slot) || loggedSet(active, slot, setIndex) || isSkippedSet(active, slot, setIndex)) return active;
+  if (setIndex < 0 || setIndex >= setCount(active, slot)) return active;
+  return retarget({ ...active, skippedSets: [...(active.skippedSets ?? []), skipKey(slot, setIndex)] });
+}
+
+/** Take back a skipped set: it's to do again. */
+export function unskipSet(active: ActiveSession, slot: string, setIndex: number): ActiveSession {
+  if (!isSkippedSet(active, slot, setIndex)) return active;
+  const skippedSets = active.skippedSets!.filter((k) => k !== skipKey(slot, setIndex));
+  const { skippedSets: _, ...rest } = active;
+  return retarget(skippedSets.length > 0 ? { ...rest, skippedSets } : rest);
 }
 
 export function skipSlot(active: ActiveSession, slot: string): ActiveSession {
@@ -519,14 +555,29 @@ function baseRecord(active: ActiveSession, now: number, end = now): Omit<Session
 export function finishSession(active: ActiveSession, core: Core, now: number, cardio?: CardioResult, endedAt = now): { core: Core; record: SessionRecord } {
   let state = core.state;
   let changes: ExerciseChange[] = [];
+  const plan = withSkippedSets(active);
   if (active.plan.kind === "strength") {
-    // Added sets aren't judged, and exercises done while very sore are held at their weight.
-    const result = recordSessionWithExtras(core.state, active.plan, active.sets, contextFor(core), recordSoreSession);
+    // Added sets aren't judged, and exercises done while very sore, or with a set skipped, are held at their weight.
+    const result = recordSessionWithExtras(core.state, plan, active.sets, contextFor(core), recordSoreSession);
     state = result.state;
     changes = result.changes;
   }
-  const record: SessionRecord = { ...baseRecord(active, now, Math.min(endedAt, now)), changes, cardio: cardio ?? null, skipped: false };
+  const record: SessionRecord = { ...baseRecord(active, now, Math.min(endedAt, now)), plan, changes, cardio: cardio ?? null, skipped: false };
   return { core: { ...core, state, nextIndex: Math.max(core.nextIndex, active.index + 1) }, record };
+}
+
+/** The plan with each exercise's skipped sets marked, so progression holds those exercises. */
+function withSkippedSets(active: ActiveSession): SessionPlan {
+  if (!active.skippedSets?.length) return active.plan;
+  const mark = (p: Prescription): Prescription => {
+    const n = skippedPlannedSets(active, p);
+    return n > 0 ? { ...p, skippedSets: n } : p;
+  };
+  return {
+    ...active.plan,
+    supersets: active.plan.supersets.map((ss) => ({ ...ss, items: ss.items.map(mark) })),
+    finisher: active.plan.finisher ? mark(active.plan.finisher) : null,
+  };
 }
 
 /** Skip the next session without training: it is recorded as skipped and the sequence moves on. */
@@ -558,7 +609,8 @@ export function refit(plan: SessionPlan): SessionPlan {
 }
 
 export function progressSummary(active: ActiveSession): { done: number; total: number } {
-  const order = setOrder(active.plan, active.extraSets).filter((r) => !active.skippedSlots.includes(r.slot));
+  // Skipped exercises and skipped sets drop out of the count.
+  const order = setOrder(active.plan, active.extraSets).filter((r) => !active.skippedSlots.includes(r.slot) && !isSkippedSet(active, r.slot, r.setIndex));
   const done = order.filter((r) => loggedSet(active, r.slot, r.setIndex)).length;
   return { done, total: order.length };
 }

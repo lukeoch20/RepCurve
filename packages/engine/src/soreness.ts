@@ -157,7 +157,7 @@ export function sorenessSummary(plan: SessionPlan): string | null {
 
 /**
  * Fold a finished session into the training state like recordSession, except that exercises done
- * while very sore are held where they were: today's sets can raise the strength estimate, but they
+ * while very sore, or with a set skipped, are held where they were: today's sets can raise the strength estimate, but they
  * don't push the weight up, count as a stall or count toward a deload. Pain still goes through the
  * pain rules, and a benchmark set still sets a first working weight.
  */
@@ -166,7 +166,8 @@ export function recordSoreSession(state: TrainingState, session: SessionPlan, lo
   const prescriptions = prescriptionsOf(session);
   const held = new Map<string, Prescription>();
   for (const p of prescriptions) {
-    if (!p.sore || held.has(p.exerciseId)) continue;
+    // Held: worked while very sore, or a set skipped ("not feeling it"), so not judged on a partial day.
+    if ((!p.sore && !p.skippedSets) || held.has(p.exerciseId)) continue;
     const sets = logs.filter((l) => l.exerciseId === p.exerciseId);
     const progress = state.exercises[p.exerciseId];
     if (sets.length === 0 || sets.some((l) => l.painFlag) || p.caution || progress?.painCheck) continue;
@@ -203,7 +204,9 @@ export function recordSoreSession(state: TrainingState, session: SessionPlan, lo
       exerciseId: id,
       nextExerciseId: id,
       action: "hold",
-      reason: "Done while very sore, so the weight stayed where it was. Same again next time.",
+      reason: p.sore
+        ? "Done while very sore, so the weight stayed where it was. Same again next time."
+        : `You skipped ${p.skippedSets === 1 ? "a set" : `${p.skippedSets} sets`}, so it stays where it was rather than being judged on fewer sets. Same again next time.`,
       next: { loadKg: next.loadKg, targetReps: next.targetReps, repRange: next.repRange },
     });
   }

@@ -365,8 +365,10 @@ export function migrateActive(a: unknown): ActiveSession | null {
   const strings = (x: unknown): string[] => (Array.isArray(x) ? (x as unknown[]).filter((s): s is string => typeof s === "string") : []);
   const entries = <T,>(x: unknown, ok: (v: Obj) => boolean): Record<string, T> =>
     isObj(x) ? (Object.fromEntries(Object.entries(x).filter(([, v]) => isObj(v) && ok(v))) as Record<string, T>) : {};
-  const { extraSets: _, ...rest } = a;
+  const { extraSets: _, skippedSets: _skipped, ...rest } = a;
   const extraSets = migrateExtraSets(a["extraSets"]);
+  // Skipped single sets are kept as "slot#setIndex"; anything else is dropped.
+  const skippedSets = strings(a["skippedSets"]).filter((k) => /^.+#\d+$/.test(k));
   return withValid<ActiveSession>({
     ...(rest as unknown as ActiveSession),
     ...(extraSets ? { extraSets } : {}),
@@ -380,6 +382,7 @@ export function migrateActive(a: unknown): ActiveSession | null {
     advice: entries(a["advice"], (v) => typeof v["message"] === "string"),
     nextSet: entries(a["nextSet"], (v) => isNum(v["reps"]) && (v["loadKg"] === null || isNum(v["loadKg"]))),
     skippedSlots: strings(a["skippedSlots"]),
+    ...(skippedSets.length > 0 ? { skippedSets } : {}),
     ...migrateSwaps(a["swaps"]),
   }, { soreness: migrateSoreness(a["soreness"]) });
 }

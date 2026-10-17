@@ -3,7 +3,7 @@ import { findExercise } from "@repcurve/exercises";
 import { displayLoad, e1RM } from "@repcurve/shared";
 import type { Units } from "@repcurve/shared";
 import { loadText } from "./format";
-import { prescriptionAt, setsForSlot } from "./session";
+import { prescriptionAt, setsForSlot, skippedPlannedSets } from "./session";
 import type { ActiveSession, LoggedSet, SessionRecord } from "./types";
 
 /** A pat on the back when an exercise's last set is done. */
@@ -102,7 +102,9 @@ function bestOf(sets: LoggedSet[]): { score: number; loadKg: number | null; reps
 /** Whether every planned set of an exercise is logged (added sets don't count towards it). */
 export function exerciseDone(active: ActiveSession, p: Prescription): boolean {
   if (active.skippedSlots.includes(p.slot)) return false;
-  return setsForSlot(active, p.slot).filter((s) => s.setIndex < p.sets).length >= p.sets;
+  // A set skipped ("not feeling it") counts as dealt with, as long as at least one was done.
+  const logged = setsForSlot(active, p.slot).filter((s) => s.setIndex < p.sets).length;
+  return logged > 0 && logged + skippedPlannedSets(active, p) >= p.sets;
 }
 
 /** Weight moved in an exercise's sets: each dumbbell of a pair and each side of a one-sided move counts. */
