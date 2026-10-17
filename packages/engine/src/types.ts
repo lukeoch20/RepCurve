@@ -27,6 +27,8 @@ export interface Prescription {
   painCheck?: boolean;
   /** The recently painful area this exercise loads (e.g. "Shoulder"), when the check-in is for that. */
   caution?: string;
+  /** Sets of this exercise skipped one at a time in the session ("not feeling it"): it's held at its weight. */
+  skippedSets?: number;
   /**
    * In an alternate block, the exercise this slot uses in the other blocks. Swaps and ladder moves
    * the person made on that exercise carry over here.

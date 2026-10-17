@@ -559,3 +559,7 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
   .pat-tick { animation: none; stroke-dashoffset: 0; }
   .pat-confetti { display: none; }
 }
+
+/* A set skipped for today ("not feeling it"). */
+.set-skipped .set-row .cell.plan { font-style: italic; }
+.set-skipped .tick { border-style: dashed; color: var(--muted); }

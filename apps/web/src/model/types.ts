@@ -143,6 +143,8 @@ export interface ActiveSession {
   nextSet: Record<string, { loadKg: number | null; reps: number }>;
   /** Slots the user chose to skip for the rest of this session. */
   skippedSlots: string[];
+  /** Single sets the user chose to skip ("not feeling it"), as "slot#setIndex". Missing means none. */
+  skippedSets?: string[];
   /** Swaps made in this session, and why: the training profile learns from them. Missing means none. */
   swaps?: SwapEvent[];
   /** Sets added per slot beyond the plan. Missing means none. */
