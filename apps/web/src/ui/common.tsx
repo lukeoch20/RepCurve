@@ -167,6 +167,7 @@ export const ICONS = {
   lower: "M6 4h12M7 4 6 12l1.5 7M17 4l1 8-1.5 7M11 4l-.5 8 .5 7M13 4l.5 8-.5 7M4 20h7M13 20h7",
   pause: "M8 5v14M16 5v14",
   play: "M7 5v14l11-7z",
+  refresh: "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15",
 } as const;
 
 export type IconName = keyof typeof ICONS;

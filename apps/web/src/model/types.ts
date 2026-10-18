@@ -77,6 +77,15 @@ export interface Core {
   profileOverrides?: ProfileOverrides;
   /** The "still sore" check-in answered for the next session. Missing means not asked yet. */
   soreCheck?: SoreCheck;
+  /** The next session regenerated with other exercises ("not feeling it"). Missing means as planned. */
+  regenerated?: Regenerated;
+}
+
+/** A regenerated session: the plan for one upcoming session, leaving out these exercises. */
+export interface Regenerated {
+  /** The session (its position in the sequence) it's for; it lapses once that one is done or skipped. */
+  index: number;
+  exclude: string[];
 }
 
 /** Answers to "Still sore from last time?" for one upcoming session. */

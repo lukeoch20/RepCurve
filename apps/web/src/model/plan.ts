@@ -1,5 +1,6 @@
 import {
   applySoreness,
+  prescriptionsOf,
   applyState,
   generateProgram,
   initialTrainingState,
@@ -78,7 +79,9 @@ export function rescheduled(core: Core, profile: Profile, equipment: Equipment):
 
 export function planFor(core: Core, index: number, minutes?: number | null, lastCardioEffort?: number, weekDone?: SessionPlan[]): SessionPlan {
   const ctx = contextFor(core);
+  const exclude = core.regenerated?.index === index ? core.regenerated.exclude : [];
   return planSessionWith(ctx, positionOf(core, index), {
+    ...(exclude.length > 0 ? { exclude } : {}),
     ...(weekDone && weekDone.length > 0 ? { weekDone } : {}),
     restSec: core.settings.restSec,
     transitionSec: core.settings.transitionSec,
@@ -150,6 +153,64 @@ export function todayPlan(core: Core, history: SessionRecord[], now: number, min
   const plan = applyState(planFor(core, core.nextIndex, minutes, lastCardioEffort(history), doneThisWeek(core, history)), core.state, ctx, days !== undefined ? { daysSinceLastStrength: days } : {});
   return applySoreness(withProfile(plan, core, history, now), currentSoreness(core, now));
 }
+
+/** Exercises a strength plan uses, the core finisher included. */
+export function planExerciseIds(plan: SessionPlan): string[] {
+  return [...plan.supersets.flatMap((ss) => ss.items.map((p) => p.exerciseId)), ...(plan.finisher ? [plan.finisher.exerciseId] : [])];
+}
+
+/** The main movements a strength plan trains (squat, hinge, presses, pulls), arms and core aside. */
+function mainPatterns(plan: SessionPlan): Set<string> {
+  return new Set(plan.supersets.flatMap((ss) => ss.items.map((p) => p.pattern)).filter((p) => p !== "isolation" && p !== "core"));
+}
+
+/**
+ * Today's strength session with other exercises, for someone not feeling the planned ones: the same
+ * day, leaving out everything offered so far. It has to train the same main movements as the plan
+ * and be about as much work; when leaving out everything offered so far can't manage that, only
+ * what's on screen now is left out. Null when nothing else fits.
+ */
+export function regenerateToday(core: Core, history: SessionRecord[], now: number, minutes?: number | null): Core | null {
+  const current = todayPlan(core, history, now, minutes);
+  if (current.kind !== "strength") return null;
+  const planned = isRegenerated(core) ? todayPlan(originalToday(core), history, now, minutes) : current;
+  const needed = mainPatterns(planned);
+  const shown = planExerciseIds(current);
+  const before = isRegenerated(core) ? core.regenerated!.exclude : [];
+  let fallback: { core: Core; score: number } | null = null;
+  for (let exclude of [[...new Set([...before, ...shown])], shown]) {
+    let next: Core = { ...core, regenerated: { index: core.nextIndex, exclude } };
+    let plan = todayPlan(next, history, now, minutes);
+    // A movement with nothing else to do it (the only overhead press there is) keeps its exercise.
+    for (let i = 0; i < 2; i++) {
+      const has = mainPatterns(plan);
+      const keep = new Set(prescriptionsOf(current).filter((p) => needed.has(p.pattern) && !has.has(p.pattern)).map((p) => p.exerciseId));
+      if (keep.size === 0) break;
+      exclude = exclude.filter((id) => !keep.has(id));
+      if (exclude.length === 0) break;
+      next = { ...core, regenerated: { index: core.nextIndex, exclude } };
+      plan = todayPlan(next, history, now, minutes);
+    }
+    const ids = planExerciseIds(plan);
+    if (plan.kind !== "strength" || exclude.length === 0 || ids.every((id) => shown.includes(id))) continue;
+    const has = mainPatterns(plan);
+    const covered = [...needed].filter((p) => has.has(p)).length;
+    const enough = planWork(plan) >= 0.85 * planWork(planned);
+    if (covered === needed.size && enough) return next;
+    const score = covered * 2 + (enough ? 1 : 0);
+    if (!fallback || score > fallback.score) fallback = { core: next, score };
+  }
+  return fallback?.core ?? null;
+}
+
+/** Back to the session as planned. */
+export function originalToday(core: Core): Core {
+  const { regenerated: _, ...rest } = core;
+  return rest;
+}
+
+/** Whether the next session has been regenerated. */
+export const isRegenerated = (core: Core): boolean => core.regenerated?.index === core.nextIndex;
 
 export interface WeekSlot {
   index: number;

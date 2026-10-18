@@ -249,7 +249,18 @@ export function migrateCore(c: unknown): Core | null {
   }
   // The programme position never goes before the first session.
   if (isNum(c["positionOffset"])) core.positionOffset = Math.max(-nextIndex, Math.min(1e6, Math.floor(c["positionOffset"])));
-  return withValid(core, { profileOverrides: migrateOverrides(c["profileOverrides"]), soreCheck: migrateSoreCheck(c["soreCheck"]) });
+  return withValid(core, {
+    profileOverrides: migrateOverrides(c["profileOverrides"]),
+    soreCheck: migrateSoreCheck(c["soreCheck"]),
+    regenerated: migrateRegenerated(c["regenerated"]),
+  });
+}
+
+/** A regenerated session: kept when it names a session and only exercises the library knows. */
+function migrateRegenerated(x: unknown): Core["regenerated"] {
+  if (!isObj(x) || !isNum(x["index"]) || !Array.isArray(x["exclude"])) return undefined;
+  const exclude = (x["exclude"] as unknown[]).filter((id): id is string => known(id));
+  return exclude.length > 0 ? { index: Math.floor(x["index"]), exclude: [...new Set(exclude)] } : undefined;
 }
 
 /** `o` with each of these fields set when valid and removed when not. */

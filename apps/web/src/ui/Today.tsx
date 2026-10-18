@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
 import { ACTIVITY_NAME, cardioLabel, dayLabel, plural } from "../model/format";
-import { contextFor, exerciseCount, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
+import { contextFor, exerciseCount, isRegenerated, regenerateToday, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
 import { BackupButton } from "./Backup";
@@ -25,6 +25,8 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
   const { dispatch, storage } = useStore();
   const [minutes, setMinutes] = useState<number | null>(null);
   const [skipAsk, setSkipAsk] = useState(false);
+  // Set when Regenerate found nothing else that fits, so the button can say so instead of doing nothing.
+  const [noOther, setNoOther] = useState(false);
   const now = Date.now();
   // Re-plan at least hourly so "days since your last session" (and a comeback) stays current.
   const hour = Math.floor(now / 3_600_000);
@@ -158,7 +160,32 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
       {plan.kind === "strength" ? <SoreCheckCard core={core} history={history} plan={plan} now={now} /> : null}
 
       <section className="card stack" style={{ gap: 14 }}>
-        <span className="eyebrow accent">Today</span>
+        <div className="spread">
+          <span className="eyebrow accent">Today</span>
+          {plan.kind === "strength" ? (
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                const now = Date.now();
+                if (regenerateToday(core, history, now, minutes)) {
+                  setNoOther(false);
+                  dispatch({ type: "regenerate", now, minutes });
+                } else setNoOther(true);
+              }}
+            >
+              <Icon name="refresh" size={16} />
+              Regenerate
+            </button>
+          ) : null}
+        </div>
+        {noOther ? <p className="meta small" role="status">Nothing else fits your equipment for today's session, so it stays as it is.</p> : null}
+        {plan.kind === "strength" && isRegenerated(core) ? (
+          <p className="meta small" role="status">
+            New exercises, same muscles.{" "}
+            <button type="button" className="link-btn" onClick={() => { setNoOther(false); dispatch({ type: "originalToday" }); }}>Back to the original</button>
+          </p>
+        ) : null}
         {plan.kind === "strength" ? <Lineup plan={plan} units={loadUnitsFor(core.profile, core.equipment)} tips /> : <CardioLineup plan={plan} />}
       </section>
 
