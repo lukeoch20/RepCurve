@@ -2,7 +2,7 @@ import type { SoreLevel, SwapReason } from "@repcurve/engine";
 import type { Equipment, Muscle, Profile } from "@repcurve/shared";
 import { addActivity, removeActivity } from "../model/activity";
 import { atLocation } from "../model/equipment";
-import { newCore, rescheduled } from "../model/plan";
+import { newCore, originalToday, regenerateToday, rescheduled } from "../model/plan";
 import { cautionFine, forgetSwaps, profileFor, retest, settleRetests } from "../model/profile";
 import { answerSoreness } from "../model/soreness";
 import {
@@ -64,6 +64,9 @@ export type Action =
   | { type: "cautionFine"; area: string; now: number }
   | { type: "forgetSwaps"; exerciseId: string; now: number }
   | { type: "retest"; exerciseId: string }
+  /** Not feeling today's session: the same day with other exercises, or back to the original. */
+  | { type: "regenerate"; now: number; minutes: number | null }
+  | { type: "originalToday" }
   | { type: "start"; now: number; minutes: number | null }
   | { type: "log"; ref: SetRef; values: SetValues; now: number }
   | { type: "edit"; slot: string; setIndex: number; values: SetValues }
@@ -146,6 +149,13 @@ export function reducer(s: AppState, a: Action): AppState {
       return core && !active ? { ...s, data: { ...s.data, core: forgetSwaps(core, history, a.exerciseId, a.now) } } : s;
     case "retest":
       return core && !active ? { ...s, data: { ...s.data, core: retest(core, a.exerciseId) } } : s;
+    case "regenerate": {
+      if (!core || active) return s;
+      const next = regenerateToday(core, history, a.now, a.minutes);
+      return next ? { ...s, data: { ...s.data, core: next } } : s;
+    }
+    case "originalToday":
+      return core && !active && core.regenerated ? { ...s, data: { ...s.data, core: originalToday(core) } } : s;
     case "start":
       if (!core || active) return s;
       return { ...s, data: { ...s.data, active: startSession(core, history, a.now, a.minutes) } };

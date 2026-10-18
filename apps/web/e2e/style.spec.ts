@@ -20,6 +20,10 @@ async function expectChosen(page: Page, name: string, v: "Light" | "Dark" | "Mat
 }
 
 // Every look, in RepCurve Test: there they're all open, while in RepCurve most are earned (looks.spec.ts).
+/** The Today card's header band: its label and the Regenerate button. */
+const todayHead = (page: import("@playwright/test").Page) =>
+  page.locator(".card > .spread:has(> .eyebrow)").filter({ has: page.getByText("Today", { exact: true }) });
+
 test("Bluebird light is the default look; Settings lists each look once and asks light or dark", async ({ page }) => {
   await onboard(page, "/test/");
   await expect(page.locator("html")).toHaveAttribute("data-style", "bluebird");
@@ -91,7 +95,7 @@ test("Bluebird light is the default look; Settings lists each look once and asks
   await page.getByRole("button", { name: "Today" }).click();
   // The session tile carries the diamond, and cards wear the platinum bevel.
   expect(await page.locator(".page-head .glyph").evaluate((el) => getComputedStyle(el).backgroundImage)).toContain("data:image/webp");
-  expect(await page.locator(".card > .eyebrow").filter({ hasText: "Today" }).locator("..").evaluate((el) => getComputedStyle(el).clipPath)).toContain("polygon");
+  expect(await todayHead(page).locator("..").evaluate((el) => getComputedStyle(el).clipPath)).toContain("polygon");
   await page.getByRole("button", { name: "Settings" }).click();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Make it yours" })).toBeVisible();
@@ -122,7 +126,7 @@ test("the workout header and tab bar wear Bluebird's blue bands", async ({ page 
   const chrome = (sel: string) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundImage);
   expect(await chrome(".tabbar")).toContain("linear-gradient");
   // The Today card's heading is a band across its top.
-  expect(await page.locator(".card > .eyebrow").filter({ hasText: "Today" }).evaluate((el) => getComputedStyle(el).backgroundImage)).toContain("linear-gradient");
+  expect(await todayHead(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toContain("linear-gradient");
   await page.getByRole("button", { name: "Start session" }).click();
   expect(await chrome(".runner-head")).toContain("linear-gradient");
 });
