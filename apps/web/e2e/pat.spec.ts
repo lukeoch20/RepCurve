@@ -11,12 +11,21 @@ async function patsOn(page: Page) {
 const pat = (page: Page) => page.getByRole("dialog");
 const nextDone = (page: Page) => page.getByRole("button", { name: /^Done · set \d+$/ }).first();
 
-/** Log sets in order until a pat on the back appears (or the sets run out). */
+const progress = (page: Page) => page.getByText(/^\d+ of \d+ sets$/);
+
+/**
+ * Log sets in order until a pat on the back appears (or the sets run out). Each set is seen to
+ * register, and the pat given a moment to open, before the next tap: otherwise a tap can land
+ * just as a pat opens and log a set of the next exercise once the pat steps aside.
+ */
 async function logUntilPat(page: Page) {
   for (let i = 0; i < 40; i++) {
     if (await pat(page).isVisible()) return;
     if ((await nextDone(page).count()) === 0) return;
+    const before = await progress(page).textContent();
     await nextDone(page).click();
+    await expect(progress(page)).not.toHaveText(before!);
+    await pat(page).waitFor({ state: "visible", timeout: 300 }).catch(() => undefined);
   }
 }
 
