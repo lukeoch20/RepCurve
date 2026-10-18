@@ -238,6 +238,8 @@ export interface StrengthSessionInput {
   alternate?: boolean;
   /** Movement patterns the rest of the week already trains. */
   weekPatterns?: Pattern[];
+  /** Exercises to leave out: a session regenerated because the person isn't feeling the planned one. */
+  exclude?: string[];
 }
 
 interface Chosen {
@@ -488,7 +490,7 @@ export function buildStrengthSession(input: StrengthSessionInput): SessionPlan {
   const budgetSec = budget * 60;
   const variants = variantsFor(input.split ?? input.profile.split);
   const variant = variants[(input.rotation ?? input.strengthIndex) % variants.length]!;
-  const used = new Set<string>();
+  const used = new Set<string>(input.exclude ?? []);
   const restSec = input.restSec ?? restSecondsForBudget(budget);
   const transitionSec = input.transitionSec ?? TRANSITION_SEC;
   const notes: string[] = [];

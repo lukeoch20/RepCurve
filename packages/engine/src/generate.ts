@@ -27,6 +27,8 @@ export interface PlanOptions {
    * session being planned fits around them, so the week stays within its ceiling.
    */
   weekDone?: SessionPlan[];
+  /** Exercises to leave out of a strength session: the plan regenerated because the person wasn't feeling it. */
+  exclude?: string[];
 }
 
 /** Weeks in a training block. People past the novice stage get alternate exercises every other block. */
@@ -189,15 +191,16 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
   const heads = weeklyDeltHeads(weekPlans);
   const headCeiling = deltHeadCeiling(weekLevel(ctx, week));
   const overWeek = MUSCLES.some((m) => m !== "core" && asCounted[m] > ceiling + 1e-9) || DELT_HEADS.some((h) => heads[h] > headCeiling + 1e-9);
-  if (today || overWeek) {
-    // Today's time differs, or a longer day earlier in the week left less room: this session fits
+  const regenerate = (opts.exclude?.length ?? 0) > 0;
+  if (today || overWeek || regenerate) {
+    // Today's time differs, the session was regenerated, or a longer day earlier in the week left less room: this session fits
     // around the rest of the week.
     const weekPatterns = chain.flatMap((s, d) => (s && d !== dayIndex ? (done.get(d) ?? s).supersets.flatMap((ss) => ss.items.map((p) => p.pattern)) : []));
     const weekOthersHeads = weeklyDeltHeads(chain.flatMap((s, d) => (s && d !== dayIndex ? [done.get(d) ?? s] : [])));
-    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekOthersHeads, weekPatterns };
+    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekOthersHeads, weekPatterns, ...(regenerate ? { exclude: opts.exclude! } : {}) };
     // A longer day is the usual session plus more (when the usual session still fits the week and
     // today's time); otherwise the session is planned afresh.
-    const extend = today && opts.minutes! > ctx.profile.minutesPerSession && !overWeek && steady.estimatedMinutes <= opts.minutes!;
+    const extend = today && !regenerate && opts.minutes! > ctx.profile.minutesPerSession && !overWeek && steady.estimatedMinutes <= opts.minutes!;
     steady = buildStrengthSession(extend ? { ...input, start: steady } : input);
   }
   const rampWeek = week === 1 && profile.trainingHistory === "never";
