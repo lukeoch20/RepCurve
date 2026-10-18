@@ -34,7 +34,8 @@ const BASE_ITEM_LABEL: Record<Exclude<EquipmentItem, `machine:${string}`>, strin
   bench: "a sturdy chair, step or bench",
   flat_bench: "a flat bench you can lie on",
   adjustable_bench: "an adjustable (incline) bench",
-  bands: "a resistance band",
+  bands: "a long resistance band",
+  loop_band: "a mini loop band",
   band_anchor: "a door anchor or sturdy post for the band",
   sliders: "sliders (or towels on a smooth floor)",
   suspension: "a suspension trainer",
@@ -70,6 +71,7 @@ export function fullGym(units: Units): Equipment {
     adjustableBench: true,
     bands: ["light", "medium", "heavy"],
     bandAnchor: true,
+    loopBands: true,
     jumpRope: true,
     barbell: true,
     rack: true,
@@ -97,8 +99,14 @@ export function atLocation(locations: Locations, at: Location): { equipment: Equ
   return equipment ? { equipment, locations: { ...locations, at } } : null;
 }
 
-/** Older band setups: the band row always assumed a door anchor, so keep offering it. */
+/**
+ * Older band setups: the band row always assumed a door anchor, and "bands" used to cover mini
+ * loop bands too, so keep offering what they had.
+ */
 export function upgradeEquipment(e: Equipment): Equipment {
-  if (e.bands.length > 0 && e.bandAnchor === undefined) return { ...e, bandAnchor: true };
-  return e;
+  if (e.bands.length === 0) return e;
+  let out = e;
+  if (out.bandAnchor === undefined) out = { ...out, bandAnchor: true };
+  if (out.loopBands === undefined) out = { ...out, loopBands: true };
+  return out;
 }

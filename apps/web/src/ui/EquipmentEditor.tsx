@@ -27,6 +27,7 @@ export interface EqDraft {
   adjustableBench: boolean;
   bands: Band[];
   bandAnchor: boolean;
+  loopBands: boolean;
   jumpRope: boolean;
   sliders: boolean;
   suspension: boolean;
@@ -63,6 +64,7 @@ export function eqDraftFrom(equipment: Equipment | undefined, units: Units, plac
     adjustableBench: e?.adjustableBench ?? false,
     bands: e?.bands ?? [],
     bandAnchor: e?.bandAnchor ?? false,
+    loopBands: e?.loopBands ?? false,
     jumpRope: e?.jumpRope ?? false,
     sliders: e?.sliders ?? false,
     suspension: e?.suspension ?? false,
@@ -106,6 +108,7 @@ export function toEquipment(d: EqDraft): Equipment | null {
     adjustableBench: d.adjustableBench,
     bands: d.bands,
     bandAnchor: d.bands.length > 0 && d.bandAnchor,
+    loopBands: d.loopBands,
     jumpRope: d.jumpRope,
     sliders: d.sliders,
     suspension: d.suspension,
@@ -200,7 +203,8 @@ export function EquipmentEditor(props: { place: Location; draft: EqDraft; onChan
           <Tile icon="mat" label="Mat or rug" checked={d.mat} onChange={(mat) => up({ mat })} />
           <Tile icon="bar" label="Pull-up bar" checked={d.pullupBar} onChange={(pullupBar) => up({ pullupBar })} />
           <Tile icon="wheel" label="Ab roller" checked={d.abRoller} onChange={(abRoller) => up({ abRoller })} />
-          <Tile icon="band" label="Bands" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
+          <Tile icon="band" label="Long bands" hint="to stand on or anchor" checked={d.bands.length > 0} onChange={(on) => up({ bands: on ? ["medium"] : [] })} />
+          <Tile icon="band" label="Mini loop bands" hint="around the legs" checked={d.loopBands} onChange={(loopBands) => up({ loopBands })} />
           <Tile icon="slider" label="Sliders" hint="or towels on a smooth floor" checked={d.sliders} onChange={(sliders) => up({ sliders })} />
           <Tile icon="suspension" label="Suspension trainer" checked={d.suspension} onChange={(suspension) => up({ suspension })} />
         </div>
@@ -209,7 +213,7 @@ export function EquipmentEditor(props: { place: Location; draft: EqDraft; onChan
         <Toggle
           id={id("anchor")}
           label="A door anchor or sturdy post for the bands"
-          hint="Rows and pulldowns need the band fixed at chest or head height. Without one, band pulling is left out."
+          hint="Standing rows and pulldowns need the band fixed at chest or head height. Without one, you row sitting down with the band around your feet."
           checked={d.bandAnchor}
           onChange={(bandAnchor) => up({ bandAnchor })}
         />

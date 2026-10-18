@@ -61,6 +61,9 @@ test("bands ask about an anchor, and a jump rope can be ticked on its own", asyn
   await rope.click();
   await expect(rope).toBeChecked();
   await expect(page.getByLabel(/door anchor/)).toHaveCount(0);
-  await page.getByRole("switch", { name: "Bands" }).click();
+  // Mini loop bands go around the legs: nothing to anchor.
+  await page.getByRole("switch", { name: /^Mini loop bands/ }).click();
+  await expect(page.getByLabel(/door anchor/)).toHaveCount(0);
+  await page.getByRole("switch", { name: /^Long bands/ }).click();
   await expect(page.getByLabel(/door anchor/)).not.toBeChecked();
 });

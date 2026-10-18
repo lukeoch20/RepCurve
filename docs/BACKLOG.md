@@ -216,6 +216,28 @@ first two rungs need. Higher rungs as new looks arrive.
 
 ---
 
+## B6. Exercise catalog audit (2026-10-18): what's left
+
+The audit judged the library by coverage per home setup (no equipment, a chair, one dumbbell, a pair,
+bands with no anchor), not by count. Done: one-arm floor press, curl and lateral raise and the one-arm
+overhead press (planned only without a pair), seated band row, band lateral raise and pull-apart,
+hands-elevated pike push-up, bodyweight good morning (planned only when nothing loads the hinge), bird
+dog, side-lying hip adduction (a swap); bridges, calf raises, split squats and pike push-ups now lead on
+to their harder versions; band overhead press and band curl are planned; mini loop bands are their own
+item. `packages/engine/src/equipment-coverage.test.ts` holds the five setups to the standard.
+
+**Still open**
+- **Loaded carries.** The suitcase carry is timed, so its dumbbell isn't tracked or progressed. Needs a
+  load type that progresses weight and time together (and a "suitcase hold" for small rooms).
+- **Adductors.** Kept off the weekly volume targets on purpose: squats and lunges train them, and
+  adding an 11th muscle changes every plan. Revisit if people ask for inner-thigh work.
+- **Lower-priority additions:** close-grip push-up, prone reverse snow angel, anchored band chest press,
+  short-lever Copenhagen plank, foot-assisted pull-up.
+- **Hex dumbbells.** The renegade row needs dumbbells that don't roll; the app can't tell, so its note
+  says so. Ask only if more exercises come to need it.
+
+---
+
 ## Build order
 
 1. ~~**B1 groundwork:** add the derived profile and route existing feedback through it, starting with the two

@@ -39,8 +39,16 @@ export function buildPool(equipment: Equipment, injuries: Injury[], profile?: Pi
       !e.avoidWith.some((i) => injuries.includes(i)),
   );
   const byLadder = new Map<string, Exercise[]>();
-  for (const e of exercises) {
-    if (e.tier !== "default") continue;
+  const pairs = canLoad("dumbbell_pair", equipment);
+  // One-dumbbell versions fill in for someone without a pair; with a pair the two-handed one is planned.
+  const planned = exercises.filter((e) => e.tier === "default" && !(e.withoutPairs && pairs));
+  // Stand-ins are only planned while nothing heavier in their family is: bodyweight gives way to a
+  // band or weights, a band to weights.
+  const weight = (e: Exercise) => (classOf(e) === "bodyweight" ? 0 : classOf(e) === "band" ? 1 : 2);
+  const heaviest = new Map<string, number>();
+  for (const e of planned) if (!e.light) heaviest.set(e.family, Math.max(heaviest.get(e.family) ?? 0, weight(e)));
+  for (const e of planned) {
+    if (e.light && (heaviest.get(e.family) ?? 0) > weight(e)) continue;
     const list = byLadder.get(e.ladder) ?? [];
     list.push(e);
     byLadder.set(e.ladder, list);
@@ -93,14 +101,15 @@ export const plannable = (pool: Pool): Exercise[] => [...pool.byLadder.values()]
 const LADDER_ORDER = [
   "squat_machine", "squat_bb", "squat_db", "squat_bw",
   "lunge_db", "lunge_bw_supported", "lunge_bw", "lunge_bw_reverse", "stepup_bw",
-  "hinge_bb", "hinge_db", "hinge_band", "bridge_bb", "bridge_db", "bridge_bw",
-  "hpush_machine", "hpush_bb", "hpush_db", "hpush_db_incline", "hpush_bw", "hpush_knee",
-  "vpush_machine", "vpush_db",
-  "row_cable", "row_db_supported", "row_db", "row_band", "row_suspension",
+  "hinge_bb", "hinge_db", "hinge_band", "bridge_bb", "bridge_db", "bridge_bw", "hinge_bw",
+  "hpush_machine", "hpush_bb", "hpush_db", "hpush_db_incline", "hpush_db_single", "hpush_bw", "hpush_knee",
+  "vpush_machine", "vpush_db", "vpush_db_single", "vpush_band", "vpush_bw",
+  "row_cable", "row_db_supported", "row_db", "row_band", "row_band_seated", "row_suspension",
   "vpull_machine", "vpull_assisted_machine", "vpull_assisted_band", "vpull_bar", "vpull_band",
-  "lateral_db", "rear_delt_db", "curl_db", "triceps_pressdown", "triceps_cable_overhead", "triceps_db",
+  "lateral_db", "lateral_db_single", "lateral_band", "rear_delt_db", "rear_delt_band", "curl_db", "curl_db_single", "curl_band",
+  "triceps_pressdown", "triceps_cable_overhead", "triceps_db",
   "leg_extension", "leg_curl_seated", "hamstring_bw", "calf_machine", "calf_db", "calf_bw", "abduction_bw",
-  "core_floor", "core_flexion", "core_side", "core_pallof",
+  "core_floor", "core_flexion", "core_side", "core_pallof", "core_bird_dog",
 ];
 const orderOf = (ladder: string) => {
   const i = LADDER_ORDER.indexOf(ladder);

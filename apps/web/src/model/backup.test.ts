@@ -85,7 +85,7 @@ const DAY = 86_400_000;
 /** A real-looking backup: two finished sessions, one under way, home and gym equipment. */
 function realData(): AppData {
   const p: Profile = { sex: "female", age: 41, heightCm: 165, bodyweightKg: 70, trainingHistory: "lapsed", goal: "strength_muscle", daysPerWeek: 3, minutesPerSession: 25, injuries: ["knee"], units: "kg", split: "full_body" };
-  const home: Equipment = { dumbbells: { kind: "adjustable", min: 2, max: 24, step: 2, unit: "kg", pairs: true }, treadmill: false, mat: true, abRoller: false, pullupBar: true, bench: true, bands: ["light", "heavy"], bandAnchor: true };
+  const home: Equipment = { dumbbells: { kind: "adjustable", min: 2, max: 24, step: 2, unit: "kg", pairs: true }, treadmill: false, mat: true, abRoller: false, pullupBar: true, bench: true, bands: ["light", "heavy"], bandAnchor: true, loopBands: false };
   let core: Core = { ...newCore(p, home, T0), locations: { home, gym: fullGym("kg"), at: "home" }, activities: [{ at: T0, name: "Swim", minutes: 30, vigorous: true }] };
   const history: SessionRecord[] = [];
   for (let i = 0; i < 2; i++) {
