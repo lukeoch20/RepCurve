@@ -26,6 +26,17 @@ export const HOW_TO_FREE: Record<string, HowTo> = {
     cues: ["Roll the pelvis up, don't just swing the legs", "Small, slow movement", "Arms rest lightly; they don't push"],
     mistakes: ["Swinging the legs for momentum", "Dropping the hips back down fast", "Pressing hard through the arms to lift"],
   },
+  lying_leg_raise: {
+    setup: "Lie on your back on a mat, rug or carpet with your legs straight and your arms by your sides, palms down. Lift your legs straight up so your feet are over your hips.",
+    steps: [
+      "Breathe out, brace your stomach and press your lower back flat into the floor.",
+      "Keeping your legs straight and together, lower your feet slowly toward the floor.",
+      "Stop just before your heels touch, or sooner if your lower back starts to lift off the floor.",
+      "Raise your legs back up until your feet are over your hips.",
+    ],
+    cues: ["Lower back stays pressed into the floor the whole time", "Slow on the way down", "Bend your knees a little to make it easier"],
+    mistakes: ["Lower back arching off the floor as the legs come down", "Dropping the legs fast or bouncing them off the floor", "Pushing hard through the arms to lift"],
+  },
   pallof_press: {
     setup: "Anchor a band securely at chest height: a door anchor in a closed door that opens away from you, or a sturdy post. Or set a cable to chest height with a single handle. Stand side-on to the anchor, feet shoulder-width apart, holding the handle with both hands at the middle of your chest. Step away until the band or cable is under tension.",
     steps: [
