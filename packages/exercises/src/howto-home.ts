@@ -4,6 +4,75 @@ const SWITCH = "Do all your reps on one side, then switch sides. That's one set.
 
 export const HOW_TO_HOME: Record<string, HowTo> = {
   // ---------------- Horizontal push ----------------
+  single_arm_dumbbell_floor_press: {
+    setup: "Lie on your back on the floor with your knees bent and feet flat. Hold one dumbbell in one hand above your chest, arm straight. Rest your free hand on your stomach or out to the side on the floor.",
+    steps: [
+      "Brace your stomach so your body doesn't roll toward the dumbbell.",
+      "Lower the dumbbell to the side of your chest until your upper arm touches the floor lightly, elbow about 45° from your body.",
+      "Pause for a moment with the arm resting, without letting the shoulder relax completely.",
+      "Press the dumbbell back up until your arm is straight over your chest.",
+      SWITCH,
+    ],
+    cues: ["Hips and shoulders stay flat on the floor", "Wrist stacked over the elbow", "Same speed down and up on both sides"],
+    mistakes: ["Rolling toward the working side", "Bouncing the elbow off the floor", "Flaring the elbow straight out to the side"],
+  },
+  single_arm_dumbbell_curl: {
+    setup: "Stand tall with feet hip-width apart, holding one dumbbell at your side with your palm facing forward. Put your free hand on your hip, or hold a wall or chair for balance.",
+    steps: [
+      "Keep your upper arm still against your side.",
+      "Curl the dumbbell up toward your shoulder, bending only at the elbow.",
+      "Squeeze briefly at the top.",
+      "Lower slowly until your arm is straight again.",
+      SWITCH,
+    ],
+    cues: ["Elbow stays pinned to your side", "Slow on the way down", "Stand tall, no leaning back"],
+    mistakes: ["Swinging the body to lift the weight", "Letting the elbow drift forward", "Dropping the weight on the way down"],
+  },
+  single_arm_dumbbell_lateral_raise: {
+    setup: "Stand side-on to a wall or sturdy chair with feet hip-width apart. Hold the support with your near hand and a dumbbell in your far hand at your side, palm facing in.",
+    steps: [
+      "Brace your stomach and keep a slight bend in the elbow.",
+      "Raise the dumbbell out to the side until your arm is level with your shoulder.",
+      "Pause briefly at the top.",
+      "Lower slowly back to your side.",
+      SWITCH,
+    ],
+    cues: ["Lead with the elbow, not the hand", "Shoulder stays down, away from your ear", "Light weight, smooth reps"],
+    mistakes: ["Shrugging the shoulder up", "Swinging the body to get the weight up", "Lifting above shoulder height"],
+  },
+  band_lateral_raise: {
+    setup: "Stand on the middle of a long band with feet hip-width apart. Hold one end in each hand at your sides, palms facing in. Standing with feet wider makes it harder.",
+    steps: [
+      "Brace your stomach and keep a slight bend in both elbows.",
+      "Raise both arms out to the sides until they're level with your shoulders.",
+      "Pause for a moment at the top.",
+      "Lower slowly back to your sides, keeping some tension in the band.",
+    ],
+    cues: ["Lead with the elbows", "Shoulders stay down", "Wider stance = more resistance"],
+    mistakes: ["Shrugging the shoulders up", "Letting the band snap the arms down", "Leaning back to finish the rep"],
+  },
+  band_pull_apart: {
+    setup: "Stand tall holding a long band in both hands at chest height, arms straight in front of you and hands about shoulder-width apart. Hands closer together on the band makes it harder.",
+    steps: [
+      "Set your shoulders down and back.",
+      "Pull the band apart by moving your arms out to the sides until the band touches your chest.",
+      "Squeeze your shoulder blades together for a moment.",
+      "Return slowly to the start, arms still straight.",
+    ],
+    cues: ["Arms stay straight with soft elbows", "Move from the shoulders", "Chest stays tall"],
+    mistakes: ["Bending the elbows to make it easier", "Shrugging up toward the ears", "Arching the lower back"],
+  },
+  seated_band_row: {
+    setup: "Sit on the floor with your legs straight out in front of you. Loop the middle of a long band around the soles of your feet and hold one end in each hand, arms straight, palms facing each other. Sit tall; holding the band nearer your feet makes it harder.",
+    steps: [
+      "Set your shoulders down and back.",
+      "Pull your hands toward your lower ribs, elbows close to your sides.",
+      "Squeeze your shoulder blades together at the end.",
+      "Let your arms straighten slowly, keeping your chest tall.",
+    ],
+    cues: ["Sit tall the whole time", "Elbows drive back past your body", "Bend your knees a little if your lower back rounds"],
+    mistakes: ["Leaning back to pull", "Shrugging the shoulders", "The band slipping off your feet: wear shoes and loop it around the arches"],
+  },
   wall_push_up: {
     setup: "Stand facing a wall, about an arm's length away, feet hip-width apart. Place your hands flat on the wall at shoulder height, slightly wider than your shoulders.",
     steps: [

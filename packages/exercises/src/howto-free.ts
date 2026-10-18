@@ -4,6 +4,51 @@ const SWITCH = "Do all your reps on one side, then switch sides. That's one set.
 
 export const HOW_TO_FREE: Record<string, HowTo> = {
   // ---------------- Core ----------------
+  bird_dog: {
+    setup: "Kneel on all fours on a mat, rug or carpet with your hands under your shoulders and knees under your hips. Keep your back flat and your neck in line, looking at the floor.",
+    steps: [
+      "Brace your stomach without arching or rounding your back.",
+      "Reach one arm forward and the opposite leg back until both are level with your body.",
+      "Hold for a second or two, hips level.",
+      "Bring them back down under control, then do the other arm and leg. That's one rep.",
+    ],
+    cues: ["Imagine a cup of water balanced on your lower back", "Reach long rather than high", "Slow and steady beats quick"],
+    mistakes: ["Hips twisting open as the leg lifts", "Arching the lower back to lift the leg higher", "Rushing from side to side"],
+  },
+  side_lying_hip_adduction: {
+    setup: "Lie on your side on a mat, rug or carpet with your bottom leg straight. Bend your top leg and put that foot flat on the floor in front of your bottom knee, or rest the top knee on a cushion. Prop your head on your hand or arm.",
+    steps: [
+      "Point the toes of your bottom foot forward.",
+      "Lift the bottom leg up off the floor as high as you can, using your inner thigh.",
+      "Pause for a moment at the top.",
+      "Lower slowly until the leg nearly touches the floor.",
+      SWITCH,
+    ],
+    cues: ["Small, controlled lift", "Bottom leg stays straight", "Body stays stacked on its side"],
+    mistakes: ["Rolling onto your back", "Swinging the leg up", "Letting the leg drop between reps"],
+  },
+  bodyweight_good_morning: {
+    setup: "Stand tall with feet hip-width apart and a soft bend in your knees. Cross your hands over your chest, or rest your fingertips lightly behind your head.",
+    steps: [
+      "Brace your stomach and keep your back flat.",
+      "Push your hips back, letting your chest tip forward, until you feel a stretch in the back of your thighs.",
+      "Stop when your back can't stay flat, usually with your chest close to level with the floor.",
+      "Drive your hips forward to stand back up tall.",
+    ],
+    cues: ["Hips move back, not down", "Knees stay softly bent", "Flat back from head to hips"],
+    mistakes: ["Rounding the back to go lower", "Bending the knees into a squat", "Pulling on your head with your hands"],
+  },
+  hands_elevated_pike_push_up: {
+    setup: "Put your hands shoulder-width apart on a stable step, sturdy chair seat against a wall, or low bench that can't slide. Walk your feet in toward it and lift your hips high, so your body makes an upside-down V.",
+    steps: [
+      "Brace your stomach and keep your hips high.",
+      "Bend your elbows to lower the top of your head toward the edge of the support, between your hands.",
+      "Go as low as you can control, elbows angled back rather than straight out.",
+      "Press back up until your arms are straight.",
+    ],
+    cues: ["Head moves toward the support, slightly ahead of your hands", "Hips stay high the whole time", "Walk your feet closer to make it harder"],
+    mistakes: ["A chair or step that can slide or tip", "Dropping the hips into a push-up", "Elbows flaring straight out"],
+  },
   side_plank: {
     setup: "Lie on your side on a mat, rug or carpet with your elbow directly under your shoulder and your forearm flat on the floor. Stack your legs straight, or bend both knees to 90° for an easier version.",
     steps: [

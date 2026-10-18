@@ -84,7 +84,7 @@ function migrateDumbbells(d: unknown, units: Units): Dumbbells {
 
 const KIT = ["treadmill", "mat", "abRoller", "pullupBar", "bench"] as const;
 const OPTIONAL_KIT = [
-  "flatBench", "jumpRope", "bandAnchor", "sliders", "suspension", "adjustableBench", "barbell", "rack", "trapBar", "ezBar", "cables", "bike", "elliptical", "rower", "stairClimber",
+  "flatBench", "jumpRope", "bandAnchor", "loopBands", "sliders", "suspension", "adjustableBench", "barbell", "rack", "trapBar", "ezBar", "cables", "bike", "elliptical", "rower", "stairClimber",
 ] as const;
 
 /**

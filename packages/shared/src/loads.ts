@@ -116,6 +116,8 @@ export function hasItem(eq: Equipment, item: EquipmentItem): boolean {
       return eq.adjustableBench === true;
     case "bands":
       return eq.bands.length > 0;
+    case "loop_band":
+      return eq.loopBands === true;
     case "band_anchor":
       return eq.bandAnchor === true;
     case "sliders":
