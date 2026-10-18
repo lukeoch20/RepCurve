@@ -4,11 +4,11 @@
   "purpose": "Proposed exercise catalog and decision metadata; not a deployed app configuration or clinical rehabilitation protocol.",
   "counts": {
     "current_strength_records": 44,
-    "proposed_additions": 62,
-    "total_strength_records": 106,
-    "selectable_strength_records": 105,
+    "proposed_additions": 63,
+    "total_strength_records": 107,
+    "selectable_strength_records": 106,
     "retired_legacy_records": 1,
-    "P1_additions": 33,
+    "P1_additions": 34,
     "P2_additions": 29,
     "cardio_modalities": 8
   },
@@ -3366,6 +3366,38 @@
       "tracking": "reps_and_leverage",
       "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
       "selection_note": "Accessible dynamic abdominal exercise without grip or hanging requirements.",
+      "evidence_basis": "practical_movement_coverage",
+      "direct_trial_references": [],
+      "context_references": [
+        "R01"
+      ],
+      "evidence_scope_note": "References support only the stated pattern or tested variation; no universal superiority or injury-safety claim."
+    },
+    {
+      "id": "lying_leg_raise",
+      "name": "Lying leg raise",
+      "origin": "proposed",
+      "priority": "P1",
+      "selectable": true,
+      "default_pool": true,
+      "primary_display_group": "Core",
+      "prime_movers": [
+        "rectus_abdominis",
+        "hip_flexors"
+      ],
+      "secondary_movers": [],
+      "stabilizers": [],
+      "movement_pattern": "hip_flexion_with_pelvic_control",
+      "equipment_options_all_of": [
+        [
+          "floor_space"
+        ]
+      ],
+      "laterality": "bilateral",
+      "rep_count_convention": "total",
+      "tracking": "reps_and_leverage",
+      "progression": "same_variant_then_load_or_leverage; optional_branches_not_global_rank",
+      "selection_note": "A harder step after the reverse crunch: straight legs make a longer lever. Hip flexors are prime movers too; the lower back stays pressed down so the abdominals do the holding.",
       "evidence_basis": "practical_movement_coverage",
       "direct_trial_references": [],
       "context_references": [

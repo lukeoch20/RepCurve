@@ -286,6 +286,7 @@ const SPECS: [string, Spec][] = [
   ["suitcase_carry", { pattern: "core", family: "anti_lateral", load: "time", ladder: "core_carry", rep: 1, cue: "Carry one heavy dumbbell at your side, walking tall without leaning." }],
   ["pallof_press", { pattern: "core", family: "anti_rotation", load: "band", ladder: "core_pallof", rep: 4, setup: 30 }],
   ["reverse_crunch", { pattern: "core", family: "trunk_flexion", load: "bodyweight", ladder: "core_flexion", rep: 2.5 }],
+  ["lying_leg_raise", { pattern: "core", family: "trunk_flexion", load: "bodyweight", ladder: "core_flexion", level: 2, rep: 3, avoid: ["low_back"], cue: "Press your lower back into the floor; stop lowering if it arches." }],
   ["hanging_knee_raise", { pattern: "core", family: "trunk_flexion", load: "bodyweight", ladder: "core_hang", rep: 2.5, avoid: ["shoulder"] }],
   ["cable_crunch", { pattern: "core", family: "trunk_flexion", load: "cable", ladder: "core_cable_crunch", rep: 2.5, setup: 30, avoid: ["low_back"] }],
 ];
