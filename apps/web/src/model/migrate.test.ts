@@ -36,6 +36,16 @@ describe("equipment from before the evidence review", () => {
     expect(migrateCore(newCore(profile, equipment, 0))!.equipment.bandAnchor).toBeUndefined();
   });
 
+  it("keeps mini-band exercises for people whose bands were ticked before loop bands had their own tile", () => {
+    const withBands = migrateCore(newCore(profile, { ...equipment, bands: ["medium"] }, 0))!;
+    expect(withBands.equipment.loopBands).toBe(true);
+    expect(migrateCore(newCore(profile, equipment, 0))!.equipment.loopBands).toBeUndefined();
+    // Once the editor has said yes or no, that answer stands.
+    const said = migrateCore(newCore(profile, { ...equipment, bands: ["medium"], bandAnchor: false, loopBands: false }, 0))!;
+    expect(said.equipment.loopBands).toBe(false);
+    expect(said.equipment.bandAnchor).toBe(false);
+  });
+
   it("keeps valid places, drops machines it doesn't know, and trains where the user said", () => {
     const gym: Equipment = { ...equipment, cables: true, machines: ["leg_press", "teleporter" as never] };
     const raw = { ...newCore(profile, equipment, 0), locations: { home: equipment, gym, at: "gym" } };

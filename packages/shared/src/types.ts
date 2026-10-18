@@ -95,7 +95,10 @@ export interface Equipment {
   bench: boolean;
   /** A flat, padded bench you can lie on and press dumbbells from (no barbell or rack). Missing means no. */
   flatBench?: boolean;
+  /** Long resistance bands (with handles or long loops) you can stand on or anchor. */
   bands: Band[];
+  /** Small loop bands ("mini bands") that go around the legs. Missing means no. */
+  loopBands?: boolean;
   /** A skipping rope, for cardio intervals. Missing means no. */
   jumpRope?: boolean;
   /** A secure anchor for bands at any height: a door anchor or a sturdy post. Missing means no. */
@@ -132,6 +135,7 @@ export type EquipmentItem =
   | "flat_bench"
   | "adjustable_bench"
   | "bands"
+  | "loop_band"
   | "band_anchor"
   | "sliders"
   | "suspension"
@@ -223,6 +227,13 @@ export interface Exercise {
   barKg?: number;
   /** Assistance makes it easier (band or machine-assisted pull-ups): progress means less help. */
   assisted?: boolean;
+  /** A one-dumbbell version: planned only for someone without a pair of dumbbells, a swap for everyone else. */
+  withoutPairs?: boolean;
+  /**
+   * A stand-in: planned only while nothing heavier in its family is (a bodyweight good morning
+   * until there's a band or dumbbells, a band curl until there are dumbbells); a swap otherwise.
+   */
+  light?: boolean;
   /** Why it's in RepCurve and how to use it. */
   note?: string;
   evidence?: Evidence;

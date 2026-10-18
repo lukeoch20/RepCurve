@@ -8,9 +8,9 @@ describe("exercise library", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("has every record of the evidence review's catalog: 107, one of them retired", () => {
+  it("has every record of the evidence review's catalog: 117, one of them retired", () => {
     expect(EXERCISES).toHaveLength(CATALOG.length);
-    expect(EXERCISES).toHaveLength(107);
+    expect(EXERCISES).toHaveLength(117);
     expect(EXERCISES.filter((e) => e.tier === "retired").map((e) => e.id)).toEqual(["towel_door_row"]);
     expect(EXERCISES.filter((e) => e.tier === "default")).toHaveLength(CATALOG.filter((c) => c.defaultPool).length);
   });
@@ -68,6 +68,30 @@ describe("exercise library", () => {
     expect(raise.ladderLevel).toBeGreaterThan(crunch.ladderLevel);
     expect(raise.avoidWith).toContain("low_back");
     expect(raise.cue).toMatch(/lower back/);
+  });
+
+  it("marks the one-dumbbell versions of paired lifts, and only those", () => {
+    const marked = EXERCISES.filter((e) => e.withoutPairs).map((e) => e.id).sort();
+    expect(marked).toEqual(["single_arm_db_overhead_press", "single_arm_dumbbell_curl", "single_arm_dumbbell_floor_press", "single_arm_dumbbell_lateral_raise"]);
+    for (const id of marked) {
+      const e = findExercise(id)!;
+      expect(e.loadType, id).toBe("single_dumbbell");
+      expect(e.unilateral, id).toBe(true);
+      expect(e.tier, id).toBe("default");
+    }
+  });
+
+  it("tells long bands from mini loop bands", () => {
+    expect(findExercise("band_hip_abduction")!.requires).toEqual([["loop_band"]]);
+    for (const id of ["seated_band_row", "band_lateral_raise", "band_pull_apart", "band_curl", "band_overhead_press"]) {
+      expect(findExercise(id)!.requires, id).toEqual([["bands"]]);
+    }
+  });
+
+  it("keeps hip adduction optional: adductors aren't a weekly volume target", () => {
+    const e = findExercise("side_lying_hip_adduction")!;
+    expect(e.tier).toBe("optional");
+    expect([...e.primary, ...e.secondary]).toEqual([]);
   });
 
   it("counts stabilisers out of weekly volume", () => {

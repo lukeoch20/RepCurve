@@ -18,6 +18,7 @@ export const STARTING_LOAD_RATIO: Record<string, Record<Sex, number>> = {
   db_glute_bridge: { male: 0.25, female: 0.2 },
   db_hip_thrust: { male: 0.3, female: 0.25 },
   db_floor_press: { male: 0.15, female: 0.1 },
+  single_arm_dumbbell_floor_press: { male: 0.14, female: 0.09 },
   db_bench_press: { male: 0.17, female: 0.11 },
   db_overhead_press: { male: 0.1, female: 0.07 },
   single_arm_db_overhead_press: { male: 0.12, female: 0.08 },
@@ -25,7 +26,9 @@ export const STARTING_LOAD_RATIO: Record<string, Record<Sex, number>> = {
   db_bent_over_row: { male: 0.15, female: 0.11 },
   db_renegade_row: { male: 0.12, female: 0.09 },
   db_lateral_raise: { male: 0.05, female: 0.035 },
+  single_arm_dumbbell_lateral_raise: { male: 0.05, female: 0.035 },
   db_curl: { male: 0.08, female: 0.055 },
+  single_arm_dumbbell_curl: { male: 0.08, female: 0.055 },
   db_overhead_triceps_extension: { male: 0.12, female: 0.08 },
   db_calf_raise: { male: 0.2, female: 0.15 },
   // Added with the 2026 evidence review.
@@ -84,7 +87,7 @@ const ITEM: Record<string, EquipmentItem | "always" | "never"> = {
   stable_shoulder_support: "bench", stable_foot_platform: "bench",
   dumbbell: "dumbbells", dumbbells: "dumbbells", nonrolling_dumbbells: "dumbbells",
   flat_bench: "flat_bench", adjustable_bench: "adjustable_bench",
-  resistance_band: "bands", assistance_band: "bands", loop_band: "bands",
+  resistance_band: "bands", assistance_band: "bands", loop_band: "loop_band",
   rated_row_anchor: "band_anchor", rated_high_anchor: "band_anchor", rated_chest_height_anchor: "band_anchor",
   suspension_trainer: "suspension", rated_suspension_anchor: "suspension",
   sliders: "sliders", towels: "sliders",
@@ -160,6 +163,10 @@ interface Spec {
   cue?: string;
   /** One side at a time even though the catalog counts it in total (or the other way round). */
   unilateral?: boolean;
+  /** A one-dumbbell version: planned only for someone without a pair, a swap for everyone else. */
+  withoutPairs?: boolean;
+  /** A stand-in, planned only while nothing heavier in its family is. */
+  light?: boolean;
 }
 
 /**
@@ -180,20 +187,21 @@ const SPECS: [string, Spec][] = [
   ["dumbbell_reverse_lunge", { id: "db_reverse_lunge", pattern: "squat", family: "lunge", load: "dumbbell_pair", ladder: "lunge_db", rep: 3, avoid: ["knee"], cue: "Step back, drop the back knee toward the floor, drive up through the front heel." }],
   ["dumbbell_bulgarian_split_squat", { id: "db_bulgarian_split_squat", pattern: "squat", family: "lunge", load: "dumbbell_pair", ladder: "lunge_db_bss", rep: 3, avoid: ["knee"], cue: "Rear foot on the bench, front shin vertical." }],
   ["supported_split_squat", { pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw_supported", rep: 3, avoid: ["knee"], bw: 0.75 }],
-  ["split_squat", { id: "bw_split_squat", pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw", rep: 2.5, avoid: ["knee"], bw: 0.8 }],
+  ["split_squat", { id: "bw_split_squat", pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw", level: 1, rep: 2.5, avoid: ["knee"], bw: 0.8 }],
   ["reverse_lunge", { id: "bw_reverse_lunge", pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw_reverse", rep: 3, avoid: ["knee"], bw: 0.8 }],
-  ["bulgarian_split_squat", { id: "bw_bulgarian_split_squat", pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw_bss", rep: 3, avoid: ["knee"], bw: 0.85 }],
+  ["bulgarian_split_squat", { id: "bw_bulgarian_split_squat", pattern: "squat", family: "lunge", load: "bodyweight", ladder: "lunge_bw", level: 3, rep: 3, avoid: ["knee"], bw: 0.85 }],
   ["step_up", { pattern: "squat", family: "lunge", load: "bodyweight", ladder: "stepup_bw", rep: 3, avoid: ["knee"], bw: 0.85 }],
   ["dumbbell_step_up", { pattern: "squat", family: "lunge", load: "dumbbell_pair", ladder: "stepup_db", rep: 3, avoid: ["knee"] }],
 
   // ---------------- Hinge: Romanian deadlifts, bridges, deadlifts ----------------
   ["dumbbell_romanian_deadlift", { id: "db_rdl", pattern: "hinge", family: "rdl", load: "dumbbell_pair", ladder: "hinge_db", rep: 3, avoid: ["low_back"], cue: "Soft knees, push your hips back, dumbbells slide down your thighs, flat back." }],
+  ["bodyweight_good_morning", { pattern: "hinge", family: "rdl", load: "bodyweight", ladder: "hinge_bw", rep: 3, avoid: ["low_back"], bw: 0.4, light: true, cue: "Hands on your chest or behind your head, soft knees, push your hips back with a flat back." }],
   ["staggered_stance_dumbbell_rdl", { id: "db_staggered_rdl", pattern: "hinge", family: "rdl", load: "dumbbell_pair", ladder: "hinge_db_staggered", rep: 3, avoid: ["low_back"] }],
   ["single_leg_dumbbell_rdl", { id: "db_single_leg_rdl", pattern: "hinge", family: "rdl", load: "single_dumbbell", ladder: "hinge_db_single", rep: 3.5, avoid: ["low_back"] }],
   ["band_romanian_deadlift", { pattern: "hinge", family: "rdl", load: "band", ladder: "hinge_band", rep: 3, setup: 10, avoid: ["low_back"] }],
   ["barbell_romanian_deadlift", { pattern: "hinge", family: "rdl", load: "barbell", ladder: "hinge_bb", rep: 3.5, setup: 60, bar: 20, avoid: ["low_back"] }],
-  ["glute_bridge", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "bridge_bw", rep: 2.5, bw: 0.4 }],
-  ["single_leg_glute_bridge", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "bridge_bw_single", rep: 2.5, bw: 0.45 }],
+  ["glute_bridge", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "bridge_bw", level: 1, rep: 2.5, bw: 0.4 }],
+  ["single_leg_glute_bridge", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "bridge_bw", level: 2, rep: 2.5, bw: 0.45 }],
   ["bodyweight_hip_thrust", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "thrust_bw", rep: 2.5, setup: 10, bw: 0.5 }],
   ["single_leg_hip_thrust", { pattern: "hinge", family: "bridge", load: "bodyweight", ladder: "thrust_bw_single", rep: 2.5, bw: 0.55, cue: "Upper back against a couch or sturdy chair, one foot planted, drive the hips up." }],
   ["dumbbell_glute_bridge", { id: "db_glute_bridge", pattern: "hinge", family: "bridge", load: "single_dumbbell", ladder: "bridge_db", rep: 2.5, cue: "Dumbbell across your hips, drive through your heels, squeeze at the top." }],
@@ -211,6 +219,7 @@ const SPECS: [string, Spec][] = [
   ["knee_push_up", { pattern: "horizontal_push", family: "hpush", load: "bodyweight", ladder: "hpush_knee", rep: 2, avoid: ["wrist"], bw: 0.5 }],
   ["feet_elevated_push_up", { pattern: "horizontal_push", family: "hpush", load: "bodyweight", ladder: "hpush_feet_up", rep: 2, avoid: ["wrist"], bw: 0.75 }],
   ["dumbbell_floor_press", { id: "db_floor_press", pattern: "horizontal_push", family: "hpush", load: "dumbbell_pair", ladder: "hpush_db", rep: 2.5, cue: "Lying on the floor, elbows touch down lightly each rep." }],
+  ["single_arm_dumbbell_floor_press", { pattern: "horizontal_push", family: "hpush", load: "single_dumbbell", ladder: "hpush_db_single", rep: 2.5, withoutPairs: true, cue: "Lying on the floor, free hand on your stomach; don't let your body roll toward the dumbbell." }],
   ["dumbbell_bench_press", { id: "db_bench_press", pattern: "horizontal_push", family: "hpush", load: "dumbbell_pair", ladder: "hpush_db", rep: 2.5, setup: 15 }],
   ["incline_dumbbell_bench_press", { pattern: "horizontal_push", family: "hpush", load: "dumbbell_pair", ladder: "hpush_db_incline", rep: 3, setup: 30 }],
   ["barbell_bench_press", { pattern: "horizontal_push", family: "hpush", load: "barbell", ladder: "hpush_bb", rep: 3, setup: 60, bar: 20 }],
@@ -219,12 +228,13 @@ const SPECS: [string, Spec][] = [
 
   // ---------------- Vertical push ----------------
   ["dumbbell_overhead_press", { id: "db_overhead_press", pattern: "vertical_push", family: "vpush", load: "dumbbell_pair", ladder: "vpush_db", rep: 2.5, avoid: ["shoulder"] }],
-  ["single_arm_dumbbell_overhead_press", { id: "single_arm_db_overhead_press", pattern: "vertical_push", family: "vpush", load: "single_dumbbell", ladder: "vpush_db_single", rep: 2.5, avoid: ["shoulder"] }],
+  ["single_arm_dumbbell_overhead_press", { id: "single_arm_db_overhead_press", pattern: "vertical_push", family: "vpush", load: "single_dumbbell", ladder: "vpush_db_single", rep: 2.5, avoid: ["shoulder"], withoutPairs: true }],
   ["machine_shoulder_press", { pattern: "vertical_push", family: "vpush", load: "machine", ladder: "vpush_machine", rep: 2.5, setup: 30, avoid: ["shoulder"] }],
   ["barbell_overhead_press", { pattern: "vertical_push", family: "vpush", load: "barbell", ladder: "vpush_bb", rep: 2.5, setup: 60, bar: 20, avoid: ["shoulder", "low_back"] }],
-  ["band_overhead_press", { pattern: "vertical_push", family: "vpush", load: "band", ladder: "vpush_band", rep: 2.5, setup: 10, avoid: ["shoulder"] }],
-  ["pike_push_up", { pattern: "vertical_push", family: "vpush", load: "bodyweight", ladder: "vpush_bw", level: 1, rep: 2.5, avoid: ["shoulder", "wrist"], bw: 0.55 }],
-  ["feet_elevated_pike_push_up", { id: "elevated_pike_push_up", pattern: "vertical_push", family: "vpush", load: "bodyweight", ladder: "vpush_bw", level: 2, rep: 2.5, avoid: ["shoulder", "wrist"], bw: 0.65 }],
+  ["band_overhead_press", { pattern: "vertical_push", family: "vpush", load: "band", ladder: "vpush_band", rep: 2.5, setup: 10, avoid: ["shoulder"], light: true }],
+  ["hands_elevated_pike_push_up", { pattern: "vertical_push", family: "vpush", load: "bodyweight", ladder: "vpush_bw", level: 1, rep: 2.5, avoid: ["shoulder", "wrist"], bw: 0.45, light: true, cue: "Hands on a stable step or chair seat that can't slide; hips high, head goes down between your hands." }],
+  ["pike_push_up", { pattern: "vertical_push", family: "vpush", load: "bodyweight", ladder: "vpush_bw", level: 2, rep: 2.5, avoid: ["shoulder", "wrist"], bw: 0.55, light: true }],
+  ["feet_elevated_pike_push_up", { id: "elevated_pike_push_up", pattern: "vertical_push", family: "vpush", load: "bodyweight", ladder: "vpush_bw", level: 4, rep: 2.5, avoid: ["shoulder", "wrist"], bw: 0.65, light: true }],
 
   // ---------------- Row ----------------
   ["dumbbell_bent_over_row", { id: "db_bent_over_row", pattern: "row", family: "row", load: "dumbbell_pair", ladder: "row_db", rep: 2.5, avoid: ["low_back"] }],
@@ -232,6 +242,7 @@ const SPECS: [string, Spec][] = [
   ["chest_supported_dumbbell_row", { pattern: "row", family: "row", load: "dumbbell_pair", ladder: "row_db_supported", rep: 2.5, setup: 30 }],
   ["renegade_row", { id: "db_renegade_row", pattern: "row", family: "row", load: "dumbbell_pair", ladder: "row_renegade", rep: 2.5, avoid: ["wrist", "low_back"] }],
   ["band_row", { pattern: "row", family: "row", load: "band", ladder: "row_band", rep: 2, setup: 20, cue: "Band anchored at chest height in a door anchor or around a sturdy post." }],
+  ["seated_band_row", { pattern: "row", family: "row", load: "band", ladder: "row_band_seated", rep: 2, setup: 10, light: true, cue: "Sit tall with the band looped around your feet; no anchor needed." }],
   ["suspension_row", { pattern: "row", family: "row", load: "bodyweight", ladder: "row_suspension", rep: 2.5, setup: 30, bw: 0.5 }],
   ["seated_cable_row", { pattern: "row", family: "row", load: "cable", ladder: "row_cable", rep: 3, setup: 30 }],
   ["chest_supported_machine_row", { pattern: "row", family: "row", load: "machine", ladder: "row_machine", rep: 3, setup: 45 }],
@@ -248,12 +259,16 @@ const SPECS: [string, Spec][] = [
 
   // ---------------- Isolation ----------------
   ["dumbbell_lateral_raise", { id: "db_lateral_raise", pattern: "isolation", family: "lateral_raise", load: "dumbbell_pair", ladder: "lateral_db", rep: 2.5, avoid: ["shoulder"] }],
+  ["single_arm_dumbbell_lateral_raise", { pattern: "isolation", family: "lateral_raise", load: "single_dumbbell", ladder: "lateral_db_single", rep: 2.5, avoid: ["shoulder"], withoutPairs: true }],
+  ["band_lateral_raise", { pattern: "isolation", family: "lateral_raise", load: "band", ladder: "lateral_band", rep: 2.5, setup: 10, avoid: ["shoulder"], light: true }],
   ["cable_lateral_raise", { pattern: "isolation", family: "lateral_raise", load: "cable", ladder: "lateral_cable", rep: 2.5, setup: 30, avoid: ["shoulder"] }],
   ["dumbbell_reverse_fly", { pattern: "isolation", family: "rear_delt", load: "dumbbell_pair", ladder: "rear_delt_db", rep: 2.5 }],
+  ["band_pull_apart", { pattern: "isolation", family: "rear_delt", load: "band", ladder: "rear_delt_band", rep: 2, light: true }],
   ["reverse_pec_deck", { pattern: "isolation", family: "rear_delt", load: "machine", ladder: "rear_delt_machine", rep: 2.5, setup: 30 }],
   ["dumbbell_curl", { id: "db_curl", pattern: "isolation", family: "biceps", load: "dumbbell_pair", ladder: "curl_db", rep: 2.5 }],
+  ["single_arm_dumbbell_curl", { pattern: "isolation", family: "biceps", load: "single_dumbbell", ladder: "curl_db_single", rep: 2.5, withoutPairs: true }],
   ["dumbbell_hammer_curl", { pattern: "isolation", family: "biceps", load: "dumbbell_pair", ladder: "curl_hammer", rep: 2.5 }],
-  ["band_curl", { pattern: "isolation", family: "biceps", load: "band", ladder: "curl_band", rep: 2, setup: 10 }],
+  ["band_curl", { pattern: "isolation", family: "biceps", load: "band", ladder: "curl_band", rep: 2, setup: 10, light: true }],
   ["machine_preacher_curl", { pattern: "isolation", family: "biceps", load: "machine", ladder: "curl_machine", rep: 3, setup: 30 }],
   ["ez_bar_curl", { pattern: "isolation", family: "biceps", load: "barbell", ladder: "curl_ez", rep: 2.5, setup: 45, bar: 10, avoid: ["wrist"] }],
   ["dumbbell_overhead_triceps_extension", { id: "db_overhead_triceps_extension", pattern: "isolation", family: "triceps", load: "single_dumbbell", ladder: "triceps_db", rep: 2.5, avoid: ["shoulder"] }],
@@ -266,14 +281,15 @@ const SPECS: [string, Spec][] = [
   ["seated_leg_curl", { pattern: "isolation", family: "knee_flexion", load: "machine", ladder: "leg_curl_seated", rep: 2.5, setup: 30 }],
   ["lying_leg_curl", { pattern: "isolation", family: "knee_flexion", load: "machine", ladder: "leg_curl_lying", rep: 2.5, setup: 30 }],
   ["dumbbell_calf_raise", { id: "db_calf_raise", pattern: "isolation", family: "calf", load: "single_dumbbell", ladder: "calf_db", rep: 2 }],
-  ["bodyweight_standing_calf_raise", { pattern: "isolation", family: "calf", load: "bodyweight", ladder: "calf_bw", rep: 2, bw: 1 }],
-  ["single_leg_bodyweight_calf_raise", { pattern: "isolation", family: "calf", load: "bodyweight", ladder: "calf_bw_single", rep: 2, bw: 1 }],
+  ["bodyweight_standing_calf_raise", { pattern: "isolation", family: "calf", load: "bodyweight", ladder: "calf_bw", level: 1, rep: 2, bw: 1 }],
+  ["single_leg_bodyweight_calf_raise", { pattern: "isolation", family: "calf", load: "bodyweight", ladder: "calf_bw", level: 2, rep: 2, bw: 1 }],
   ["standing_machine_calf_raise", { pattern: "isolation", family: "calf", load: "machine", ladder: "calf_machine", rep: 2.5, setup: 30 }],
   ["seated_machine_calf_raise", { pattern: "isolation", family: "calf", load: "machine", ladder: "calf_machine_seated", rep: 2.5, setup: 30 }],
   ["seated_dumbbell_calf_raise", { pattern: "isolation", family: "calf", load: "single_dumbbell", ladder: "calf_db_seated", rep: 2, setup: 10 }],
   ["side_lying_hip_abduction", { pattern: "isolation", family: "hip_abduction", load: "bodyweight", ladder: "abduction_bw", rep: 2, bw: 0.15 }],
   ["band_hip_abduction", { pattern: "isolation", family: "hip_abduction", load: "band", ladder: "abduction_band", rep: 2, setup: 10 }],
   ["hip_abduction_machine", { pattern: "isolation", family: "hip_abduction", load: "machine", ladder: "abduction_machine", rep: 2.5, setup: 30 }],
+  ["side_lying_hip_adduction", { pattern: "isolation", family: "hip_adduction", load: "bodyweight", ladder: "adduction_bw", rep: 2, bw: 0.15 }],
   ["hip_adduction_machine", { pattern: "isolation", family: "hip_adduction", load: "machine", ladder: "adduction_machine", rep: 2.5, setup: 30 }],
 
   // ---------------- Core ----------------
@@ -282,6 +298,7 @@ const SPECS: [string, Spec][] = [
   ["hollow_hold", { pattern: "core", family: "anti_extension", load: "time", ladder: "core_hollow", rep: 1, avoid: ["low_back"] }],
   ["kneeling_ab_roller_rollout", { id: "kneeling_ab_rollout", pattern: "core", family: "anti_extension", load: "bodyweight", ladder: "core_roller", level: 1, rep: 4, avoid: ["low_back"], cue: "Roll out only as far as you can keep your lower back from sagging." }],
   ["standing_ab_roller_rollout", { id: "standing_ab_rollout", pattern: "core", family: "anti_extension", load: "bodyweight", ladder: "core_roller", level: 2, rep: 5, avoid: ["low_back"] }],
+  ["bird_dog", { pattern: "core", family: "anti_rotation", load: "bodyweight", ladder: "core_bird_dog", rep: 4, cue: "Reach long with the opposite arm and leg; hips stay level as if balancing a cup on your back." }],
   ["side_plank", { pattern: "core", family: "anti_lateral", load: "time", ladder: "core_side", rep: 1 }],
   ["suitcase_carry", { pattern: "core", family: "anti_lateral", load: "time", ladder: "core_carry", rep: 1, cue: "Carry one heavy dumbbell at your side, walking tall without leaning." }],
   ["pallof_press", { pattern: "core", family: "anti_rotation", load: "band", ladder: "core_pallof", rep: 4, setup: 30 }],
@@ -321,6 +338,8 @@ function build(catalogId: string, s: Spec): Exercise {
   if (s.setup) e.setupSec = s.setup;
   if (s.bar !== undefined) e.barKg = s.bar;
   if (s.assisted) e.assisted = true;
+  if (s.withoutPairs) e.withoutPairs = true;
+  if (s.light) e.light = true;
   return e;
 }
 

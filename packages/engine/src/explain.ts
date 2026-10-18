@@ -61,6 +61,12 @@ export function explain(
     lines.push(
       `Your week has no ${listOf(extras.missingPatterns.map((p) => PATTERN_NAMES[p]))} work, because of your equipment, injuries or session length. Each superset pairs what is available instead.`,
     );
+    // Bodyweight alone can't load a pull; say what cheaply fixes it.
+    if (extras.missingPatterns.includes("row") && equipment.dumbbells.kind === "none" && equipment.bands.length === 0 && !equipment.pullupBar) {
+      lines.push(
+        "Your back muscles are trained by pulling, and bodyweight alone can't do that well at home. A long resistance band (rows sitting down, no anchor needed) or a dumbbell would add rows; a pull-up bar adds pull-ups.",
+      );
+    }
   }
   if (extras.benchmarkWeek) {
     lines.push(
