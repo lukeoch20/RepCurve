@@ -8,9 +8,9 @@ describe("exercise library", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("has every record of the evidence review's catalog: 106, one of them retired", () => {
+  it("has every record of the evidence review's catalog: 107, one of them retired", () => {
     expect(EXERCISES).toHaveLength(CATALOG.length);
-    expect(EXERCISES).toHaveLength(106);
+    expect(EXERCISES).toHaveLength(107);
     expect(EXERCISES.filter((e) => e.tier === "retired").map((e) => e.id)).toEqual(["towel_door_row"]);
     expect(EXERCISES.filter((e) => e.tier === "default")).toHaveLength(CATALOG.filter((c) => c.defaultPool).length);
   });
@@ -58,6 +58,16 @@ describe("exercise library", () => {
     for (const e of EXERCISES) {
       for (const r of [...e.evidence!.direct, ...e.evidence!.context]) expect(ids.has(r), `${e.id}: ${r}`).toBe(true);
     }
+  });
+
+  it("has a lying leg raise as the step up from the reverse crunch, kept away from sore lower backs", () => {
+    const crunch = findExercise("reverse_crunch")!;
+    const raise = findExercise("lying_leg_raise")!;
+    expect(raise.tier).toBe("default");
+    expect([raise.pattern, raise.family, raise.ladder]).toEqual([crunch.pattern, crunch.family, crunch.ladder]);
+    expect(raise.ladderLevel).toBeGreaterThan(crunch.ladderLevel);
+    expect(raise.avoidWith).toContain("low_back");
+    expect(raise.cue).toMatch(/lower back/);
   });
 
   it("counts stabilisers out of weekly volume", () => {
