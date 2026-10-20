@@ -1,6 +1,5 @@
 import {
   applySoreness,
-  prescriptionsOf,
   applyState,
   generateProgram,
   initialTrainingState,
@@ -11,6 +10,7 @@ import {
   type Program,
   type SessionPlan,
 } from "@repcurve/engine";
+import { findExercise } from "@repcurve/exercises";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { withProfile } from "./profile";
 import { currentSoreness } from "./soreness";
@@ -79,7 +79,7 @@ export function rescheduled(core: Core, profile: Profile, equipment: Equipment):
 
 export function planFor(core: Core, index: number, minutes?: number | null, lastCardioEffort?: number, weekDone?: SessionPlan[]): SessionPlan {
   const ctx = contextFor(core);
-  const exclude = core.regenerated?.index === index ? core.regenerated.exclude : [];
+  const exclude = core.regenerated?.index === index ? regeneratedExclude(core.regenerated.exclude, core.state.substitutions) : [];
   return planSessionWith(ctx, positionOf(core, index), {
     ...(exclude.length > 0 ? { exclude } : {}),
     ...(weekDone && weekDone.length > 0 ? { weekDone } : {}),
@@ -159,16 +159,30 @@ export function planExerciseIds(plan: SessionPlan): string[] {
   return [...plan.supersets.flatMap((ss) => ss.items.map((p) => p.exerciseId)), ...(plan.finisher ? [plan.finisher.exerciseId] : [])];
 }
 
+/**
+ * What a regenerated session leaves out, as the planner needs it: the exercises themselves, and
+ * anything the training state turns into one of them (a ladder move from the glute bridge to the
+ * single-leg one, a "do this instead" swap), or the plan would come straight back.
+ */
+function regeneratedExclude(exclude: string[], substitutions: Record<string, string>): string[] {
+  const out = new Set(exclude);
+  for (const [from, to] of Object.entries(substitutions)) if (out.has(to)) out.add(from);
+  return [...out];
+}
+
 /** The main movements a strength plan trains (squat, hinge, presses, pulls), arms and core aside. */
 function mainPatterns(plan: SessionPlan): Set<string> {
   return new Set(plan.supersets.flatMap((ss) => ss.items.map((p) => p.pattern)).filter((p) => p !== "isolation" && p !== "core"));
 }
 
+const patternOf = (id: string) => findExercise(id)?.pattern;
+
 /**
  * Today's strength session with other exercises, for someone not feeling the planned ones: the same
- * day, leaving out everything offered so far. It has to train the same main movements as the plan
- * and be about as much work; when leaving out everything offered so far can't manage that, only
- * what's on screen now is left out. Null when nothing else fits.
+ * day, leaving out everything offered so far (oldest first). It has to train the same main movements
+ * as the plan and be about as much work. When leaving everything out would lose a movement (only two
+ * rows to choose from), the one of it seen longest ago comes back, so a movement with few options
+ * takes turns rather than standing still. Null when nothing else fits.
  */
 export function regenerateToday(core: Core, history: SessionRecord[], now: number, minutes?: number | null): Core | null {
   const current = todayPlan(core, history, now, minutes);
@@ -177,19 +191,30 @@ export function regenerateToday(core: Core, history: SessionRecord[], now: numbe
   const needed = mainPatterns(planned);
   const shown = planExerciseIds(current);
   const before = isRegenerated(core) ? core.regenerated!.exclude : [];
+  const planWith = (exclude: string[]) => {
+    const next: Core = { ...core, regenerated: { index: core.nextIndex, exclude } };
+    return { next, plan: todayPlan(next, history, now, minutes) };
+  };
   let fallback: { core: Core; score: number } | null = null;
-  for (let exclude of [[...new Set([...before, ...shown])], shown]) {
-    let next: Core = { ...core, regenerated: { index: core.nextIndex, exclude } };
-    let plan = todayPlan(next, history, now, minutes);
-    // A movement with nothing else to do it (the only overhead press there is) keeps its exercise.
-    for (let i = 0; i < 2; i++) {
+  // Everything offered so far, oldest first (what's on screen last); else just what's on screen; else
+  // just its main lifts, so arm and core work can fill out a session that ran short of options.
+  const mainShown = shown.filter((id) => needed.has(patternOf(id) ?? ""));
+  const tries = [[...new Set([...before.filter((id) => !shown.includes(id)), ...shown])], shown, mainShown];
+  for (let exclude of tries) {
+    let { next, plan } = planWith(exclude);
+    for (let i = 0; i < 4; i++) {
       const has = mainPatterns(plan);
-      const keep = new Set(prescriptionsOf(current).filter((p) => needed.has(p.pattern) && !has.has(p.pattern)).map((p) => p.exerciseId));
-      if (keep.size === 0) break;
-      exclude = exclude.filter((id) => !keep.has(id));
-      if (exclude.length === 0) break;
-      next = { ...core, regenerated: { index: core.nextIndex, exclude } };
-      plan = todayPlan(next, history, now, minutes);
+      const missing = [...needed].filter((p) => !has.has(p));
+      if (missing.length === 0) break;
+      // Bring back, for each lost movement, the exercise of it seen longest ago: one not on screen now if there is one.
+      const back = missing.flatMap((p) => {
+        const of = exclude.filter((id) => patternOf(id) === p);
+        const pick = of.find((id) => !shown.includes(id)) ?? of[0];
+        return pick ? [pick] : [];
+      });
+      if (back.length === 0) break;
+      exclude = exclude.filter((id) => !back.includes(id));
+      ({ next, plan } = planWith(exclude));
     }
     const ids = planExerciseIds(plan);
     if (plan.kind !== "strength" || exclude.length === 0 || ids.every((id) => shown.includes(id))) continue;
@@ -197,7 +222,7 @@ export function regenerateToday(core: Core, history: SessionRecord[], now: numbe
     const covered = [...needed].filter((p) => has.has(p)).length;
     const enough = planWork(plan) >= 0.85 * planWork(planned);
     if (covered === needed.size && enough) return next;
-    const score = covered * 2 + (enough ? 1 : 0);
+    const score = covered * 2 + Math.min(1, planWork(plan) / planWork(planned));
     if (!fallback || score > fallback.score) fallback = { core: next, score };
   }
   return fallback?.core ?? null;

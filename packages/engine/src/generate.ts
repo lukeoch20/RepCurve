@@ -4,8 +4,9 @@ import { explain } from "./explain.js";
 import { deltHeadCeiling, volumeCeiling, volumeTarget } from "./level.js";
 import { buildStrengthSession, rampOf, variantsFor, type StrengthSessionInput } from "./session.js";
 import { applyState } from "./state.js";
+import { buildPool } from "./pool.js";
 import type { Muscle, Pattern } from "@repcurve/shared";
-import type { CardioActivity, GenerateInput, GenerateOptions, Program, SessionPlan } from "./types.js";
+import type { CardioActivity, GenerateInput, GenerateOptions, Pool, Program, SessionPlan } from "./types.js";
 import { DELT_HEADS, MUSCLES, ceilingVolume, emptyVolume, hardSets, weeklyDeltHeads, weeklyVolume } from "./volume.js";
 
 export const BASE_ROUNDS = 3;
@@ -111,6 +112,15 @@ function weekChain(ctx: EngineContext, week: number, opts: PlanOptions): (Sessio
   return finals;
 }
 
+const widePools = new WeakMap<EngineContext, Pool>();
+
+/** The context's pool with stand-ins planned too, for a regenerated session. */
+function widePool(ctx: EngineContext): Pool {
+  let pool = widePools.get(ctx);
+  if (!pool) widePools.set(ctx, (pool = buildPool(ctx.equipment, ctx.profile.injuries, ctx.profile, { standIns: true })));
+  return pool;
+}
+
 /** Inputs for the strength session at a position in the sequence. */
 function strengthInput(ctx: EngineContext, index: number, opts: PlanOptions, profile: EngineContext["profile"]): StrengthSessionInput {
   const { week, dayIndex } = weekAndDay(ctx, index);
@@ -197,7 +207,14 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
     // around the rest of the week.
     const weekPatterns = chain.flatMap((s, d) => (s && d !== dayIndex ? (done.get(d) ?? s).supersets.flatMap((ss) => ss.items.map((p) => p.pattern)) : []));
     const weekOthersHeads = weeklyDeltHeads(chain.flatMap((s, d) => (s && d !== dayIndex ? [done.get(d) ?? s] : [])));
-    const input = { ...strengthInput(ctx, index, opts, profile), weekOthers: others, weekOthersHeads, weekPatterns, ...(regenerate ? { exclude: opts.exclude! } : {}) };
+    const input = {
+      ...strengthInput(ctx, index, opts, profile),
+      weekOthers: others,
+      weekOthersHeads,
+      weekPatterns,
+      // A regenerated session may also use stand-ins (one-arm, band and bodyweight versions), for more to choose from.
+      ...(regenerate ? { exclude: opts.exclude!, pool: widePool(ctx) } : {}),
+    };
     // A longer day is the usual session plus more (when the usual session still fits the week and
     // today's time); otherwise the session is planned afresh.
     const extend = today && !regenerate && opts.minutes! > ctx.profile.minutesPerSession && !overWeek && steady.estimatedMinutes <= opts.minutes!;
