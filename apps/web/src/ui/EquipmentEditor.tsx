@@ -125,11 +125,15 @@ export function toEquipment(d: EqDraft): Equipment | null {
   };
 }
 
-/** What one place has: dumbbells first, then everything else, with a gym's bars, cables and machines. */
-export function EquipmentEditor(props: { place: Location; draft: EqDraft; onChange: (patch: Partial<EqDraft>) => void }): React.ReactElement {
+/**
+ * What one place has: dumbbells first, then everything else, with a gym's bars, cables and machines.
+ * `prefilled` says the list started from a typical gym's, to be checked (a new gym's, by default).
+ */
+export function EquipmentEditor(props: { place: Location; draft: EqDraft; onChange: (patch: Partial<EqDraft>) => void; prefilled?: boolean }): React.ReactElement {
   const d = props.draft;
   const up = props.onChange;
   const gym = props.place === "gym";
+  const prefilled = props.prefilled ?? gym;
   const hasGymKit = d.barbell || d.cables || d.machines.length > 0;
   const [showGymKit, setShowGymKit] = useState(gym || hasGymKit);
   const id = (k: string) => `${props.place}-${k}`;
@@ -141,7 +145,7 @@ export function EquipmentEditor(props: { place: Location; draft: EqDraft; onChan
 
   return (
     <div className="stack-lg">
-      {gym ? (
+      {prefilled ? (
         <p className="meta small">
           Filled in for a typical gym. Untick anything yours doesn't have; RepCurve only plans what's ticked.
         </p>

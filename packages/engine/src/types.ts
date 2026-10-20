@@ -145,6 +145,8 @@ export interface GenerateOptions {
 export interface GenerateInput {
   profile: Profile;
   equipment: Equipment;
+  /** Equipment the week's shape is set from, when it isn't `equipment` (see makeContext). */
+  scheduleEquipment?: Equipment;
 }
 
 /** How an exercise is loaded, for choosing between machines, free weights, bands and bodyweight. */

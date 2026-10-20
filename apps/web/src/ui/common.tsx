@@ -168,6 +168,7 @@ export const ICONS = {
   pause: "M8 5v14M16 5v14",
   play: "M7 5v14l11-7z",
   refresh: "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15",
+  plus: "M12 5v14M5 12h14",
 } as const;
 
 export type IconName = keyof typeof ICONS;

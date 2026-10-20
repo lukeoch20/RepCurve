@@ -81,23 +81,25 @@ describe("dayLabel", () => {
 
 describe("reducer: training at home and at a gym", () => {
   const gym: Equipment = { ...equipment, barbell: true, rack: true, cables: true, machines: ["leg_press", "lat_pulldown", "chest_press"] };
+  const both = { list: [{ id: "home", name: "Home", equipment }, { id: "gym", name: "Gym", equipment: gym }], usual: "home" };
 
-  it("plans from where the user trains today, and switches with the place", () => {
-    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+  it("plans from the setup in use, and switches with it", () => {
+    let s = reducer(loaded(), { type: "setup", profile, setups: both, now: T0 });
     expect(s.data.core!.equipment).toEqual(equipment);
-    s = reducer(s, { type: "location", at: "gym" });
+    s = reducer(s, { type: "chooseSetup", id: "gym", mode: "kept" });
     expect(s.data.core!.equipment).toEqual(gym);
-    expect(s.data.core!.locations!.at).toBe("gym");
-    // Changing units from Settings keeps both places.
-    s = reducer(s, { type: "setup", profile: { ...profile, units: "kg" }, equipment: s.data.core!.equipment, now: T0 });
-    expect(s.data.core!.locations!.home).toEqual(equipment);
+    expect(s.data.core!.setups.kept).toBe("gym");
+    // Changing units from Settings keeps both setups and the choice.
+    s = reducer(s, { type: "setup", profile: { ...profile, units: "kg" }, now: T0 });
+    expect(s.data.core!.setups.list.map((x) => x.equipment)).toEqual([equipment, gym]);
     expect(s.data.core!.equipment).toEqual(gym);
   });
 
-  it("doesn't switch place in the middle of a session", () => {
-    let s = reducer(loaded(), { type: "setup", profile, equipment, locations: { home: equipment, gym, at: "home" }, now: T0 });
+  it("doesn't switch setup in the middle of a session", () => {
+    let s = reducer(loaded(), { type: "setup", profile, setups: both, now: T0 });
     s = reducer(s, { type: "start", now: T0, minutes: null });
-    expect(reducer(s, { type: "location", at: "gym" })).toBe(s);
+    expect(reducer(s, { type: "chooseSetup", id: "gym", mode: "once" })).toBe(s);
+    expect(reducer(s, { type: "backToUsual" })).toBe(s);
   });
 });
 

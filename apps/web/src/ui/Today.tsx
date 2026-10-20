@@ -9,8 +9,8 @@ import { ReminderPrompt } from "./Reminders";
 import { canSuggestInstall, isIOS } from "../platform/install";
 import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
-import { Icon, Seg, Stepper } from "./common";
-import { placesOf } from "../model/equipment";
+import { Icon, Stepper } from "./common";
+import { SetupCard } from "./Setups";
 import { CardioLineup, Lineup } from "./Lineup";
 import { useTip } from "./tips";
 import { ChallengeCard } from "./Trophies";
@@ -20,7 +20,13 @@ import { SoreCheckCard } from "./SoreCheck";
 
 const DAY_MS = 86_400_000;
 
-export function Today(props: { core: Core; history: SessionRecord[] }): React.ReactElement {
+export function Today(props: {
+  core: Core;
+  history: SessionRecord[];
+  /** Open the setup picker straight away, on the way back from the setups screen. */
+  picker?: { note: string | null } | null;
+  onPickerShown?: () => void;
+}): React.ReactElement {
   const { core, history } = props;
   const { dispatch, storage } = useStore();
   const [minutes, setMinutes] = useState<number | null>(null);
@@ -79,17 +85,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         <SessionGlyph plan={plan} />
       </header>
 
-      {placesOf(core).length === 2 && core.locations ? (
-        <div className="field">
-          <span className="label">Training at</span>
-          <Seg
-            label="Training at"
-            value={core.locations.at}
-            onChange={(at) => dispatch({ type: "location", at })}
-            options={[{ value: "home", label: "Home" }, { value: "gym", label: "Gym" }]}
-          />
-        </div>
-      ) : null}
+      <SetupCard core={core} picker={props.picker ?? null} {...(props.onPickerShown ? { onPickerShown: props.onPickerShown } : {})} />
 
       <section className="card stack" style={{ gap: 14 }} ref={weekTip}>
         <div className="spread">
@@ -244,6 +240,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
           <p className="meta num">
             {last.activeMinutes} min{last.kind === "strength" ? ` · ${last.sets.length} sets` : last.cardio ? ` · effort ${last.cardio.effort}/10` : ""}
           </p>
+          {last.setup ? <p className="meta small setup-name">{last.setup.name}</p> : null}
         </section>
       ) : null}
     </div>
