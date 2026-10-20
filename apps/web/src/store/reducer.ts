@@ -1,8 +1,8 @@
 import type { SoreLevel, SwapReason } from "@repcurve/engine";
 import type { Equipment, Muscle, Profile } from "@repcurve/shared";
 import { addActivity, removeActivity } from "../model/activity";
-import { atLocation } from "../model/equipment";
 import { newCore, originalToday, regenerateToday, rescheduled } from "../model/plan";
+import { addSetup, backToUsual, chooseSetup, deleteSetup, duplicateSetup, endOneOff, makeUsual, updateSetup } from "../model/setups";
 import { cautionFine, forgetSwaps, profileFor, retest, settleRetests } from "../model/profile";
 import { answerSoreness } from "../model/soreness";
 import {
@@ -15,6 +15,7 @@ import {
   pause,
   removeAddedSet,
   removeSet,
+  sessionCore,
   setPainArea,
   resume,
   setTimerLength,
@@ -32,7 +33,7 @@ import {
   type SetRef,
   type SetValues,
 } from "../model/session";
-import type { AppData, CardioResult, ExtraActivity, Location, Locations, SessionRecord, Settings } from "../model/types";
+import type { AppData, CardioResult, ExtraActivity, SessionRecord, Settings, TrainingSetups } from "../model/types";
 
 export interface AppState {
   data: AppData;
@@ -51,10 +52,20 @@ export interface ActionFailure {
 
 export type Action =
   | { type: "loaded"; data: AppData }
-  /** `locations` replaces the places the user trains; leave it out to keep them. */
-  | { type: "setup"; profile: Profile; equipment: Equipment; locations?: Locations; now: number }
-  /** Train somewhere else today: the plan follows that place's equipment. */
-  | { type: "location"; at: Location }
+  /**
+   * First run: the profile and the places the person trains (`setups`, or one setup with `equipment`).
+   * Later: a new profile only; setups are changed with the setup actions below.
+   */
+  | { type: "setup"; profile: Profile; setups?: TrainingSetups; equipment?: Equipment; now: number }
+  /** Use a training setup for the next workout only, or keep using it until changed. Not during a workout. */
+  | { type: "chooseSetup"; id: string; mode: "once" | "kept" }
+  | { type: "backToUsual" }
+  /** Saved setups. A workout in progress keeps the setup it started with. */
+  | { type: "addSetup"; name: string; equipment: Equipment; now: number }
+  | { type: "updateSetup"; id: string; name?: string; equipment?: Equipment }
+  | { type: "duplicateSetup"; id: string; now: number }
+  | { type: "deleteSetup"; id: string }
+  | { type: "makeUsual"; id: string }
   | { type: "settings"; settings: Partial<Settings> }
   | { type: "addActivity"; activity: ExtraActivity }
   | { type: "removeActivity"; at: number }
@@ -118,23 +129,26 @@ export function reducer(s: AppState, a: Action): AppState {
     case "loaded":
       return { ...s, data: a.data, ready: true };
     case "setup": {
-      // First run creates the training record; later edits keep history and progress.
-      const locations = a.locations ?? core?.locations;
-      const here = locations ? atLocation(locations, locations.at) : null;
-      const equipment = here && a.locations ? here.equipment : a.equipment;
-      const nextCore = core ? rescheduled(core, a.profile, equipment) : newCore(a.profile, equipment, a.now);
-      if (locations) {
-        // The place being trained at keeps the equipment just saved.
-        nextCore.locations = { ...locations, [locations.at]: equipment };
-      }
-      return { ...s, data: { ...s.data, core: nextCore } };
+      // First run creates the training record; later edits keep history, progress and setups.
+      if (core) return { ...s, data: { ...s.data, core: rescheduled(core, a.profile) } };
+      const first = a.setups ? (a.setups.list.find((x) => x.id === a.setups!.usual) ?? a.setups.list[0])?.equipment : a.equipment;
+      if (!first) return s;
+      return { ...s, data: { ...s.data, core: newCore(a.profile, first, a.now, undefined, a.setups) } };
     }
-    case "location": {
-      if (!core?.locations || active) return s;
-      const here = atLocation(core.locations, a.at);
-      if (!here) return s;
-      return { ...s, data: { ...s.data, core: { ...rescheduled(core, core.profile, here.equipment), locations: here.locations } } };
-    }
+    case "chooseSetup":
+      return core && !active ? { ...s, data: { ...s.data, core: chooseSetup(core, a.id, a.mode) } } : s;
+    case "backToUsual":
+      return core && !active ? { ...s, data: { ...s.data, core: backToUsual(core) } } : s;
+    case "addSetup":
+      return core ? { ...s, data: { ...s.data, core: addSetup(core, a.name, a.equipment, a.now) } } : s;
+    case "updateSetup":
+      return core ? { ...s, data: { ...s.data, core: updateSetup(core, a.id, { ...(a.name !== undefined ? { name: a.name } : {}), ...(a.equipment ? { equipment: a.equipment } : {}) }) } } : s;
+    case "duplicateSetup":
+      return core ? { ...s, data: { ...s.data, core: duplicateSetup(core, a.id, a.now) } } : s;
+    case "deleteSetup":
+      return core ? { ...s, data: { ...s.data, core: deleteSetup(core, a.id) } } : s;
+    case "makeUsual":
+      return core ? { ...s, data: { ...s.data, core: makeUsual(core, a.id) } } : s;
     case "settings":
       return core ? { ...s, data: { ...s.data, core: { ...core, settings: { ...core.settings, ...a.settings } } } } : s;
     case "addActivity":
@@ -164,18 +178,21 @@ export function reducer(s: AppState, a: Action): AppState {
     case "skip": {
       if (!core || active) return s;
       const r = skipSession(core, history, a.now);
-      return { ...s, data: { ...s.data, core: r.core, history: [...history, r.record] } };
+      // A setup chosen for this workout only is used up with it.
+      return { ...s, data: { ...s.data, core: endOneOff(r.core), history: [...history, r.record] } };
     }
   }
 
   if (!core || !active) return s;
+  // A workout in progress works from the setup it started with.
+  const at = sessionCore(core, active);
   switch (a.type) {
     case "log":
-      return withActive(logSet(active, a.ref, a.values, core, a.now));
+      return withActive(logSet(active, a.ref, a.values, at, a.now));
     case "edit":
-      return withActive(editSet(active, a.slot, a.setIndex, a.values, core));
+      return withActive(editSet(active, a.slot, a.setIndex, a.values, at));
     case "remove":
-      return withActive(removeSet(active, a.slot, a.setIndex, core));
+      return withActive(removeSet(active, a.slot, a.setIndex, at));
     case "addSet":
       return withActive(addSet(active, a.slot));
     case "removeAddedSet":
@@ -191,8 +208,9 @@ export function reducer(s: AppState, a: Action): AppState {
     case "unskipSet":
       return withActive(unskipSet(active, a.slot, a.setIndex));
     case "swap": {
-      const r = swapExercise(active, core, a.slot, a.exerciseId, a.permanent, a.reason, profileFor(core, s.data.history, a.now ?? Date.now()));
-      return { ...s, data: { ...s.data, active: r.active, core: r.core } };
+      const r = swapExercise(active, at, a.slot, a.exerciseId, a.permanent, a.reason, profileFor(core, s.data.history, a.now ?? Date.now()));
+      // A swap for good changes the training state; the next workout's equipment stays as it was.
+      return { ...s, data: { ...s.data, active: r.active, core: { ...r.core, equipment: core.equipment } } };
     }
     case "warmup":
       return withActive(toggleWarmup(active, a.name));
@@ -213,10 +231,12 @@ export function reducer(s: AppState, a: Action): AppState {
     case "cardioNext":
       return withActive(skipSegment(active, a.now));
     case "discard":
-      return { ...s, data: { ...s.data, active: null } };
+      // Dropped without a record: a setup chosen for this workout only goes with it.
+      return { ...s, data: { ...s.data, core: endOneOff(core), active: null } };
     case "finish": {
-      const r = finishSession(active, core, a.now, a.cardio, a.at);
-      return { ...s, data: { core: settleRetests(r.core), active: null, history: [...history, r.record] }, finished: r.record };
+      const r = finishSession(active, at, a.now, a.cardio, a.at);
+      // The next workout uses the kept or usual setup again, with its own equipment.
+      return { ...s, data: { core: endOneOff(settleRetests(r.core)), active: null, history: [...history, r.record] }, finished: r.record };
     }
     default:
       return s;

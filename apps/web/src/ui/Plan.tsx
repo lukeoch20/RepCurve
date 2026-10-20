@@ -3,6 +3,7 @@ import { MUSCLES } from "@repcurve/engine";
 import { loadUnitsFor } from "@repcurve/shared";
 import { plural } from "../model/format";
 import { contextFor, currentProgram, weekSessions } from "../model/plan";
+import { findSetup, ongoingSetup } from "../model/setups";
 import type { Core, SessionRecord } from "../model/types";
 import { Icon } from "./common";
 import { ExerciseLibrary } from "./ExerciseInfo";
@@ -34,7 +35,16 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
   // Volume comes from the sessions as the user gets them now, so progress that changes them shows here.
   const program = useMemo(() => currentProgram(core), [core]);
   const { week, sessions } = useMemo(() => weekSessions(core, history, Date.now()), [core, history]);
+  // Weights in each session's own setup's units: the next one's, the one a done session used, or the one in use after.
   const units = loadUnitsFor(core.profile, core.equipment);
+  const laterUnits = loadUnitsFor(core.profile, ongoingSetup(core.setups).equipment);
+  const unitsOf = (index: number, status: string) => {
+    if (status === "next") return units;
+    if (status === "upcoming") return laterUnits;
+    const where = history.find((r) => r.index === index)?.setup;
+    const equipment = where ? findSetup(core.setups, where.id)?.equipment : undefined;
+    return equipment ? loadUnitsFor(core.profile, equipment) : units;
+  };
   const adjusted = adjustmentSummary(history);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const available = useMemo(() => new Set(contextFor(core).pool.exercises.map((e) => e.id)), [core]);
@@ -57,7 +67,7 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
 
       <section className="session-list" aria-label={`Week ${week} sessions`} ref={weekTip}>
         {sessions.map((s, i) => (
-          <SessionRow key={s.index} session={s} position={i} units={units} />
+          <SessionRow key={s.index} session={s} position={i} units={unitsOf(s.index, s.status)} />
         ))}
       </section>
 

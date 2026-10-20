@@ -5,10 +5,25 @@ import { MACHINES } from "@repcurve/shared";
 import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Rir, TrainingHistory, Units } from "@repcurve/shared";
 import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
+import { BODYWEIGHT_ID, MAX_NAME, MAX_SETUPS, cleanName, sessionSetup, setupsFrom, withSetups } from "./setups";
 import { MAX_ADDED_SETS } from "./session";
 import { migrateOverrides } from "./profile";
 import { migrateSoreCheck, migrateSoreness } from "./soreness";
-import { DATA_VERSION, DEFAULT_SETTINGS, EMPTY_DATA, type ActiveSession, type AppData, type Core, type LoggedSet, type Locations, type SessionRecord, type Settings } from "./types";
+import {
+  DATA_VERSION,
+  DEFAULT_SETTINGS,
+  EMPTY_DATA,
+  type ActiveSession,
+  type AppData,
+  type Core,
+  type LoggedSet,
+  type Locations,
+  type SessionRecord,
+  type SessionSetup,
+  type Settings,
+  type TrainingSetup,
+  type TrainingSetups,
+} from "./types";
 
 /**
  * Bring stored or imported data up to the current shape: fill defaults that older versions
@@ -100,6 +115,33 @@ export function migrateEquipment(e: unknown, units: Units): Equipment | null {
   if (Array.isArray(e["machines"])) out["machines"] = onlyKnown(e["machines"], MACHINES);
   else delete out["machines"];
   return upgradeEquipment(out as unknown as Equipment);
+}
+
+/**
+ * Saved training setups, each with equipment the app can plan from (a setup whose equipment can't
+ * be read is dropped, as is a second one with the same id), and choices that point at one that's there.
+ */
+function migrateSetups(x: unknown, units: Units): TrainingSetups | undefined {
+  if (!isObj(x) || !Array.isArray(x["list"])) return undefined;
+  const list: TrainingSetup[] = [];
+  for (const raw of x["list"] as unknown[]) {
+    if (!isObj(raw) || typeof raw["id"] !== "string" || raw["id"] === "" || raw["id"].length > 64 || raw["id"] === BODYWEIGHT_ID) continue;
+    if (list.some((s) => s.id === raw["id"])) continue;
+    const equipment = migrateEquipment(raw["equipment"], units);
+    if (!equipment) continue;
+    const name = typeof raw["name"] === "string" ? cleanName(raw["name"]) : "";
+    list.push({ ...(raw as object), id: raw["id"], name: name || "Setup", equipment });
+    if (list.length >= MAX_SETUPS) break;
+  }
+  const ids = new Set([...list.map((s) => s.id), BODYWEIGHT_ID]);
+  const ref = (v: unknown): string | undefined => (typeof v === "string" && ids.has(v) ? v : undefined);
+  const usual = ref(x["usual"]) ?? list[0]?.id ?? BODYWEIGHT_ID;
+  const out: TrainingSetups = { list, usual };
+  const kept = ref(x["kept"]);
+  if (kept) out.kept = kept;
+  const once = x["once"];
+  if (isObj(once) && ref(once["id"]) && isNum(once["index"])) out.once = { id: once["id"] as string, index: Math.max(0, Math.floor(once["index"])) };
+  return out;
 }
 
 function migrateLocations(l: unknown, units: Units): Locations | undefined {
@@ -235,25 +277,26 @@ export function migrateCore(c: unknown): Core | null {
     nextIndex,
   };
   delete core.activities;
-  delete core.locations;
+  delete (core as Partial<Core> & { locations?: unknown }).locations;
   delete core.positionOffset;
   if (Array.isArray(c["activities"])) {
     core.activities = (c["activities"] as unknown[]).filter(
       (a): a is NonNullable<Core["activities"]>[number] => isObj(a) && isNum(a["at"]) && isNum(a["minutes"]) && a["minutes"] > 0 && typeof a["name"] === "string",
     ).map((a) => ({ at: a.at, name: a.name, minutes: Math.min(a.minutes, 24 * 60), vigorous: a.vigorous === true }));
   }
-  const locations = migrateLocations(c["locations"], profile.units);
-  if (locations) {
-    core.locations = locations;
-    core.equipment = locations[locations.at]!;
-  }
   // The programme position never goes before the first session.
   if (isNum(c["positionOffset"])) core.positionOffset = Math.max(-nextIndex, Math.min(1e6, Math.floor(c["positionOffset"])));
-  return withValid(core, {
-    profileOverrides: migrateOverrides(c["profileOverrides"]),
-    soreCheck: migrateSoreCheck(c["soreCheck"]),
-    regenerated: migrateRegenerated(c["regenerated"]),
-  });
+  // Training setups; older data had one equipment list, or home and gym with the one in use. Either
+  // way the next workout keeps the equipment it had, and the place in use becomes the usual setup.
+  const setups = migrateSetups(c["setups"], profile.units) ?? setupsFrom(equipment, migrateLocations(c["locations"], profile.units));
+  return withSetups(
+    withValid(core, {
+      profileOverrides: migrateOverrides(c["profileOverrides"]),
+      soreCheck: migrateSoreCheck(c["soreCheck"]),
+      regenerated: migrateRegenerated(c["regenerated"]),
+    }),
+    setups,
+  );
 }
 
 /** A regenerated session: kept when it names a session and only exercises the library knows. */
@@ -356,7 +399,13 @@ export function migrateRecord(r: unknown): SessionRecord | null {
     comeback: r["comeback"] === true,
     skipped: r["skipped"] === true,
     ...migrateSwaps(r["swaps"]),
-  }, { soreness: migrateSoreness(r["soreness"]) });
+  }, { soreness: migrateSoreness(r["soreness"]), setup: migrateSessionSetup(r["setup"]) });
+}
+
+/** Where a session was done, when it says; a record from before setups says nothing and stays that way. */
+function migrateSessionSetup(x: unknown): SessionSetup | undefined {
+  if (!isObj(x) || typeof x["id"] !== "string" || x["id"] === "" || typeof x["name"] !== "string") return undefined;
+  return { id: x["id"].slice(0, 64), name: x["name"].slice(0, MAX_NAME * 2) || "Setup" };
 }
 
 /** Sets added per slot: whole numbers from 1 up to the most that can be added. */
@@ -367,7 +416,7 @@ function migrateExtraSets(x: unknown): Record<string, number> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-export function migrateActive(a: unknown): ActiveSession | null {
+export function migrateActive(a: unknown, units: Units = "kg"): ActiveSession | null {
   if (!isObj(a) || typeof a["id"] !== "string" || !isNum(a["index"]) || !isNum(a["startedAt"]) || !runnablePlan(a["plan"])) return null;
   const t = a["timer"];
   const timer = isObj(t) && (t["kind"] === "rest" || t["kind"] === "transition") && isNum(t["endsAt"]) && isNum(t["durationSec"]) ? { ...(t as object), next: typeof t["next"] === "string" ? t["next"] : "" } : null;
@@ -395,7 +444,14 @@ export function migrateActive(a: unknown): ActiveSession | null {
     skippedSlots: strings(a["skippedSlots"]),
     ...(skippedSets.length > 0 ? { skippedSets } : {}),
     ...migrateSwaps(a["swaps"]),
-  }, { soreness: migrateSoreness(a["soreness"]) });
+  }, { soreness: migrateSoreness(a["soreness"]), setup: migrateActiveSetup(a["setup"], units) });
+}
+
+/** The setup a session started with and its equipment then; without equipment that can be read, the session uses the next workout's. */
+function migrateActiveSetup(x: unknown, units: Units): ActiveSession["setup"] {
+  const where = migrateSessionSetup(x);
+  const equipment = where && isObj(x) ? migrateEquipment(x["equipment"], units) : null;
+  return where && equipment ? { ...where, equipment } : undefined;
 }
 
 export function migrateData(raw: unknown): AppData {
@@ -405,7 +461,9 @@ export function migrateData(raw: unknown): AppData {
     .map(migrateRecord)
     .filter((r): r is SessionRecord => r !== null)
     .sort((a, b) => a.index - b.index || a.finishedAt - b.finishedAt);
-  return { core, active: core ? migrateActive(raw["active"]) : null, history };
+  const active = core ? migrateActive(raw["active"], core.profile.units) : null;
+  // A workout started before setups existed began with the equipment in use then, which is still the next workout's.
+  return { core, active: active && core && !active.setup ? { ...active, setup: sessionSetup(core) } : active, history };
 }
 
 /** True when the data was saved by a newer version of RepCurve than this one. */

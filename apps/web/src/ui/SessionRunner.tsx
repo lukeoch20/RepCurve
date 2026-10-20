@@ -99,6 +99,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
               <p className="meta small num">
                 ~{Math.round(active.plan.estimatedMinutes)} min · {plural(exerciseCount(active.plan), "exercise")}
               </p>
+              {active.setup ? <p className="meta small setup-name">Setup: {active.setup.name}</p> : null}
             </div>
             <div style={{ textAlign: "right" }}>
               <div className="runner-clock" aria-label="Elapsed time">

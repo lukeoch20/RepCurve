@@ -12,7 +12,7 @@ import { PlanExplanation } from "./PlanExplanation";
 import { PrivacyLink } from "./Privacy";
 import { APP_NAME } from "../platform/channel";
 import { parseBackup } from "../model/backup";
-import type { AppData, Location, Locations } from "../model/types";
+import type { AppData, Location, TrainingSetup, TrainingSetups } from "../model/types";
 import { useStore } from "../store/useAppStore";
 
 interface Draft {
@@ -28,14 +28,14 @@ interface Draft {
   days: number;
   minutes: number;
   split: Split;
-  /** Where the user trains. */
+  /** Where the user trains (first run only: setups are edited on their own screen after that). */
   where: Where;
-  /** Equipment for each place; only the chosen places are saved. */
+  /** Equipment for each place; only the chosen places are saved, each as a training setup. */
   home: EqDraft;
   gym: EqDraft;
   /** The place shown on the equipment step when there are two. */
   tab: Location;
-  /** Where the next session happens. */
+  /** The usual place of the two. */
   at: Location;
   injuries: Injury[];
 }
@@ -47,15 +47,14 @@ function defaultUnits(): Units {
 
 type Where = "home" | "gym" | "both";
 
-function draftFrom(profile?: Profile, equipment?: Equipment, locations?: Locations): Draft {
+function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
   const units = profile?.units ?? defaultUnits();
   const totalIn = profile ? profile.heightCm / 2.54 : 0;
-  // Setups from before locations existed: one place, a gym if it has gym equipment.
-  const legacy: Location = equipment && hasGymEquipment(equipment) ? "gym" : "home";
-  const home = locations ? locations.home : legacy === "home" ? equipment : undefined;
-  const gym = locations ? locations.gym : legacy === "gym" ? equipment : undefined;
-  const where: Where = home && gym ? "both" : gym ? "gym" : "home";
-  const at: Location = locations?.at ?? (where === "gym" ? "gym" : "home");
+  const place: Location = equipment && hasGymEquipment(equipment) ? "gym" : "home";
+  const home = place === "home" ? equipment : undefined;
+  const gym = place === "gym" ? equipment : undefined;
+  const where: Where = place;
+  const at: Location = place;
   return {
     units,
     sex: profile?.sex,
@@ -111,15 +110,15 @@ function toProfile(d: Draft): Profile | null {
 
 const placesFor = (w: Where): Location[] => (w === "both" ? ["home", "gym"] : [w]);
 
-/** Equipment for each chosen place, or null while any of them is incomplete. */
-function toLocations(d: Draft): Locations | null {
-  const out: Locations = { at: d.where === "both" ? d.at : d.where };
+/** A training setup for each chosen place, or null while any of them is incomplete. */
+function toSetups(d: Draft): TrainingSetups | null {
+  const list: TrainingSetup[] = [];
   for (const p of placesFor(d.where)) {
-    const e = toEquipment(d[p]);
-    if (!e) return null;
-    out[p] = e;
+    const equipment = toEquipment(d[p]);
+    if (!equipment) return null;
+    list.push({ id: p, name: p === "home" ? "Home" : "Gym", equipment });
   }
-  return out;
+  return { list, usual: d.where === "both" ? d.at : d.where };
 }
 
 const SPLIT_OPTIONS: { value: Split; label: string; hint: string }[] = [
@@ -142,28 +141,33 @@ export const SPLIT_LABEL: Record<Split, string> = { push_pull: "Push / Pull", fu
 type Step = "welcome" | "you" | "experience" | "schedule" | "where" | "equipment" | "body" | "review";
 
 export function Onboarding(props: {
-  /** An existing user's setup, and strength sessions they've logged (their plan's volume steps up with them). */
-  initial?: { profile: Profile; equipment: Equipment; locations?: Locations; logged?: number };
-  onDone: (profile: Profile, equipment: Equipment, locations: Locations) => void;
+  /**
+   * An existing user's profile, the equipment their schedule is set from (the usual setup's), and
+   * strength sessions they've logged (their plan's volume steps up with them). Editing leaves
+   * equipment alone: training setups have their own screen.
+   */
+  initial?: { profile: Profile; equipment: Equipment; logged?: number };
+  /** The profile, and on first run the setups for where the person trains (null when editing). */
+  onDone: (profile: Profile, setups: TrainingSetups | null) => void;
   onCancel?: () => void;
 }): React.ReactElement {
   const editing = !!props.initial;
-  const steps: Step[] = editing ? ["you", "experience", "schedule", "where", "equipment", "body", "review"] : ["welcome", "you", "experience", "schedule", "where", "equipment", "body", "review"];
+  const steps: Step[] = editing ? ["you", "experience", "schedule", "body", "review"] : ["welcome", "you", "experience", "schedule", "where", "equipment", "body", "review"];
   const [i, setI] = useState(0);
-  const [d, setD] = useState<Draft>(() => draftFrom(props.initial?.profile, props.initial?.equipment, props.initial?.locations));
+  const [d, setD] = useState<Draft>(() => draftFrom(props.initial?.profile, props.initial?.equipment));
   const step = steps[i]!;
   const up = (patch: Partial<Draft>) => setD((x) => ({ ...x, ...patch }));
   const profile = toProfile(d);
-  const locations = toLocations(d);
-  const equipment = locations ? locations[locations.at]! : null;
+  const setups = editing ? null : toSetups(d);
+  const equipment = props.initial ? props.initial.equipment : setups ? (setups.list.find((x) => x.id === setups.usual) ?? setups.list[0])!.equipment : null;
   /** Equipment step: the place being edited (one of two, or the only one). */
   const editingPlace: Location = d.where === "both" ? d.tab : d.where;
-  const otherIncomplete = d.where === "both" && locations === null && toEquipment(d[editingPlace]) !== null;
+  const otherIncomplete = d.where === "both" && setups === null && toEquipment(d[editingPlace]) !== null;
 
   const canNext =
     step === "you" ? !!d.sex && body(d) !== null
       : step === "experience" ? !!d.history
-        : step === "equipment" ? equipment !== null
+        : step === "equipment" ? setups !== null
           : true;
   const youMissing = step === "you" && !canNext;
 
@@ -183,7 +187,7 @@ export function Onboarding(props: {
   };
 
   const next = () => {
-    if (step === "review" && profile && equipment && locations) props.onDone(profile, equipment, locations);
+    if (step === "review" && profile && equipment) props.onDone(profile, setups);
     else setI((x) => Math.min(steps.length - 1, x + 1));
     window.scrollTo(0, 0);
   };
@@ -356,6 +360,7 @@ export function Onboarding(props: {
               { value: "both", label: "Both", hint: "Set up each place, then pick where you are on the day" },
             ]}
           />
+          <p className="meta small">Each place is saved as a training setup. Add more, like a hotel gym or travel bands, any time from Today.</p>
         </section>
       ) : null}
 
@@ -375,9 +380,9 @@ export function Onboarding(props: {
           <EquipmentEditor key={editingPlace} place={editingPlace} draft={d[editingPlace]} onChange={(patch) => up({ [editingPlace]: { ...d[editingPlace], ...patch } } as Partial<Draft>)} />
           {d.where === "both" ? (
             <div className="field">
-              <span className="label">Where's your next workout?</span>
-              <Seg label="Next workout" value={d.at} onChange={(at) => up({ at })} options={[{ value: "home", label: "Home" }, { value: "gym", label: "Gym" }]} />
-              <span className="meta small">Switch any day from the Today screen; the workout follows the equipment.</span>
+              <span className="label">Where do you usually train?</span>
+              <Seg label="Usual setup" value={d.at} onChange={(at) => up({ at })} options={[{ value: "home", label: "Home" }, { value: "gym", label: "Gym" }]} />
+              <span className="meta small">Workouts use your usual setup. Pick the other one for any workout from the Today screen.</span>
             </div>
           ) : null}
         </section>

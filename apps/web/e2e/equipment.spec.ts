@@ -33,7 +33,7 @@ test("a gym comes filled in with machines, and a newcomer's plan uses them", asy
   await expect(page.getByText(/jump rope/i)).toHaveCount(0);
 });
 
-test("home and gym: each place has its own equipment, and Today switches between them", async ({ page }) => {
+test("home and gym: each place is a training setup, and Today switches between them", async ({ page }) => {
   await toWhere(page);
   await page.getByRole("button", { name: /^Both/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
@@ -46,10 +46,15 @@ test("home and gym: each place has its own equipment, and Today switches between
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Start training" }).click();
 
-  const where = page.getByRole("group", { name: "Training at" });
-  await expect(where.getByRole("button", { name: "Home" })).toHaveAttribute("aria-pressed", "true");
+  const card = page.getByRole("region", { name: "Training setup" });
+  await expect(card).toContainText("Home");
+  await expect(card).toContainText("Usual");
   await expect(page.getByRole("button", { name: /Leg press|Lat pulldown|Chest press/ })).toHaveCount(0);
-  await where.getByRole("button", { name: "Gym" }).click();
+  await card.getByRole("button", { name: "Change training setup" }).click();
+  const setups = page.getByRole("dialog", { name: "Training setup" }).getByRole("group", { name: "Training setups" });
+  await setups.getByRole("button", { name: /^Gym/ }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(card).toContainText("Gym");
   await expect(page.getByRole("button", { name: /Leg press|Lat pulldown|Chest press/ }).first()).toBeVisible();
 });
 

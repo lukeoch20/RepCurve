@@ -23,9 +23,10 @@ export interface Settings {
  * number tells an older app that newer data is in front of it. 3: an exercise in a superset may
  * do one set fewer than the superset's rounds (older apps would wait for a set they never show).
  * 4: sets can be added to an exercise mid-session (older apps would hide them and count them
- * toward progression).
+ * toward progression). 5: equipment lives in named training setups (`core.setups`) instead of the
+ * home and gym `locations`; older apps still plan from `core.equipment`, the next workout's.
  */
-export const DATA_VERSION = 4;
+export const DATA_VERSION = 5;
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 60, transitionSec: 20, sound: true, keepAwake: true, haptics: true };
 
@@ -42,13 +43,43 @@ export interface ExtraActivity {
   vigorous: boolean;
 }
 
+/** The two places first-run setup asks about. Training setups are named freely after that. */
 export type Location = "home" | "gym";
 
-/** Equipment for each place the user trains, and where today's training happens. */
+/** Equipment for home and gym as saved before training setups (data version 4 and older). */
 export interface Locations {
   home?: Equipment;
   gym?: Equipment;
   at: Location;
+}
+
+/** Saved equipment for one place someone trains (home, a gym, a hotel), named by them. */
+export interface TrainingSetup {
+  /** Stable id: sessions keep it with the name it had, so renaming or deleting changes no history. */
+  id: string;
+  name: string;
+  equipment: Equipment;
+}
+
+/**
+ * The user's training setups and which one workouts use. Exercises follow the equipment of the
+ * setup in use; the week's schedule follows the usual one, so a workout elsewhere never moves the
+ * programme. History and progression are shared by every setup.
+ */
+export interface TrainingSetups {
+  list: TrainingSetup[];
+  /** The setup workouts use unless another is chosen: a saved one's id, or "bodyweight" for Bodyweight only. */
+  usual: string;
+  /** "Keep using this setup": in use for every workout until changed or back to the usual one. */
+  kept?: string;
+  /** "This workout": a setup for one upcoming session only (its position in the sequence). */
+  once?: { id: string; index: number };
+}
+
+/** Where a session was done: the setup's id and its name at the time. */
+export interface SessionSetup {
+  id: string;
+  name: string;
 }
 
 /** Everything about the user and their training that isn't a session log. */
@@ -56,10 +87,13 @@ export interface Core {
   /** The data's shape version (DATA_VERSION when this app saved it; higher if a newer app did). */
   version: number;
   profile: Profile;
-  /** Equipment where the user is training now: what plans are built from. */
+  /**
+   * Equipment for the next workout: the selected training setup's (see setups.ts), kept in step
+   * whenever setups or the selection change. What plans are built from.
+   */
   equipment: Equipment;
-  /** Places the user trains. Missing on setups from before locations existed. */
-  locations?: Locations;
+  /** Saved equipment setups and which one is in use. */
+  setups: TrainingSetups;
   /** Activity logged outside RepCurve. Missing means none. */
   activities?: ExtraActivity[];
   settings: Settings;
@@ -160,6 +194,11 @@ export interface ActiveSession {
   extraSets?: Record<string, number>;
   /** The "still sore" check-in's answers before starting. Missing means not asked. */
   soreness?: Soreness[];
+  /**
+   * The training setup the session was started with, and its equipment then: the session keeps
+   * working from it however setups change. Missing on sessions started before setups.
+   */
+  setup?: SessionSetup & { equipment: Equipment };
 }
 
 export interface CardioResult {
@@ -190,6 +229,8 @@ export interface SessionRecord {
   swaps?: SwapEvent[];
   /** The "still sore" check-in's answers before the session. Missing when not asked. */
   soreness?: Soreness[];
+  /** Where it was done. Missing on skipped sessions and on sessions from before setups. */
+  setup?: SessionSetup;
 }
 
 export interface AppData {

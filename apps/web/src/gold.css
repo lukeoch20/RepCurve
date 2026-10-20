@@ -173,7 +173,7 @@
 [data-style="gold"] .btn.outline { border-color: var(--accent-line); }
 [data-style="gold"] .btn.ghost { border-color: transparent; }
 [data-style="gold"] .btn.danger { color: var(--stop); }
-[data-style="gold"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: #fff; }
+[data-style="gold"] .btn.danger.solid { background: var(--stop); border-color: var(--stop); color: var(--card); }
 /* disabled: flat, no metal (the [disabled] outranks the faceted frame) */
 [data-style="gold"] :is(.btn, .chip, .icon-btn)[disabled]:disabled { opacity: 1; color: var(--muted); background: var(--sunk); border-color: var(--control-line); border-radius: var(--radius-sm); box-shadow: none; clip-path: none; }
 [data-style="gold"] .btn.ghost[disabled]:disabled { background: transparent; border-color: transparent; opacity: 0.5; }
