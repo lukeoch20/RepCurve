@@ -33,9 +33,9 @@ describe("regenerating today's session", () => {
     const after = todayPlan(next, [], T0);
     expect(after.kind).toBe("strength");
     expect(after.name).toBe(before.name);
-    // New exercises, except one that's the only way to do its movement (the only overhead press there is).
+    // All new: even the only overhead press the planner uses gives way to a stand-in (a one-arm press).
     const first = planExerciseIds(before);
-    expect(planExerciseIds(after).filter((id) => first.includes(id))).toEqual(["db_overhead_press"]);
+    expect(planExerciseIds(after).filter((id) => first.includes(id))).toEqual([]);
     expect(planWork(after)).toBeGreaterThanOrEqual(0.85 * planWork(before));
     expect(after.estimatedMinutes).toBeLessThanOrEqual(profile.minutesPerSession + 1);
     // The same day trains (mostly) the same muscles.
@@ -61,6 +61,33 @@ describe("regenerating today's session", () => {
       c = next!;
       shown = ids;
     }
+  });
+
+  it("isn't pulled back by the training state, and a movement with few options takes turns", () => {
+    // A pull day for someone who moved up from glute bridges and swapped planks for dead bugs, with
+    // dumbbells and no bench: only two rows to choose from.
+    const pull: Profile = { ...profile, split: "push_pull", minutesPerSession: 20, daysPerWeek: 4 };
+    const noBench: Equipment = { ...dumbbells, bench: false, bands: [] };
+    let c: Core = newCore(pull, noBench, T0);
+    c = { ...c, state: { ...c.state, substitutions: { glute_bridge: "single_leg_glute_bridge", plank: "dead_bug" } } };
+    c = { ...c, nextIndex: [0, 1, 2, 3].find((i) => /pull/i.test(todayPlan({ ...c, nextIndex: i }, [], T0).name))! };
+    const planned = planExerciseIds(todayPlan(c, [], T0));
+    const seen: string[][] = [planned];
+    for (let i = 0; i < 5; i++) {
+      c = regenerateToday(c, [], T0)!;
+      seen.push(planExerciseIds(todayPlan(c, [], T0)));
+    }
+    // Each tap changes most of the session, not one exercise.
+    for (let i = 1; i < seen.length; i++) {
+      const fresh = seen[i]!.filter((id) => !seen[i - 1]!.includes(id)).length;
+      expect(fresh, `tap ${i}: ${seen[i]!.join(", ")}`).toBeGreaterThanOrEqual(Math.ceil(seen[i]!.length / 2));
+    }
+    // Every planned exercise gives way at some point, rows included; the single-leg bridge and dead bug don't stick.
+    for (const id of planned) expect(seen.slice(1).some((ids) => !ids.includes(id)), id).toBe(true);
+    for (const id of ["single_leg_glute_bridge", "dead_bug"]) expect(seen.slice(1).filter((ids) => ids.includes(id)).length, id).toBeLessThan(5);
+    // Both rows take turns rather than standing still.
+    const rows = seen.slice(1).map((ids) => ids.filter((id) => id === "one_arm_db_row" || id === "db_bent_over_row").join("+"));
+    expect(new Set(rows).size).toBeGreaterThan(1);
   });
 
   it("goes back to the original, and lapses once the session is done", () => {

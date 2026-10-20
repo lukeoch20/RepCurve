@@ -30,7 +30,13 @@ export function classOrder(equipment: Equipment, profile?: Pick<Profile, "traini
  * them can be chosen in a swap; only "default" exercises are planned automatically, and the
  * ladders (progression tracks) hold only those. Retired exercises stay in the library for history.
  */
-export function buildPool(equipment: Equipment, injuries: Injury[], profile?: Pick<Profile, "trainingHistory" | "goal">): Pool {
+export function buildPool(
+  equipment: Equipment,
+  injuries: Injury[],
+  profile?: Pick<Profile, "trainingHistory" | "goal">,
+  /** Plan stand-ins too (one-arm versions alongside a pair, band and bodyweight versions alongside weights): for variety on request. */
+  opts: { standIns?: boolean } = {},
+): Pool {
   const exercises = EXERCISES.filter(
     (e) =>
       e.tier !== "retired" &&
@@ -41,14 +47,14 @@ export function buildPool(equipment: Equipment, injuries: Injury[], profile?: Pi
   const byLadder = new Map<string, Exercise[]>();
   const pairs = canLoad("dumbbell_pair", equipment);
   // One-dumbbell versions fill in for someone without a pair; with a pair the two-handed one is planned.
-  const planned = exercises.filter((e) => e.tier === "default" && !(e.withoutPairs && pairs));
+  const planned = exercises.filter((e) => e.tier === "default" && (opts.standIns || !(e.withoutPairs && pairs)));
   // Stand-ins are only planned while nothing heavier in their family is: bodyweight gives way to a
   // band or weights, a band to weights.
   const weight = (e: Exercise) => (classOf(e) === "bodyweight" ? 0 : classOf(e) === "band" ? 1 : 2);
   const heaviest = new Map<string, number>();
   for (const e of planned) if (!e.light) heaviest.set(e.family, Math.max(heaviest.get(e.family) ?? 0, weight(e)));
   for (const e of planned) {
-    if (e.light && (heaviest.get(e.family) ?? 0) > weight(e)) continue;
+    if (!opts.standIns && e.light && (heaviest.get(e.family) ?? 0) > weight(e)) continue;
     const list = byLadder.get(e.ladder) ?? [];
     list.push(e);
     byLadder.set(e.ladder, list);
