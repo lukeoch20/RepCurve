@@ -11,6 +11,7 @@ import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { useTip } from "./tips";
 import { PIXEL_ICONS } from "./pixelIcons";
+import { AimTipCard } from "./AimTips";
 
 const UP = new Set(["load_up", "ladder_up", "widen_range"]);
 const DOWN = new Set(["load_down", "ladder_down", "pain"]);
@@ -135,6 +136,7 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
         </p>
       </section>
 
+      <AimTipCard core={props.core} record={r} history={props.history} />
       <section className="card stack" style={{ gap: 8 }}>
         <h2 className="h3">Why it matters</h2>
         <ul className="howto-list">

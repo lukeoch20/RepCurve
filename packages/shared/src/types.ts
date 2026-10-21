@@ -22,7 +22,13 @@ export interface Profile {
   units: Units;
   /** How strength sessions divide the body. Missing means full body (older setups). */
   split?: Split;
+  /** What the person most wants from training; picks the tips they see, not the plan. Missing until asked. */
+  aim?: Aim;
 }
+
+/** The outcome someone trains for, as they'd put it. */
+export type Aim = "lose_fat" | "build_muscle" | "get_stronger" | "get_fitter";
+export const AIMS: readonly Aim[] = ["lose_fat", "build_muscle", "get_stronger", "get_fitter"];
 
 /**
  * - full_body: every session trains everything

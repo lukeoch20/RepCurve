@@ -77,8 +77,8 @@ export function App(): React.ReactElement {
     body = (
       <Onboarding
         {...(core ? { initial: { profile: core.profile, equipment: scheduleEquipment(core.setups), logged: core.state.strengthSessionsLogged }, onCancel: () => setEditingSetup(false) } : {})}
-        onDone={(profile, setups) => {
-          store.dispatch({ type: "setup", profile, ...(setups ? { setups } : {}), now: Date.now() });
+        onDone={(profile, setups, account) => {
+          store.dispatch({ type: "setup", profile, ...(setups ? { setups } : {}), ...(account ? { account } : {}), now: Date.now() });
           setEditingSetup(false);
           setTab("today");
         }}

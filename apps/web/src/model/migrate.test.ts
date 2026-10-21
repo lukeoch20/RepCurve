@@ -143,3 +143,30 @@ describe("deload state", () => {
     expect(cleaned.sessionsSinceDeload).toBe(0);
   });
 });
+
+describe("usernames, aims and tips in saved data", () => {
+  const account = { userId: "11111111-1111-4111-8111-111111111111", secret: "ab".repeat(32), username: "Luke_O" };
+
+  it("keeps a claimed username with its id and secret, and drops one that can't be used", () => {
+    const core = { ...newCore(profile, equipment, 0), account };
+    expect(migrateCore(JSON.parse(JSON.stringify(core)))!.account).toEqual(account);
+    for (const bad of [{ ...account, userId: "me" }, { ...account, secret: "short" }, { ...account, username: "no spaces allowed" }, "Luke_O"]) {
+      expect("account" in migrateCore({ ...core, account: bad })!).toBe(false);
+    }
+    // Older data has none, and gets none.
+    expect("account" in migrateCore(newCore(profile, equipment, 0))!).toBe(false);
+  });
+
+  it("keeps the aim, and asks again for one this version doesn't know", () => {
+    expect(migrateCore(newCore({ ...profile, aim: "lose_fat" }, equipment, 0))!.profile.aim).toBe("lose_fat");
+    const odd = JSON.parse(JSON.stringify(newCore(profile, equipment, 0)));
+    odd.profile.aim = "bulk";
+    expect("aim" in migrateCore(odd)!.profile).toBe(false);
+  });
+
+  it("keeps tips after workouts turned off, and ignores a setting it can't read", () => {
+    const core = newCore(profile, equipment, 0);
+    expect(migrateCore({ ...core, settings: { ...core.settings, aimTips: false } })!.settings.aimTips).toBe(false);
+    expect("aimTips" in migrateCore({ ...core, settings: { ...core.settings, aimTips: "no" } })!.settings).toBe(false);
+  });
+});

@@ -19,6 +19,9 @@ import { ErrorLogSettings } from "./ErrorLog";
 import { Lock, LookPreview, useLooks } from "./Looks";
 import { KnowsLink } from "./Knows";
 import { useOpenSetups } from "./Setups";
+import { AccountSettings, FeedbackSettings } from "./Account";
+import { AimTipsSettings } from "./AimTips";
+import { deleteAccount, hasBackend } from "../platform/backend";
 import { currentSetup, usualSetup } from "../model/setups";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
@@ -104,6 +107,9 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       {msg ? <div className={`banner ${msg.tone}`} role="status">{msg.text}</div> : null}
 
+      <AccountSettings core={core} />
+      <FeedbackSettings core={core} history={data.history} />
+
       <section className="card stack">
         <h2 className="h3">Rest timer</h2>
         <div className="field">
@@ -138,6 +144,8 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
       <StyleSettings history={data.history} core={core} />
 
       <TipsSettings />
+
+      <AimTipsSettings core={core} />
 
       <SetupsSettings core={core} />
 
@@ -239,12 +247,17 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
                 type="button"
                 className="btn danger solid"
                 onClick={() => {
-                  // The copy kept to undo a restore and the error log go too, so nothing is left behind.
+                  // The copy kept to undo a restore and the error log go too, so nothing is left behind,
+                  // and the username is let go on the server when it can be reached.
                   clearCrashLog();
-                  void dropSafetyCopy().then(() => {
-                    setUndo(null);
-                    return replaceWith(EMPTY_DATA, "Everything was deleted.");
-                  });
+                  const account = core.account;
+                  void (account && hasBackend() ? deleteAccount(account) : Promise.resolve(null))
+                    .then(async (released) => {
+                      await dropSafetyCopy();
+                      setUndo(null);
+                      const kept = released && !(released.ok && released.value === "ok");
+                      return replaceWith(EMPTY_DATA, kept ? `Everything here was deleted. Your username, ${account!.username}, couldn't be released from RepCurve's server, so it stays taken.` : "Everything was deleted.");
+                    });
                 }}
               >
                 Delete everything

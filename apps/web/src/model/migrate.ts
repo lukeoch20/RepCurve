@@ -1,8 +1,8 @@
 import type { Split } from "@repcurve/shared";
 import { initialTrainingState, TARGET_RIR, type CardioActivity, type TrainingState } from "@repcurve/engine";
 import { findExercise } from "@repcurve/exercises";
-import { MACHINES } from "@repcurve/shared";
-import type { Band, Dumbbells, Equipment, Goal, Injury, Profile, Rir, TrainingHistory, Units } from "@repcurve/shared";
+import { AIMS, MACHINES } from "@repcurve/shared";
+import type { Aim, Band, Dumbbells, Equipment, Goal, Injury, Profile, Rir, TrainingHistory, Units } from "@repcurve/shared";
 import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
 import { BODYWEIGHT_ID, MAX_NAME, MAX_SETUPS, cleanName, sessionSetup, setupsFrom, withSetups } from "./setups";
@@ -13,6 +13,7 @@ import {
   DATA_VERSION,
   DEFAULT_SETTINGS,
   EMPTY_DATA,
+  type Account,
   type ActiveSession,
   type AppData,
   type Core,
@@ -59,8 +60,11 @@ const isUnits = (x: unknown): x is Units => x === "lb" || x === "kg";
 export function migrateProfile(p: unknown, dumbbellUnit?: unknown): Profile | null {
   if (!isObj(p) || (p["sex"] !== "male" && p["sex"] !== "female")) return null;
   if (!isNum(p["age"]) || !isNum(p["heightCm"]) || !isNum(p["bodyweightKg"])) return null;
+  const { aim, ...rest } = p;
   return {
-    ...(p as unknown as Profile),
+    ...(rest as unknown as Profile),
+    // Not asked yet, or an aim this version doesn't know: asked again.
+    ...(AIMS.includes(aim as Aim) ? { aim: aim as Aim } : {}),
     sex: p["sex"],
     age: clamp(p["age"], 14, 100),
     heightCm: clamp(p["heightCm"], 100, 250),
@@ -169,7 +173,7 @@ function validReminders(r: unknown): r is Reminders {
 
 function migrateSettings(s: unknown): Settings {
   // Fields from a newer version are kept; the ones this version knows are checked.
-  const { cardioActivity, reminders, ...o } = isObj(s) ? s : ({} as Obj);
+  const { cardioActivity, reminders, aimTips, ...o } = isObj(s) ? s : ({} as Obj);
   return {
     ...o,
     restSec: isNum(o["restSec"]) && o["restSec"] > 0 ? clamp(Math.round(o["restSec"]), 10, 600) : DEFAULT_SETTINGS.restSec,
@@ -177,6 +181,7 @@ function migrateSettings(s: unknown): Settings {
     sound: typeof o["sound"] === "boolean" ? o["sound"] : DEFAULT_SETTINGS.sound,
     keepAwake: typeof o["keepAwake"] === "boolean" ? o["keepAwake"] : DEFAULT_SETTINGS.keepAwake,
     haptics: typeof o["haptics"] === "boolean" ? o["haptics"] : DEFAULT_SETTINGS.haptics,
+    ...(typeof aimTips === "boolean" ? { aimTips } : {}),
     ...(typeof cardioActivity === "string" && ACTIVITIES.includes(cardioActivity as CardioActivity) ? { cardioActivity: cardioActivity as CardioActivity } : {}),
     ...(validReminders(reminders) ? { reminders } : {}),
   };
@@ -294,9 +299,21 @@ export function migrateCore(c: unknown): Core | null {
       profileOverrides: migrateOverrides(c["profileOverrides"]),
       soreCheck: migrateSoreCheck(c["soreCheck"]),
       regenerated: migrateRegenerated(c["regenerated"]),
+      account: migrateAccount(c["account"]),
     }),
     setups,
   );
+}
+
+/** A claimed username with the id and secret it was claimed with; anything less can't be used, so it's dropped. */
+function migrateAccount(a: unknown): Account | undefined {
+  if (!isObj(a)) return undefined;
+  const { userId, secret, username } = a;
+  const ok =
+    typeof userId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) &&
+    typeof secret === "string" && /^[0-9a-f]{32,128}$/i.test(secret) &&
+    typeof username === "string" && /^[A-Za-z0-9_]{3,20}$/.test(username);
+  return ok ? { userId, secret, username } : undefined;
 }
 
 /** A regenerated session: kept when it names a session and only exercises the library knows. */

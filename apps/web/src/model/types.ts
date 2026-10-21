@@ -16,6 +16,8 @@ export interface Settings {
   cardioActivity?: CardioActivity;
   /** Training days and time last added to the phone's calendar as reminders. */
   reminders?: Reminders;
+  /** A tip for the person's aim after each workout. Missing means on. */
+  aimTips?: boolean;
 }
 
 /**
@@ -82,6 +84,16 @@ export interface SessionSetup {
   name: string;
 }
 
+/**
+ * Who someone is to RepCurve's server: a random id and secret made on their device (needed to
+ * rename or delete the username), and the username they claimed with them.
+ */
+export interface Account {
+  userId: string;
+  secret: string;
+  username: string;
+}
+
 /** Everything about the user and their training that isn't a session log. */
 export interface Core {
   /** The data's shape version (DATA_VERSION when this app saved it; higher if a newer app did). */
@@ -113,6 +125,8 @@ export interface Core {
   soreCheck?: SoreCheck;
   /** The next session regenerated with other exercises ("not feeling it"). Missing means as planned. */
   regenerated?: Regenerated;
+  /** The username claimed on RepCurve's server. Missing until one is picked. */
+  account?: Account;
 }
 
 /** A regenerated session: the plan for one upcoming session, leaving out these exercises. */
