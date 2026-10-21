@@ -10,6 +10,7 @@ async function setUp(page: Page, split?: string) {
   await page.getByLabel("(in)").fill("6");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: /New to it/ }).click();
+  await page.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
   // Schedule: the split choice explains itself, with push/pull picked to start.
   const choice = page.getByRole("group", { name: "Split" });
@@ -57,6 +58,7 @@ test("push/pull/legs needs three lifting days, and says so", async ({ page }) =>
   await page.getByLabel("(in)").fill("6");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: /New to it/ }).click();
+  await page.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
   const choice = page.getByRole("group", { name: "Split" });
   const ppl = choice.getByRole("button", { name: /^Push \/ Pull \/ Legs/ });

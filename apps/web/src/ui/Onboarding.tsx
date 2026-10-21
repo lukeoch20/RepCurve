@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { SPLIT_MIN_STRENGTH_DAYS, effectiveSplit, hasGymEquipment, strengthDaysPerWeek } from "@repcurve/engine";
 import { kgToLb, lbToKg, loadUnitsFor } from "@repcurve/shared";
-import type { Equipment, Goal, Injury, Profile, Sex, Split, TrainingHistory, Units } from "@repcurve/shared";
+import type { Aim, Equipment, Goal, Injury, Profile, Sex, Split, TrainingHistory, Units } from "@repcurve/shared";
 import { Choice, CurveMark, Icon, Seg } from "./common";
 import { EquipmentEditor, eqDraftFrom, toEquipment, type EqDraft } from "./EquipmentEditor";
 import { Lineup } from "./Lineup";
@@ -12,10 +12,15 @@ import { PlanExplanation } from "./PlanExplanation";
 import { PrivacyLink } from "./Privacy";
 import { APP_NAME } from "../platform/channel";
 import { parseBackup } from "../model/backup";
-import type { AppData, Location, TrainingSetup, TrainingSetups } from "../model/types";
+import type { Account, AppData, Location, TrainingSetup, TrainingSetups } from "../model/types";
 import { useStore } from "../store/useAppStore";
+import { claimUsername, hasBackend, newIdentity, type Identity } from "../platform/backend";
+import { UsernameField, claimProblem, useUsernameCheck } from "./Account";
+import { AIM_OPTIONS } from "../model/aimTips";
 
 interface Draft {
+  /** The username to claim (first run, when there's a server to claim it on). */
+  username: string;
   units: Units;
   sex: Sex | undefined;
   age: string;
@@ -24,6 +29,7 @@ interface Draft {
   heightCm: string;
   weight: string;
   history: TrainingHistory | undefined;
+  aim: Aim | undefined;
   goal: Goal;
   days: number;
   minutes: number;
@@ -56,6 +62,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
   const where: Where = place;
   const at: Location = place;
   return {
+    username: "",
     units,
     sex: profile?.sex,
     age: profile ? String(profile.age) : "",
@@ -64,6 +71,7 @@ function draftFrom(profile?: Profile, equipment?: Equipment): Draft {
     heightCm: profile ? String(Math.round(profile.heightCm)) : "",
     weight: profile ? String(Math.round(units === "lb" ? kgToLb(profile.bodyweightKg) : profile.bodyweightKg)) : "",
     history: profile?.trainingHistory,
+    aim: profile?.aim,
     goal: profile?.goal ?? "both",
     days: profile?.daysPerWeek ?? 4,
     minutes: profile?.minutesPerSession ?? 20,
@@ -90,7 +98,7 @@ function body(d: Draft): { age: number; weight: number; heightCm: number } | nul
 
 function toProfile(d: Draft): Profile | null {
   const b = body(d);
-  if (!d.sex || !d.history || !b) return null;
+  if (!d.sex || !d.history || !d.aim || !b) return null;
   const { age, weight, heightCm } = b;
   return {
     sex: d.sex,
@@ -105,8 +113,12 @@ function toProfile(d: Draft): Profile | null {
     split: d.split,
     injuries: d.injuries,
     units: d.units,
+    aim: d.aim,
   };
 }
+
+/** The kind of week that usually suits an aim: the starting choice, which the person can change. */
+const GOAL_FOR_AIM: Record<Aim, Goal> = { lose_fat: "both", build_muscle: "strength_muscle", get_stronger: "strength_muscle", get_fitter: "fitness" };
 
 const placesFor = (w: Where): Location[] => (w === "both" ? ["home", "gym"] : [w]);
 
@@ -147,8 +159,11 @@ export function Onboarding(props: {
    * equipment alone: training setups have their own screen.
    */
   initial?: { profile: Profile; equipment: Equipment; logged?: number };
-  /** The profile, and on first run the setups for where the person trains (null when editing). */
-  onDone: (profile: Profile, setups: TrainingSetups | null) => void;
+  /**
+   * The profile, and on first run the setups for where the person trains (null when editing) and
+   * the username they claimed (null when they didn't, or the server couldn't be reached).
+   */
+  onDone: (profile: Profile, setups: TrainingSetups | null, account: Account | null) => void;
   onCancel?: () => void;
 }): React.ReactElement {
   const editing = !!props.initial;
@@ -159,14 +174,24 @@ export function Onboarding(props: {
   const up = (patch: Partial<Draft>) => setD((x) => ({ ...x, ...patch }));
   const profile = toProfile(d);
   const setups = editing ? null : toSetups(d);
+  // A username on first run, when there's a server to claim it on; one identity, kept through retries.
+  const askName = !editing && hasBackend();
+  const [identity] = useState<Identity>(newIdentity);
+  const [claimed, setClaimed] = useState<Account | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameNote, setNameNote] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const nameCheck = useUsernameCheck(d.username, identity.userId, claimed?.username);
+  // Unreachable server: carry on, and pick a username later (Today asks).
+  const nameReady = !askName || ["available", "yours", "offline", "unavailable"].includes(nameCheck);
   const equipment = props.initial ? props.initial.equipment : setups ? (setups.list.find((x) => x.id === setups.usual) ?? setups.list[0])!.equipment : null;
   /** Equipment step: the place being edited (one of two, or the only one). */
   const editingPlace: Location = d.where === "both" ? d.tab : d.where;
   const otherIncomplete = d.where === "both" && setups === null && toEquipment(d[editingPlace]) !== null;
 
   const canNext =
-    step === "you" ? !!d.sex && body(d) !== null
-      : step === "experience" ? !!d.history
+    step === "you" ? !!d.sex && body(d) !== null && nameReady && !claiming
+      : step === "experience" ? !!d.history && !!d.aim
         : step === "equipment" ? setups !== null
           : true;
   const youMissing = step === "you" && !canNext;
@@ -186,10 +211,31 @@ export function Onboarding(props: {
     });
   };
 
-  const next = () => {
-    if (step === "review" && profile && equipment) props.onDone(profile, setups);
-    else setI((x) => Math.min(steps.length - 1, x + 1));
+  const advance = () => {
+    setI((x) => Math.min(steps.length - 1, x + 1));
     window.scrollTo(0, 0);
+  };
+  const next = () => {
+    if (step === "review" && profile && equipment) return props.onDone(profile, setups, claimed);
+    if (step === "you" && askName && d.username && claimed?.username !== d.username) {
+      setClaiming(true);
+      setNameError(null);
+      void claimUsername(identity, d.username).then((r) => {
+        setClaiming(false);
+        if (r.ok && r.value === "ok") {
+          setClaimed({ ...identity, username: d.username });
+          setNameNote(null);
+          return advance();
+        }
+        if (!r.ok || r.value === "busy") {
+          setNameNote("Your username couldn't be saved just now. You can pick it later from Today or Settings.");
+          return advance();
+        }
+        setNameError(claimProblem(r.value));
+      });
+      return;
+    }
+    advance();
   };
   const back = () => {
     if (i === 0) props.onCancel?.();
@@ -226,6 +272,18 @@ export function Onboarding(props: {
             <h1 className="title">Start from where you are</h1>
             <p className="meta">Used to set safe starting weights and to compare your progress with people like you.</p>
           </header>
+          {askName ? (
+            <UsernameField
+              id="username"
+              value={d.username}
+              onChange={(username) => {
+                up({ username });
+                setNameError(null);
+              }}
+              check={nameCheck}
+              error={nameError}
+            />
+          ) : null}
           <div className="field">
             <span className="label">Units</span>
             <Seg label="Units" value={d.units} onChange={switchUnits} options={[{ value: "lb", label: "lb · ft" }, { value: "kg", label: "kg · cm" }]} />
@@ -283,7 +341,18 @@ export function Onboarding(props: {
             ]}
           />
           <div className="field">
-            <span className="label">What matters most?</span>
+            <span className="label">What do you most want from training?</span>
+            <Choice
+              label="Main aim"
+              value={d.aim}
+              // On first run the aim suggests the kind of week below; an existing plan is left as it is.
+              onChange={(aim) => up(editing ? { aim } : { aim, goal: GOAL_FOR_AIM[aim] })}
+              options={AIM_OPTIONS}
+            />
+            <span className="meta small">After each workout you'll get a tip for it, with the research behind it.</span>
+          </div>
+          <div className="field">
+            <span className="label">How should your week look?</span>
             <Choice
               label="Goal"
               value={d.goal}
@@ -416,7 +485,8 @@ export function Onboarding(props: {
 
       {step === "review" && profile && equipment ? <Review profile={profile} equipment={equipment} logged={props.initial?.logged ?? 0} /> : null}
 
-      {youMissing ? <p className="meta small">Fill in sex, age, height and weight to continue.</p> : null}
+      {youMissing ? <p className="meta small">{askName && !nameReady && d.sex && body(d) ? "Pick an available username to continue." : `Fill in ${askName ? "a username, " : ""}sex, age, height and weight to continue.`}</p> : null}
+      {nameNote && step === "experience" ? <p className="banner adjust" role="status">{nameNote}</p> : null}
 
       {step === "welcome" ? null : (
         <div className="footer-actions">
@@ -426,7 +496,7 @@ export function Onboarding(props: {
             </button>
           ) : null}
           <button type="button" className="btn primary" onClick={next} disabled={!canNext}>
-            {step === "review" ? (editing ? "Save changes" : "Start training") : "Next"}
+            {step === "review" ? (editing ? "Save changes" : "Start training") : claiming ? "Saving…" : "Next"}
           </button>
         </div>
       )}

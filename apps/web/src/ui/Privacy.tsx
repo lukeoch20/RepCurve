@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Sheet } from "./common";
+import { hasBackend } from "../platform/backend";
 
 declare const __RUNTIME__: "pwa" | "artifact";
 
@@ -8,9 +9,15 @@ const inClaude = (typeof __RUNTIME__ === "undefined" ? "artifact" : __RUNTIME__)
 
 /** What RepCurve keeps, where, and how to delete it. Plain facts only. */
 function PrivacyNote(): React.ReactElement {
+  // With a server for usernames and feedback; the claude.ai page never has one.
+  const server = hasBackend();
   return (
     <>
-      <p className="prose">No account, no analytics, no ads, and no server that receives your data.</p>
+      <p className="prose">
+        {server
+          ? "No analytics, no ads, no email or password. Your training stays on this device: RepCurve's server only gets your username and any feedback you send."
+          : "No account, no analytics, no ads, and no server that receives your data."}
+      </p>
       <section className="howto">
         <h3 className="eyebrow">What it keeps</h3>
         <ul className="howto-list">
@@ -18,6 +25,8 @@ function PrivacyNote(): React.ReactElement {
           <li>Injuries, where things hurt when you flag pain on a set, and how sore you said you were.</li>
           <li>Your training: your plan, every session you log, and your settings.</li>
           <li>A short log of errors the app hit, on this device only, for you to copy if you report a problem.</li>
+          {server ? <li>Your username, on RepCurve's server (run on Supabase), with a random ID and key made on this device so only it can change the name.</li> : null}
+          {server ? <li>Feedback you send, on the same server: your words, your username, the app version, your phone and browser, your style and how many workouts you've logged.</li> : null}
         </ul>
       </section>
       <section className="howto">
@@ -25,7 +34,9 @@ function PrivacyNote(): React.ReactElement {
         <p className="prose">
           {inClaude
             ? "In your Claude account, through claude.ai's storage for this page, so it follows you to any device where you open it. RepCurve doesn't send it anywhere else."
-            : "On this device, in this app's own storage. RepCurve doesn't send it anywhere."}
+            : server
+              ? "Your training is on this device, in this app's own storage, and isn't sent anywhere. Your username and feedback are the only things sent, to RepCurve's server."
+              : "On this device, in this app's own storage. RepCurve doesn't send it anywhere."}
         </p>
         <p className="prose">
           {inClaude
@@ -39,7 +50,10 @@ function PrivacyNote(): React.ReactElement {
       </section>
       <section className="howto">
         <h3 className="eyebrow">Delete everything</h3>
-        <p className="prose">Settings → Start over → Reset all data deletes your profile, injuries and training history, any copy saved to undo a restore, and the error log.</p>
+        <p className="prose">
+          Settings → Start over → Reset all data deletes your profile, injuries and training history, any copy saved to undo a restore, and the error log.
+          {server ? " It also deletes your username from RepCurve's server when there's a connection; feedback you sent stays, without your name." : ""}
+        </p>
         <p className="prose">
           {inClaude
             ? "This browser also keeps small preferences, like your style and which looks you have unlocked. Clearing this site's data in your browser deletes those."
@@ -48,7 +62,7 @@ function PrivacyNote(): React.ReactElement {
       </section>
       <section className="howto">
         <h3 className="eyebrow">Contact</h3>
-        <p className="prose">There's no contact address yet.</p>
+        <p className="prose">{server ? "Send feedback from Settings → Send feedback." : "There's no contact address yet."}</p>
       </section>
     </>
   );

@@ -33,7 +33,7 @@ import {
   type SetRef,
   type SetValues,
 } from "../model/session";
-import type { AppData, CardioResult, ExtraActivity, SessionRecord, Settings, TrainingSetups } from "../model/types";
+import type { Account, AppData, CardioResult, ExtraActivity, SessionRecord, Settings, TrainingSetups } from "../model/types";
 
 export interface AppState {
   data: AppData;
@@ -53,10 +53,13 @@ export interface ActionFailure {
 export type Action =
   | { type: "loaded"; data: AppData }
   /**
-   * First run: the profile and the places the person trains (`setups`, or one setup with `equipment`).
-   * Later: a new profile only; setups are changed with the setup actions below.
+   * First run: the profile, the places the person trains (`setups`, or one setup with `equipment`)
+   * and the username they claimed, if any. Later: a new profile only; setups and the username are
+   * changed with their own actions.
    */
-  | { type: "setup"; profile: Profile; setups?: TrainingSetups; equipment?: Equipment; now: number }
+  | { type: "setup"; profile: Profile; setups?: TrainingSetups; equipment?: Equipment; account?: Account; now: number }
+  /** A username claimed or changed on the server, or (null) let go. */
+  | { type: "account"; account: Account | null }
   /** Use a training setup for the next workout only, or keep using it until changed. Not during a workout. */
   | { type: "chooseSetup"; id: string; mode: "once" | "kept" }
   | { type: "backToUsual" }
@@ -133,7 +136,13 @@ export function reducer(s: AppState, a: Action): AppState {
       if (core) return { ...s, data: { ...s.data, core: rescheduled(core, a.profile) } };
       const first = a.setups ? (a.setups.list.find((x) => x.id === a.setups!.usual) ?? a.setups.list[0])?.equipment : a.equipment;
       if (!first) return s;
-      return { ...s, data: { ...s.data, core: newCore(a.profile, first, a.now, undefined, a.setups) } };
+      const fresh = newCore(a.profile, first, a.now, undefined, a.setups);
+      return { ...s, data: { ...s.data, core: a.account ? { ...fresh, account: a.account } : fresh } };
+    }
+    case "account": {
+      if (!core) return s;
+      const { account: _, ...rest } = core;
+      return { ...s, data: { ...s.data, core: a.account ? { ...rest, account: a.account } : rest } };
     }
     case "chooseSetup":
       return core && !active ? { ...s, data: { ...s.data, core: chooseSetup(core, a.id, a.mode) } } : s;

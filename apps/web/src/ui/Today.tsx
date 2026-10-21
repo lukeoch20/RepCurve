@@ -11,6 +11,7 @@ import { unlockAudio } from "../platform/device";
 import { useStore } from "../store/useAppStore";
 import { Icon, Stepper } from "./common";
 import { SetupCard } from "./Setups";
+import { PickUsernameCard } from "./Account";
 import { CardioLineup, Lineup } from "./Lineup";
 import { useTip } from "./tips";
 import { ChallengeCard } from "./Trophies";
@@ -86,6 +87,8 @@ export function Today(props: {
       </header>
 
       <SetupCard core={core} picker={props.picker ?? null} {...(props.onPickerShown ? { onPickerShown: props.onPickerShown } : {})} />
+
+      <PickUsernameCard core={core} />
 
       <section className="card stack" style={{ gap: 14 }} ref={weekTip}>
         <div className="spread">

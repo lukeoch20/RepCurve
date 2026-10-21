@@ -10,6 +10,7 @@ async function toWhere(page: import("@playwright/test").Page) {
   await page.getByLabel("(in)").fill("11");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: /A little/ }).click();
+  await page.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Next" }).click();
 }

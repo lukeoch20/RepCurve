@@ -55,6 +55,11 @@ jobs:
     needs: pages-enabled
     if: needs.pages-enabled.outputs.enabled == 'true'
     runs-on: ubuntu-latest
+    # The backend for usernames and feedback (supabase/README.md): repository variables, since the
+    # key is public by design. Unset, both apps build without usernames or feedback.
+    env:
+      VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      VITE_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
     steps:
       # The real app always comes from main, whichever branch was pushed.
       - uses: actions/checkout@v4
