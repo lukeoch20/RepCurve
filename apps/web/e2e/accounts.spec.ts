@@ -47,7 +47,8 @@ test("a new person picks a unique username while setting up, can change it, and 
   await expect(feedback).toContainText("Thanks! Your feedback was sent.");
   await expect(feedback.getByLabel(/What's working/)).toHaveValue("");
   expect(db.feedback).toHaveLength(1);
-  expect(db.feedback[0]).toMatchObject({ username: "LukeLifts", message: "The setup picker is great", meta: { channel: "main", workouts: 0, build: "dev" } });
+  // The build is the commit's short hash in CI, "dev" in a local build.
+  expect(db.feedback[0]).toMatchObject({ username: "LukeLifts", message: "The setup picker is great", meta: { channel: "main", workouts: 0, build: expect.stringMatching(/^(dev|[0-9a-f]{7})$/) } });
 
   // The privacy note says what goes to the server.
   await page.getByRole("button", { name: "What RepCurve keeps" }).click();
