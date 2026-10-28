@@ -7,6 +7,7 @@ apps/web/dist-artifact/
 apps/web/artifact/
 apps/web/test-results/
 apps/web/playwright-report/
+apps/web/sim-runs/
 
 # Local settings, such as the backend for usernames and feedback (supabase/README.md)
 apps/web/.env.local

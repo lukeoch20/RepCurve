@@ -11,7 +11,8 @@
     "generate": "pnpm --filter @repcurve/cli generate",
     "build:web": "pnpm --filter @repcurve/web build && pnpm --filter @repcurve/web build:test",
     "build:artifact": "pnpm --filter @repcurve/web build:artifact",
-    "e2e": "pnpm --filter @repcurve/web e2e"
+    "e2e": "pnpm --filter @repcurve/web e2e",
+    "sim": "pnpm --filter @repcurve/web sim"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
