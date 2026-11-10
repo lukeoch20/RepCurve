@@ -143,6 +143,18 @@ export const TIPS = [
     body: "Every session of this week, with what's done and what's next. Tap a session to see its exercises.",
   },
   {
+    id: "plan.mobility",
+    kind: "app",
+    title: "Mobility sessions",
+    body: "Short stretching and mobility routines, apart from your workouts. Start the six-week hips block, or do a quick one whenever you like. They're extra: your plan stays as it is.",
+  },
+  {
+    id: "mobility.timer",
+    kind: "app",
+    title: "The timer runs the holds",
+    body: "Each hold counts down and beeps, then tells you when to switch sides. Slow reps go at your own pace: tap Done. Pause, skip a drill or tap Something hurts at any point.",
+  },
+  {
     id: "progress.charts",
     kind: "app",
     title: "Your progress",

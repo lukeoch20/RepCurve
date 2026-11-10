@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useReducer, useRef, useState } from "rea
 import { migrateData, savedByNewerVersion } from "../model/migrate";
 import { DATA_VERSION, EMPTY_DATA, type AppData } from "../model/types";
 import { logCrash } from "../platform/crashLog";
+import { loadMobilitySession, saveMobilitySession } from "../platform/mobilitySession";
 import { isStorageFull, memoryPersistence, openPersistence, STORAGE_FULL, type Persistence, type StorageKind } from "./persistence";
 import { INITIAL, safeReducer, type Action, type AppState } from "./reducer";
 
@@ -36,6 +37,8 @@ export function useAppStore(): AppStore {
   const saved = useRef<AppData>(EMPTY_DATA);
   const current = useRef<AppData>(EMPTY_DATA);
   current.current = state.data;
+  /** True once a mobility session kept on this device has been read back, so the first save can't wipe it. */
+  const mobilityRead = useRef(false);
 
   // An action threw and changed nothing: keep a note of it on the device and say so.
   useEffect(() => {
@@ -93,11 +96,18 @@ export function useAppStore(): AppStore {
             : null),
       );
       dispatch({ type: "loaded", data });
+      dispatch({ type: "mobilityRestore", saved: loadMobilitySession(), now: Date.now() });
+      mobilityRead.current = true;
     })();
     return () => {
       cancelled = true;
     };
   }, [reload]);
+
+  // A mobility session under way is kept on this device, so a reload picks it up where it was.
+  useEffect(() => {
+    if (state.ready && mobilityRead.current) saveMobilitySession(state.mobility);
+  }, [state.mobility, state.ready]);
 
   // Save whatever changed since the last save.
   useEffect(() => {
