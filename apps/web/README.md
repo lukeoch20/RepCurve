@@ -65,4 +65,5 @@ Until Pages is on, the deploy workflow skips with a notice instead of failing.
 pnpm --filter @repcurve/web dev       # local dev server
 pnpm build:web && pnpm e2e            # build, then browser tests on an iPhone-sized viewport
 pnpm --filter @repcurve/web icons     # re-render the PNG icons from SVG
+pnpm sim --personas dana --visits 2   # AI personas try RepCurve Test over simulated weeks (sim/README.md)
 ```
