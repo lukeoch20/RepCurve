@@ -1,6 +1,33 @@
 import type { SoreLevel, SwapReason } from "@repcurve/engine";
+import { findRoutine } from "@repcurve/exercises";
 import type { Equipment, Muscle, Profile } from "@repcurve/shared";
 import { addActivity, removeActivity } from "../model/activity";
+import {
+  anotherRound,
+  endBlock,
+  finishMobility,
+  handsFreeOn,
+  MOBILITY_STALE_MS,
+  nextMobility,
+  pauseBlock,
+  pauseMobility,
+  restartStep,
+  restoreMobility,
+  resumeBlock,
+  resumeMobility,
+  routinePlan,
+  sessionHandsFree,
+  setBlockLevel,
+  setHandsFree,
+  setLeftOut,
+  skipDrill,
+  startBlock,
+  startMobility,
+  tickMobility,
+  trainedFamilies,
+  type ActiveMobility,
+  type MobilityEntry,
+} from "../model/mobility";
 import { newCore, originalToday, regenerateToday, rescheduled } from "../model/plan";
 import { addSetup, backToUsual, chooseSetup, deleteSetup, duplicateSetup, endOneOff, makeUsual, updateSetup } from "../model/setups";
 import { cautionFine, forgetSwaps, profileFor, retest, settleRetests } from "../model/profile";
@@ -40,6 +67,10 @@ export interface AppState {
   ready: boolean;
   /** The session just finished, shown as a summary until dismissed. */
   finished: SessionRecord | null;
+  /** A mobility session under way. Kept on this device only, not with the saved data (see useAppStore). */
+  mobility: ActiveMobility | null;
+  /** The mobility session just finished, shown as a summary until dismissed. */
+  mobilityDone: MobilityEntry | null;
   /** The last action that threw, which changed nothing (see safeReducer). */
   failure?: ActionFailure;
 }
@@ -107,9 +138,36 @@ export type Action =
   | { type: "finish"; now: number; cardio?: CardioResult; at?: number }
   | { type: "discard" }
   | { type: "skip"; now: number }
-  | { type: "dismissFinished" };
+  | { type: "dismissFinished" }
+  /** Mobility: start a routine's session at a level (0-based), as a one-off or as the block's next. */
+  | { type: "mobilityStart"; routine: string; level: number; block: boolean; now: number }
+  | { type: "mobilityTick"; now: number }
+  /** Move on: start what was waiting, finish the reps, or end a hold early. */
+  | { type: "mobilityNext"; now: number }
+  | { type: "mobilityPause"; now: number }
+  | { type: "mobilityResume"; now: number }
+  /** Leave the rest of the current drill; `hurt` when it's stopped for pain. */
+  | { type: "mobilitySkip"; now: number; hurt?: boolean }
+  | { type: "mobilityRestart"; now: number }
+  /** Holds follow on by themselves, or wait for a tap: for this session and from now on. */
+  | { type: "mobilityHandsFree"; on: boolean; now: number }
+  /** End the session, keeping what was done. `hurt`: ended because the drill under way hurt, which is noted. */
+  | { type: "mobilityFinish"; now: number; hurt?: boolean }
+  | { type: "mobilityDiscard" }
+  | { type: "mobilityDismiss" }
+  /** A session read back from this device after a reload. */
+  | { type: "mobilityRestore"; saved: unknown; now: number }
+  | { type: "blockStart"; routine: string; now: number }
+  | { type: "blockPause"; now: number }
+  | { type: "blockResume" }
+  | { type: "blockEnd" }
+  /** After the review: the same block again. */
+  | { type: "blockAgain"; now: number }
+  /** Stay at a level (0-based), or null for the block's own pace. */
+  | { type: "blockLevel"; level: number | null }
+  | { type: "mobilityLeaveOut"; routine: string; drill: string; out: boolean };
 
-export const INITIAL: AppState = { data: { core: null, active: null, history: [] }, ready: false, finished: null };
+export const INITIAL: AppState = { data: { core: null, active: null, history: [] }, ready: false, finished: null, mobility: null, mobilityDone: null };
 
 /**
  * The reducer the app runs: an action that throws (an engine error on data it didn't expect)
@@ -127,10 +185,13 @@ export function safeReducer(s: AppState, a: Action): AppState {
 export function reducer(s: AppState, a: Action): AppState {
   const { core, active, history } = s.data;
   const withActive = (next: typeof active): AppState => (next === active ? s : { ...s, data: { ...s.data, active: next } });
+  const withCore = (next: typeof core): AppState => (next === core ? s : { ...s, data: { ...s.data, core: next } });
+  const withMobility = (next: ActiveMobility | null): AppState => (next === s.mobility ? s : { ...s, mobility: next });
 
   switch (a.type) {
     case "loaded":
-      return { ...s, data: a.data, ready: true };
+      // With the setup gone (a reset), a mobility session under way goes with it.
+      return { ...s, data: a.data, ready: true, ...(a.data.core ? {} : { mobility: null, mobilityDone: null }) };
     case "setup": {
       // First run creates the training record; later edits keep history, progress and setups.
       if (core) return { ...s, data: { ...s.data, core: rescheduled(core, a.profile) } };
@@ -180,10 +241,63 @@ export function reducer(s: AppState, a: Action): AppState {
     case "originalToday":
       return core && !active && core.regenerated ? { ...s, data: { ...s.data, core: originalToday(core) } } : s;
     case "start":
-      if (!core || active) return s;
+      if (!core || active || s.mobility) return s;
       return { ...s, data: { ...s.data, active: startSession(core, history, a.now, a.minutes) } };
     case "dismissFinished":
       return { ...s, finished: null };
+    case "mobilityStart": {
+      const routine = findRoutine(a.routine);
+      if (!core || active || s.mobility || !routine) return s;
+      const plan = routinePlan(core, routine, a.level, trainedFamilies(core, history, a.now));
+      if (plan.steps.length === 0) return s;
+      return { ...s, mobility: startMobility(plan, { block: a.block, handsFree: handsFreeOn(core) }, a.now), mobilityDone: null };
+    }
+    case "mobilityRestore": {
+      const saved = core && !s.mobility ? restoreMobility(a.saved, a.now) : null;
+      if (!core || !saved) return s;
+      // Left open for hours, or a workout is under way (started in another tab): closed as of when
+      // it last moved, keeping what was done. Only one session runs at a time.
+      if (active || a.now - saved.touchedAt > MOBILITY_STALE_MS) return withCore(finishMobility(saved, core, a.now, saved.touchedAt).core);
+      return { ...s, mobility: saved };
+    }
+    case "mobilityTick":
+      return s.mobility ? withMobility(tickMobility(s.mobility, a.now)) : s;
+    case "mobilityNext":
+      return s.mobility ? withMobility(nextMobility(s.mobility, a.now)) : s;
+    case "mobilityPause":
+      return s.mobility ? withMobility(pauseMobility(s.mobility, a.now)) : s;
+    case "mobilityResume":
+      return s.mobility ? withMobility(resumeMobility(s.mobility, a.now)) : s;
+    case "mobilitySkip":
+      return s.mobility ? withMobility(skipDrill(s.mobility, a.now, a.hurt === true)) : s;
+    case "mobilityRestart":
+      return s.mobility ? withMobility(restartStep(s.mobility, a.now)) : s;
+    case "mobilityHandsFree":
+      if (!core) return s;
+      return { ...s, data: { ...s.data, core: setHandsFree(core, a.on) }, mobility: s.mobility ? sessionHandsFree(s.mobility, a.on, a.now) : null };
+    case "mobilityFinish": {
+      if (!core || !s.mobility) return s;
+      const r = finishMobility(a.hurt ? skipDrill(s.mobility, a.now, true) : s.mobility, core, a.now);
+      return { ...s, data: { ...s.data, core: r.core }, mobility: null, mobilityDone: r.entry };
+    }
+    case "mobilityDiscard":
+      return withMobility(null);
+    case "mobilityDismiss":
+      return { ...s, mobilityDone: null };
+    case "blockStart":
+      return core ? withCore(startBlock(core, a.routine, a.now)) : s;
+    case "blockPause":
+      return core ? withCore(pauseBlock(core, a.now)) : s;
+    case "blockResume":
+      return core ? withCore(resumeBlock(core)) : s;
+    case "blockEnd":
+      return core ? withCore(endBlock(core)) : s;
+    case "blockAgain":
+      return core ? withCore(anotherRound(core, a.now)) : s;
+    case "blockLevel":
+      return core ? withCore(setBlockLevel(core, a.level)) : s;
+    case "mobilityLeaveOut":
+      return core ? withCore(setLeftOut(core, a.routine, a.drill, a.out)) : s;
     case "skip": {
       if (!core || active) return s;
       const r = skipSession(core, history, a.now);

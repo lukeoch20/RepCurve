@@ -24,6 +24,7 @@ function PrivacyNote(): React.ReactElement {
           <li>Your profile: sex, age, height and body weight.</li>
           <li>Injuries, where things hurt when you flag pain on a set, and how sore you said you were.</li>
           <li>Your training: your plan, every session you log, and your settings.</li>
+          <li>Mobility sessions from the last year, and any drill you stopped because it hurt.</li>
           <li>A short log of errors the app hit, on this device only, for you to copy if you report a problem.</li>
           {server ? <li>Your username, on RepCurve's server (run on Supabase), with a random ID and key made on this device so only it can change the name.</li> : null}
           {server ? <li>Feedback you send, on the same server: your words, your username, the app version, your phone and browser, your style and how many workouts you've logged.</li> : null}

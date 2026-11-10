@@ -45,7 +45,11 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
   const earned = React.useMemo(() => newBadges(r, props.history, props.core), [r, props.history, props.core]);
   const levels = React.useMemo(() => (r.kind === "strength" ? levelUps(r, props.history) : []), [r, props.history]);
   // The session screen was scrolled; the celebration starts at the top.
-  React.useEffect(() => window.scrollTo(0, 0), []);
+  // A block body, so the effect returns nothing: newer Chrome hands back a promise from scrollTo,
+  // and React would try to call it as the effect's cleanup.
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   return (
     <main className="app stack-lg" style={{ paddingBottom: 40 }}>
       <Confetti />

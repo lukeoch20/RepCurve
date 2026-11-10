@@ -7,6 +7,7 @@ import { findSetup, ongoingSetup } from "../model/setups";
 import type { Core, SessionRecord } from "../model/types";
 import { Icon } from "./common";
 import { ExerciseLibrary } from "./ExerciseInfo";
+import { MobilitySection } from "./Mobility";
 import { PlanExplanation } from "./PlanExplanation";
 import { useTip } from "./tips";
 import { SessionRow, WeekStrip } from "./Week";
@@ -70,6 +71,8 @@ export function Plan(props: { core: Core; history: SessionRecord[] }): React.Rea
           <SessionRow key={s.index} session={s} position={i} units={unitsOf(s.index, s.status)} />
         ))}
       </section>
+
+      <MobilitySection core={core} history={history} />
 
       <section className="card tint" style={{ display: "grid", gridTemplateColumns: "36px 1fr", gap: 12, alignItems: "start" }}>
         <span className="glyph" style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--card)" }} aria-hidden="true">
