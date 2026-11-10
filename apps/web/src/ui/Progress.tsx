@@ -17,6 +17,7 @@ import { NextLook } from "./Looks";
 import { shareCard, type ShareCard as ShareCardData } from "../model/share";
 import { ShareSheet } from "./ShareCard";
 import { KnowsLink } from "./Knows";
+import { MobilityProgress } from "./Mobility";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -94,6 +95,8 @@ export function Progress(props: { core: Core; history: SessionRecord[] }): React
       {lifts.length > 0 ? <RecordsWall lifts={lifts} units={units} /> : null}
 
       <CalendarCard history={history} now={now} />
+
+      <MobilityProgress core={core} now={now} />
 
       <Adherence history={history} core={core} range={range} now={now} />
 

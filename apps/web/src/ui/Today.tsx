@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
+import { mobilityMinutes } from "@repcurve/engine";
 import { loadUnitsFor } from "@repcurve/shared";
 import { ACTIVITY_NAME, cardioLabel, dayLabel, plural } from "../model/format";
+import { blockStatus, routinePlan, trainedFamilies } from "../model/mobility";
 import { contextFor, exerciseCount, isRegenerated, regenerateToday, timeChoices, todayPlan, weekSlots, weekStreak } from "../model/plan";
 import type { Core, SessionRecord } from "../model/types";
 import { backupDue } from "../platform/backupReminder";
@@ -17,6 +19,7 @@ import { ChallengeCard } from "./Trophies";
 import { badges, monthChallenge, RETURN_GAP_DAYS } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
 import { SoreCheckCard } from "./SoreCheck";
+import { MobilityToday } from "./Mobility";
 
 const DAY_MS = 86_400_000;
 
@@ -66,6 +69,14 @@ export function Today(props: {
     return next && next.progress && next.progress.have + 1 >= next.progress.need ? next.name : null;
   }, [away, history, core]);
   const streak = weekStreak(history, now);
+  // With a mobility block running: a shorter workout that leaves room for its session inside the usual time.
+  const mobilityFit = useMemo(() => {
+    const block = blockStatus(core, hour * 3_600_000);
+    if (!block || block.paused || block.reviewDue || minutes !== null) return null;
+    const session = mobilityMinutes(routinePlan(core, block.routine, block.level, trainedFamilies(core, history, hour * 3_600_000)));
+    const to = [...choices].reverse().find((m) => m + session <= usual);
+    return to === undefined ? null : { minutes: to, usual };
+  }, [core, history, hour, minutes, choices, usual]);
   const benchmarks = plan.kind === "strength" && [...plan.supersets.flatMap((s) => s.items)].some((p) => p.benchmarkSet);
 
   return (
@@ -232,6 +243,14 @@ export function Today(props: {
           </button>
         )}
       </div>
+
+      <MobilityToday
+        core={core}
+        history={history}
+        workout={{ name: plan.name, minutes: plan.kind === "strength" ? plan.estimatedMinutes : (plan.cardio?.totalMinutes ?? plan.budgetMinutes) }}
+        trainedToday={last !== undefined && new Date(last.finishedAt).toDateString() === new Date(now).toDateString()}
+        fit={mobilityFit ? { ...mobilityFit, apply: () => setTime(mobilityFit.minutes) } : null}
+      />
 
       {last ? (
         <section className="card flat">

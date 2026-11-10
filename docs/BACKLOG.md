@@ -238,6 +238,66 @@ item. `packages/engine/src/equipment-coverage.test.ts` holds the five setups to 
 
 ---
 
+## B7. Programs: mobility is in, rehab is not
+
+**Where this came from.** The ask was "special sessions": a good stretching workout, hip mobility and
+strengthening, six-week plans, and a physical-therapy-style section for a proximal hamstring
+tendinopathy. The first plan put all of it in one "Programs" feature. An adversarial review changed
+the order: build the session foundations on low-risk mobility work first, and build nothing that
+manages an injury until a clinician has reviewed its rules.
+
+**Release 1, built (2026-11-10).** Mobility lives under Plan, with a way in on Today; no new tab.
+
+- **Routines:** one six-week block ("Hips: mobility and strength", three sessions a week, three
+  levels) and three quick sessions (morning, desk-day, wind-down). Definitions are versioned
+  (`ROUTINES` in `packages/exercises/src/mobility.ts`), so a saved session says what it was built from.
+- **The player:** one step at a time. Holds count down and beep; reps wait for Done. Hands-free is a
+  switch. Pause, skip and "Something hurts" are always there, and "Something hurts" pauses first and
+  asks second. A reload brings the session back paused.
+- **One day, one schedule:** with a block running, Today shows its next session beside the workout,
+  the total time, which comes first, and a shorter workout that fits both into the usual time.
+- **A practice block, not a ladder:** sessions run in order, so a missed day waits. A session counts
+  when half of it is done. Two weeks away eases back a level. The person can stay at a level, pause
+  or end. After 18 sessions the app asks them to look back and choose; it doesn't promise a result.
+- **What it does with what it knows:** drills that bother a sore area in the profile are swapped for
+  a gentler one or left out, and the app says so. Strength exercises borrowed from the library are
+  left out when the week's workouts already train that movement, so nothing is added twice. Any
+  drill can be left out for good.
+- **Planned against done:** each session keeps the seconds planned and done per drill, and any drill
+  stopped for pain, for a year.
+- **What it claims:** only what `docs/EVIDENCE.md` section 16 supports, shown in the app as "What
+  stretching does, and what it doesn't". No injury, soreness or posture claims. No questionnaire.
+
+**Release 2, not started: a reviewed hamstring pilot.** Nothing here is built until a physiotherapist
+has read and signed off the rules. What the review said the design needs:
+
+- **Who it's for is not where it hurts.** Entry is by a clinician's diagnosis or advice, with clear
+  exclusions, not by tapping a body part.
+- **A decision table, not one rule.** The "up to 3 out of 10 and settled by morning" rule becomes a
+  table: pain during, pain after, pain the next morning, each compared with the person's own usual
+  level, each leading to hold, ease back or carry on.
+- **Missing answers stay unknown.** No check-in is never read as "fine". The next-morning question is
+  asked relative to when the exercise was done.
+- **Pain and effort are separate questions,** and the stop control from Release 1 stays.
+- **Stages are proposed, not imposed.** The app suggests moving on or back and the person confirms.
+- **One workload.** Rehab work counts toward the week and replaces hamstring work in the plan rather
+  than sitting on top of it. Exercises that compress the tendon are described neutrally, with no
+  "protect" language.
+- **Two levels of warning:** stop and get checked soon, and stop and get help now.
+- **Ask before building:** whether this is general wellness or a medical device under FDA guidance.
+  That decides the wording and how much the app may decide by itself.
+- **Records:** versioned program definitions, planned against completed doses, and a lifecycle
+  (started, paused, finished, stopped) carry over from Release 1.
+
+**Release 3, later: more areas.** Only after the pilot has been used. An export of what was done, for
+a clinician, comes before any body map. No target for how many exercises the library should have.
+
+**Smaller things Release 1 left out:** spoken cues; reminders for block sessions; mobility on the
+Progress calendar and in the weekly strip; left-out and stopped drills on the "What RepCurve knows
+about you" screen; routines for shoulders and ankles; a harder fourth level.
+
+---
+
 ## Build order
 
 1. ~~**B1 groundwork:** add the derived profile and route existing feedback through it, starting with the two
@@ -261,3 +321,5 @@ item. `packages/engine/src/equipment-coverage.test.ts` holds the five setups to 
 5. ~~**B4:** style previews in Settings.~~ Done.
 6. ~~**B5:** looks as rewards, first two rungs (Fired Forge and Pixel Press), once the open decisions are made.~~
    Done, with Gold Plated and Cut Like a Diamond too; look 3 waits for its art.
+7. ~~**B7 release 1:** mobility routines and the timed session player.~~ Done.
+8. **B7 release 2:** the hamstring pilot, after a physiotherapist has reviewed its rules.

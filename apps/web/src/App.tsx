@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { loadUnitsFor } from "@repcurve/shared";
 import { CardioRunner } from "./ui/CardioRunner";
 import { Finished } from "./ui/Finished";
+import { MobilityFinished, MobilityRunner } from "./ui/MobilityRunner";
 import { Knows, KnowsOpener } from "./ui/Knows";
 import { Onboarding } from "./ui/Onboarding";
 import { Plan } from "./ui/Plan";
@@ -90,6 +91,10 @@ export function App(): React.ReactElement {
     body = <Finished record={store.finished} core={core} history={history} units={loadUnitsFor(core.profile, done ?? core.equipment)} />;
   } else if (active) {
     body = active.plan.kind === "cardio" ? <CardioRunner core={runCore!} active={active} /> : <SessionRunner core={runCore!} active={active} />;
+  } else if (store.mobility) {
+    body = <MobilityRunner core={core} session={store.mobility} />;
+  } else if (store.mobilityDone) {
+    body = <MobilityFinished core={core} entry={store.mobilityDone} />;
   } else {
     body = (
       <>
@@ -159,10 +164,10 @@ export function App(): React.ReactElement {
       {store.storageWarning ? (
         <div className="banner stop storage-warning" role="alert">{store.storageWarning}</div>
       ) : null}
-      {update && updateOffered(active !== null) ? (
+      {update && updateOffered(active !== null || store.mobility !== null) ? (
         <div className="banner info storage-warning" role="status">
           <b>A new version of RepCurve is ready</b>
-          <button type="button" className="btn" onClick={() => applyUpdate(store.data.active !== null)}>Update now</button>
+          <button type="button" className="btn" onClick={() => applyUpdate(store.data.active !== null || store.mobility !== null)}>Update now</button>
         </div>
       ) : null}
       <TipsProvider>

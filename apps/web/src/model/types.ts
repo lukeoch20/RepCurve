@@ -2,6 +2,7 @@ import type { CardioActivity, ExerciseChange, ProfileOverrides, SessionPlan, Sor
 import type { Equipment, Profile, SetLog } from "@repcurve/shared";
 
 import type { Reminders } from "./calendar";
+import type { MobilityState } from "./mobility";
 
 export interface Settings {
   /** Rest after each superset round, seconds. */
@@ -113,6 +114,8 @@ export interface Core {
   soreCheck?: SoreCheck;
   /** The next session regenerated with other exercises ("not feeling it"). Missing means as planned. */
   regenerated?: Regenerated;
+  /** Mobility: the block in progress, finished sessions and choices. Missing means none yet. */
+  mobility?: MobilityState;
 }
 
 /** A regenerated session: the plan for one upcoming session, leaving out these exercises. */
