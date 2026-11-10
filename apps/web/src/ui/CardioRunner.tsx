@@ -54,6 +54,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         <p className="meta num">
           {plan.totalMinutes} min planned · {clock(elapsedMs(active, now))} so far
         </p>
+        {active.setup ? <p className="meta small setup-name">Setup: {active.setup.name}</p> : null}
       </header>
 
       <section className="cardio-clock" aria-label="Segment timer" ref={effortTip}>

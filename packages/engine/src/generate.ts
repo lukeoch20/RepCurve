@@ -227,14 +227,14 @@ export function planSessionWith(ctx: EngineContext, index: number, opts: PlanOpt
 }
 
 export function planSession(input: GenerateInput, index: number, opts: PlanOptions = {}): SessionPlan {
-  return planSessionWith(makeContext(input.profile, input.equipment), index, opts);
+  return planSessionWith(makeContext(input.profile, input.equipment, {}, input.scheduleEquipment), index, opts);
 }
 
 export function generateProgram(input: GenerateInput, opts: GenerateOptions = {}): Program {
   const ctx = makeContext(input.profile, input.equipment, {
     strengthSessionsLogged: opts.state?.strengthSessionsLogged ?? 0,
     ...(opts.position !== undefined ? { position: opts.position } : {}),
-  });
+  }, input.scheduleEquipment);
   const weeks = opts.weeks ?? 4;
   const planOpts: PlanOptions = {
     e1rmByExercise: opts.e1rmByExercise ?? {},

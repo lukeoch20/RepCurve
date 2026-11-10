@@ -19,6 +19,7 @@ import { findExercise } from "@repcurve/exercises";
 import type { Rir } from "@repcurve/shared";
 import { contextFor, todayPlan } from "./plan";
 import { currentSoreness } from "./soreness";
+import { sessionSetup } from "./setups";
 import type { ActiveSession, CardioProgress, CardioResult, Core, LoggedSet, SessionRecord, TimerState } from "./types";
 
 /** Rest between sets of the core finisher. */
@@ -504,6 +505,8 @@ export function startSession(core: Core, history: SessionRecord[], now: number, 
   const soreness = plan.kind === "strength" ? currentSoreness(core, now) : undefined;
   return {
     ...(soreness ? { soreness } : {}),
+    // The setup it starts with stays with it, whatever happens to setups before it's finished.
+    setup: sessionSetup(core),
     id: `s${core.nextIndex + 1}-${now.toString(36)}`,
     index: core.nextIndex,
     plan,
@@ -545,7 +548,16 @@ function baseRecord(active: ActiveSession, now: number, end = now): Omit<Session
     comeback: active.plan.comeback,
     ...(active.swaps && active.swaps.length > 0 ? { swaps: active.swaps } : {}),
     ...(active.soreness ? { soreness: active.soreness } : {}),
+    ...(active.setup ? { setup: { id: active.setup.id, name: active.setup.name } } : {}),
   };
+}
+
+/**
+ * The core as a session in progress sees it: with the equipment the session started with, so
+ * loads, swaps and progression keep to what's there even if setups change meanwhile.
+ */
+export function sessionCore(core: Core, active: Pick<ActiveSession, "setup">): Core {
+  return active.setup ? { ...core, equipment: active.setup.equipment } : core;
 }
 
 /**

@@ -40,8 +40,13 @@ export interface ContextHistory {
   position?: number;
 }
 
-export function makeContext(profile: Profile, equipment: Equipment, history: ContextHistory = {}): EngineContext {
-  const template = weeklyTemplate(profile.daysPerWeek, profile.goal, equipment);
+/**
+ * `scheduleEquipment` sets the week's shape (which days are strength or cardio, and so the split's
+ * rotation) when it differs from the equipment sessions are built from: a workout away from the
+ * usual setup takes that day's place in the programme, with what's there to train with.
+ */
+export function makeContext(profile: Profile, equipment: Equipment, history: ContextHistory = {}, scheduleEquipment: Equipment = equipment): EngineContext {
+  const template = weeklyTemplate(profile.daysPerWeek, profile.goal, scheduleEquipment);
   const strengthPerWeek = template.filter((k) => k === "strength").length;
   const logged = history.strengthSessionsLogged ?? 0;
   const volumeLevel = progressedLevel(profile, logged);

@@ -1,6 +1,5 @@
 import { MACHINES } from "@repcurve/shared";
 import type { Equipment, EquipmentItem, Machine, Units } from "@repcurve/shared";
-import type { Core, Location, Locations } from "./types";
 
 export const MACHINE_LABEL: Record<Machine, string> = {
   leg_press: "Leg press",
@@ -84,19 +83,6 @@ export function fullGym(units: Units): Equipment {
     rower: true,
     stairClimber: true,
   };
-}
-
-/** Where the user trains, as set up. Older setups without locations count as one place. */
-export function placesOf(core: Pick<Core, "locations">): Location[] {
-  const l = core.locations;
-  if (!l) return [];
-  return (["home", "gym"] as const).filter((p) => l[p] !== undefined);
-}
-
-/** Switch where today's training happens; the plan follows that place's equipment. */
-export function atLocation(locations: Locations, at: Location): { equipment: Equipment; locations: Locations } | null {
-  const equipment = locations[at];
-  return equipment ? { equipment, locations: { ...locations, at } } : null;
 }
 
 /**

@@ -37,10 +37,11 @@ test("full body and upper/lower can be chosen instead, and changed later", async
   await expect(page.getByRole("heading", { name: "Full body A" })).toBeVisible();
 
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Edit profile, schedule and equipment" }).click();
+  await page.getByRole("button", { name: "Edit profile and schedule" }).click();
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("group", { name: "Split" }).getByRole("button", { name: /^Upper \/ Lower/ }).click();
-  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Next" }).click();
+  // Equipment isn't part of it: training setups have their own screen.
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await page.getByRole("button", { name: "Today" }).click();
   await expect(page.getByRole("heading", { name: "Upper body" })).toBeVisible();

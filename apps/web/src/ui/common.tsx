@@ -168,6 +168,7 @@ export const ICONS = {
   pause: "M8 5v14M16 5v14",
   play: "M7 5v14l11-7z",
   refresh: "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15",
+  plus: "M12 5v14M5 12h14",
   // Mobility: a joint and the arc it moves through
   mobility: "M4 15a8 8 0 0 1 16 0M2.5 11.5 4 15l3.5-1.5M21.5 11.5 20 15l-3.5-1.5M12 15l4.5-5.5M12 15v.01",
 } as const;

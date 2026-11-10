@@ -136,7 +136,7 @@ svg { flex: none; }
 .time-adjust .stepper { flex: 0 0 172px; }
 .stepper button:disabled { opacity: 0.35; }
 .btn.danger { color: var(--stop); }
-.btn.danger.solid { background: var(--stop); color: #fff; border-color: var(--stop); }
+.btn.danger.solid { background: var(--stop); color: var(--card); border-color: var(--stop); }
 .btn.small { min-height: 36px; padding: 0 14px; font-size: 0.86rem; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .icon-btn { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); display: inline-grid; place-items: center; color: var(--ink); }
@@ -379,6 +379,17 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .footer-actions .btn { flex: 1; }
 .hero-curve { width: 100%; height: auto; display: block; }
 .example-tag { display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+/* training setups: names are the person's own, so long ones wrap anywhere rather than overflow */
+.setup-name { overflow-wrap: anywhere; }
+.setup-card { gap: 6px; }
+.setup-card > .spread:first-child { margin-bottom: 4px; }
+.setup-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.setup-title .example-tag, .setup-item .spread .example-tag { flex: none; }
+/* a long name takes the whole line and its tag drops below it, instead of squeezing into a column */
+.setup-item > .spread:first-child { flex-wrap: wrap; row-gap: 6px; }
+.setup-item > .spread:first-child > .h3 { flex: 1 1 auto; min-width: 0; }
+.setup-actions .btn { flex: 1 1 auto; }
+.setup-status b { font-weight: 600; color: var(--ink); }
 .choice .caution-note { display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 600; color: var(--warn); }
 .meta.warn { color: var(--warn); }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.5rem; }

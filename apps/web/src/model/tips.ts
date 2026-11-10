@@ -30,7 +30,7 @@ export const TIPS = [
     id: "today.split",
     kind: "lifting",
     title: "Your split",
-    body: "Your lifting days take turns: a push day, then a pull day, and so on, each focused on a few muscles. Change your split any time in Settings, under Edit profile, schedule and equipment.",
+    body: "Your lifting days take turns: a push day, then a pull day, and so on, each focused on a few muscles. Change your split any time in Settings, under Edit profile and schedule.",
   },
   {
     id: "today.benchmark",

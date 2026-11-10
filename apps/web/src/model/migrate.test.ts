@@ -46,15 +46,19 @@ describe("equipment from before the evidence review", () => {
     expect(said.equipment.bandAnchor).toBe(false);
   });
 
-  it("keeps valid places, drops machines it doesn't know, and trains where the user said", () => {
+  it("turns home and gym into training setups, drops machines it doesn't know, and keeps training where the user said", () => {
     const gym: Equipment = { ...equipment, cables: true, machines: ["leg_press", "teleporter" as never] };
-    const raw = { ...newCore(profile, equipment, 0), locations: { home: equipment, gym, at: "gym" } };
+    const { setups: _, ...v4 } = newCore(profile, equipment, 0);
+    const raw = { ...v4, version: 4, equipment: gym, locations: { home: equipment, gym, at: "gym" } };
     const c = migrateCore(JSON.parse(JSON.stringify(raw)))!;
-    expect(c.locations?.at).toBe("gym");
+    expect(c.setups.list.map((x) => [x.id, x.name])).toEqual([["home", "Home"], ["gym", "Gym"]]);
+    expect(c.setups.usual).toBe("gym");
     expect(c.equipment.machines).toEqual(["leg_press"]);
+    expect("locations" in c).toBe(false);
     const broken = migrateCore(JSON.parse(JSON.stringify({ ...raw, locations: { home: equipment, gym: { nope: 1 }, at: "gym" } })))!;
-    expect(broken.locations?.at).toBe("home");
-    expect(broken.locations?.gym).toBeUndefined();
+    expect(broken.setups.list.map((x) => x.id)).toEqual(["home"]);
+    expect(broken.setups.usual).toBe("home");
+    expect(broken.equipment).toEqual(equipment);
   });
 
   it("keeps logged outside activity and a cardio preference", () => {
@@ -95,9 +99,12 @@ describe("data from another version of the app", () => {
     const core = newCore(profile, equipment, T);
     expect(migrateCore({ ...core, profile: { ...core.profile, goal: "muscle" } })!.profile.goal).toBe("both");
     expect(migrateCore({ ...core, profile: { ...core.profile, trainingHistory: "lots" } })!.profile.trainingHistory).toBe("never");
-    const thousands = migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 100, step: 0.0001, unit: "lb" } } })!;
+    // Equipment lives in the setups; the next workout's (core.equipment) follows from them.
+    const withDumbbells = (dumbbells: unknown) => ({ ...core, setups: { ...core.setups, list: core.setups.list.map((x) => ({ ...x, equipment: { ...x.equipment, dumbbells } })) } });
+    const thousands = migrateCore(withDumbbells({ kind: "adjustable", min: 5, max: 100, step: 0.0001, unit: "lb" }))!;
     expect(thousands.equipment.dumbbells).toEqual({ kind: "none" });
-    const fine = migrateCore({ ...core, equipment: { ...core.equipment, dumbbells: { kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" } } })!;
+    expect(thousands.setups.list[0]!.equipment.dumbbells).toEqual({ kind: "none" });
+    const fine = migrateCore(withDumbbells({ kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb" }))!;
     expect(fine.equipment.dumbbells).toEqual({ kind: "adjustable", min: 5, max: 50, step: 2.5, unit: "lb", pairs: true });
   });
 

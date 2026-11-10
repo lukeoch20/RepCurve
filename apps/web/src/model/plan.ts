@@ -13,40 +13,67 @@ import {
 import { findExercise } from "@repcurve/exercises";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { withProfile } from "./profile";
+import { ongoingSetup, scheduleEquipment, setupsFrom, withSetups } from "./setups";
 import { currentSoreness } from "./soreness";
-import { DATA_VERSION, DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings } from "./types";
+import { DATA_VERSION, DEFAULT_SETTINGS, type Core, type SessionRecord, type Settings, type TrainingSetups } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-let cached: { key: string; ctx: EngineContext } | null = null;
+/** Recently used contexts, newest last: the next workout and later ones can use different setups. */
+const cache: { key: string; ctx: EngineContext }[] = [];
 
 /**
- * Engine context for the user's current profile and equipment (memoised). Sessions logged so far
- * step the plan's volume up as the person moves past the novice stage.
+ * Engine context for the user's current profile and equipment (memoised). Sessions are built from
+ * `equipment`; the week's schedule follows the usual training setup, so a workout with another
+ * setup takes the same place in the programme. Sessions logged so far step the plan's volume up
+ * as the person moves past the novice stage.
  */
 export function contextFor(
-  core: Pick<Core, "profile" | "equipment"> & Partial<Pick<Core, "nextIndex" | "positionOffset">> & { state?: Pick<Core["state"], "strengthSessionsLogged"> },
+  core: Pick<Core, "profile" | "equipment"> & Partial<Pick<Core, "nextIndex" | "positionOffset" | "setups">> & { state?: Pick<Core["state"], "strengthSessionsLogged"> },
 ): EngineContext {
   const logged = core.state?.strengthSessionsLogged ?? 0;
   // Where the person is in the sequence places a promotion in time: it starts with the next week.
   const position = core.nextIndex !== undefined ? positionOf(core, core.nextIndex) : undefined;
-  const key = JSON.stringify([core.profile, core.equipment, logged, position]);
-  if (!cached || cached.key !== key) {
-    cached = { key, ctx: makeContext(core.profile, core.equipment, { strengthSessionsLogged: logged, ...(position !== undefined ? { position } : {}) }) };
+  const schedule = core.setups ? scheduleEquipment(core.setups) : core.equipment;
+  const key = JSON.stringify([core.profile, core.equipment, schedule === core.equipment ? null : schedule, logged, position]);
+  const hit = cache.findIndex((c) => c.key === key);
+  if (hit >= 0) {
+    const [entry] = cache.splice(hit, 1);
+    cache.push(entry!);
+    return entry!.ctx;
   }
-  return cached.ctx;
+  const ctx = makeContext(core.profile, core.equipment, { strengthSessionsLogged: logged, ...(position !== undefined ? { position } : {}) }, schedule);
+  cache.push({ key, ctx });
+  if (cache.length > 4) cache.shift();
+  return ctx;
 }
 
-export function newCore(profile: Profile, equipment: Equipment, now: number, settings: Settings = DEFAULT_SETTINGS): Core {
-  return {
-    version: DATA_VERSION,
-    profile,
-    equipment,
-    settings,
-    state: initialTrainingState(),
-    startedAt: new Date(now).toISOString(),
-    nextIndex: 0,
-  };
+/**
+ * A new training record. `setups` are the places the person trains; without them, `equipment`
+ * becomes their one setup.
+ */
+export function newCore(profile: Profile, equipment: Equipment, now: number, settings: Settings = DEFAULT_SETTINGS, setups?: TrainingSetups): Core {
+  return withSetups(
+    {
+      version: DATA_VERSION,
+      profile,
+      equipment,
+      setups: setups ?? setupsFrom(equipment),
+      settings,
+      state: initialTrainingState(),
+      startedAt: new Date(now).toISOString(),
+      nextIndex: 0,
+    },
+    setups ?? setupsFrom(equipment),
+  );
+}
+
+/**
+ * The core as sessions after the next one see it: with the setup in use beyond the next workout
+ * (the kept or usual one), for the rest of the week and the programme overview.
+ */
+export function laterCore(core: Core): Core {
+  return { ...core, equipment: ongoingSetup(core.setups).equipment };
 }
 
 export function daysSinceLastStrength(history: SessionRecord[], now: number): number | undefined {
@@ -64,12 +91,13 @@ export function positionOf(core: Pick<Core, "positionOffset">, index: number): n
 
 /**
  * Keep the user in the same week when days per week change: the next session becomes the
- * same day of the current week in the new schedule (or its last day).
+ * same day of the current week in the new schedule (or its last day). Equipment never changes the
+ * number of days, so setups don't come into it.
  */
-export function rescheduled(core: Core, profile: Profile, equipment: Equipment): Core {
+export function rescheduled(core: Core, profile: Profile): Core {
   const before = contextFor(core).template.length;
-  const after = contextFor({ profile, equipment }).template.length;
-  const next = { ...core, profile, equipment };
+  const next = { ...core, profile };
+  const after = contextFor(next).template.length;
   if (before === after) return next;
   const position = positionOf(core, core.nextIndex);
   const week = Math.floor(position / before);
@@ -105,8 +133,9 @@ export function lastCardioEffort(history: SessionRecord[]): number | undefined {
  * from the sessions personalised with their training state (outside any deload).
  */
 export function currentProgram(core: Core): Program {
+  const later = laterCore(core);
   return generateProgram(
-    { profile: core.profile, equipment: core.equipment },
+    { profile: later.profile, equipment: later.equipment, scheduleEquipment: scheduleEquipment(core.setups) },
     { weeks: 2, restSec: core.settings.restSec, transitionSec: core.settings.transitionSec, state: core.state, position: positionOf(core, core.nextIndex), createdAt: "current" },
   );
 }
@@ -274,13 +303,15 @@ export interface WeekSession extends WeekSlot {
 
 /** The current week's sessions with their plans, for the week strip and the Plan tab. */
 export function weekSessions(core: Core, history: SessionRecord[], now: number): { week: number; sessions: WeekSession[] } {
-  const ctx = contextFor(core);
+  // Sessions after the next one use the setup in use beyond it.
+  const later = laterCore(core);
+  const laterCtx = contextFor(later);
   const { week, slots } = weekSlots(core, history);
   const byIndex = new Map(history.map((r) => [r.index, r]));
   const sessions = slots.map((slot) => {
     const done = byIndex.get(slot.index);
     const usable = done && !done.skipped && Array.isArray(done.plan?.supersets) ? done.plan : null;
-    const plan = usable ?? (slot.status === "next" ? todayPlan(core, history, now) : applyState(planFor(core, slot.index), core.state, ctx));
+    const plan = usable ?? (slot.status === "next" ? todayPlan(core, history, now) : applyState(planFor(later, slot.index), core.state, laterCtx));
     return { ...slot, plan };
   });
   return { week, sessions };

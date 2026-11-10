@@ -9,7 +9,7 @@ import { clearCrashLog } from "../platform/crashLog";
 import { dropSafetyCopy, keepSafetyCopy, safetyCopy } from "../platform/safetyCopy";
 import { applyStyle, FAMILIES, familyOf, loadStyle, saveStyle, type StyleFamily, type StyleId } from "../platform/style";
 import { useStore } from "../store/useAppStore";
-import { Seg, Toggle } from "./common";
+import { Icon, Seg, Toggle } from "./common";
 import { useTips } from "./tips";
 import { InstallCard } from "./Install";
 import { backUp } from "./Backup";
@@ -18,6 +18,8 @@ import { PrivacySettings } from "./Privacy";
 import { ErrorLogSettings } from "./ErrorLog";
 import { Lock, LookPreview, useLooks } from "./Looks";
 import { KnowsLink } from "./Knows";
+import { useOpenSetups } from "./Setups";
+import { currentSetup, usualSetup } from "../model/setups";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -34,7 +36,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
   const units = core.profile.units;
   const setUnits = (u: typeof units) => {
     if (u === units) return;
-    dispatch({ type: "setup", profile: { ...core.profile, units: u }, equipment: core.equipment, now: Date.now() });
+    dispatch({ type: "setup", profile: { ...core.profile, units: u }, now: Date.now() });
   };
 
   const exportNow = async () => {
@@ -137,17 +139,17 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
 
       <TipsSettings />
 
+      <SetupsSettings core={core} />
+
       <section className="card stack">
-        <h2 className="h3">You and your equipment</h2>
+        <h2 className="h3">You and your schedule</h2>
         <div className="field">
           <span className="label">Body units</span>
           <Seg label="Units" value={units} onChange={setUnits} options={[{ value: "lb", label: "Pounds" }, { value: "kg", label: "Kilograms" }]} />
-          {core.equipment.dumbbells.kind !== "none" ? (
-            <span className="meta small">Weights always show in {core.equipment.dumbbells.unit}, as marked on your dumbbells. Change that under equipment.</span>
-          ) : null}
+          <span className="meta small">Weights show in the units marked on each setup's dumbbells. Change those under Training setups.</span>
         </div>
         <button type="button" className="btn" onClick={props.onEditSetup}>
-          Edit profile, schedule and equipment
+          Edit profile and schedule
         </button>
         <p className="meta small">Your progress is kept when you change these.</p>
         <KnowsLink />
@@ -320,6 +322,27 @@ function StyleSettings(props: { history: SessionRecord[]; core: Core }): React.R
           );
         })}
       </div>
+    </section>
+  );
+}
+
+/** Saved equipment setups, and the way to manage them. */
+function SetupsSettings(props: { core: Core }): React.ReactElement {
+  const open = useOpenSetups();
+  const { setups } = props.core;
+  const next = currentSetup(props.core);
+  const count = setups.list.length;
+  return (
+    <section className="card stack">
+      <h2 className="h3">Training setups</h2>
+      <p className="meta small">
+        {count === 0 ? "No saved setups yet" : count === 1 ? "1 saved setup" : `${count} saved setups`}, plus Bodyweight only. Usual: <b className="setup-name">{usualSetup(setups).name}</b>
+        {next.mode !== "usual" ? <>. Next workout: <b className="setup-name">{next.name}</b></> : null}.
+      </p>
+      <button type="button" className="btn" onClick={() => open({ add: false, from: "settings" })}>
+        Manage training setups
+        <Icon name="chevronRight" size={18} />
+      </button>
     </section>
   );
 }
