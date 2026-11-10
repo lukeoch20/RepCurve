@@ -134,10 +134,18 @@ test("something hurts pauses first; the stopped drill is remembered, and a reloa
   await page.clock.runFor(20_000);
   await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:2\d left$/);
 
-  // Ending early keeps what was done.
+  // End stops the clock while you decide, and Keep going picks it up again.
   await page.getByRole("button", { name: "End", exact: true }).click();
   const end = page.getByRole("dialog", { name: "End this session?" });
   await expect(end).toContainText("What you've done is saved.");
+  const held = (await timer(page).getAttribute("aria-label"))!;
+  expect(held).toMatch(/^Hold: 0:2\d left, paused$/);
+  await page.clock.runFor(30_000);
+  await expect(timer(page)).toHaveAttribute("aria-label", held);
+  await end.getByRole("button", { name: "Keep going" }).click();
+  await expect(timer(page)).toHaveAttribute("aria-label", held.replace(", paused", ""));
+  // Ending early keeps what was done.
+  await page.getByRole("button", { name: "End", exact: true }).click();
   await end.getByRole("button", { name: "Finish and save" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Done for today" })).toBeVisible();
   await expect(page.getByText("You stopped half-kneeling hip-flexor stretch")).toBeVisible();

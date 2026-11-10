@@ -133,6 +133,18 @@ describe("a mobility session under way", () => {
     expect(nextMobility(a, T0 + 23_000).doneSec[2]).toBe(12);
   });
 
+  it("keeps the part of a hold under way when the session is ended, paused or not", () => {
+    const a = tickMobility(skipDrill(skipDrill(begin(), T0), T0), T0 + 10_000);
+    const running = finishMobility(a, core0(), T0 + 22_400);
+    expect(running.entry!.drills[2]).toEqual({ id: "hip_flexor_stretch", plannedSec: 120, doneSec: 12 });
+    // Ended from the "End this session?" sheet, which pauses first: the time at the pause counts, not the time spent deciding.
+    const paused = finishMobility(pauseMobility(a, T0 + 22_400), core0(), T0 + 500_000);
+    expect(paused.entry!.drills[2]!.doneSec).toBe(12);
+    // Reps under way aren't timed, so there's nothing to add for them.
+    const reps = tickMobility(begin(), T0 + 10_000);
+    expect(finishMobility(reps, core0(), T0 + 60_000).entry).toBeNull();
+  });
+
   it("pauses and resumes without losing its place or counting the pause", () => {
     let a = tickMobility(skipDrill(skipDrill(begin(), T0), T0), T0 + 10_000);
     a = pauseMobility(a, T0 + 20_000);

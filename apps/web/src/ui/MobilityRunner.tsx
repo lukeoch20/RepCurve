@@ -69,7 +69,8 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
   const paused = a.pausedAt !== null;
   const counting = isCounting(a);
   const remaining = stepRemainingMs(a, now);
-  const [endOpen, setEndOpen] = useState(false);
+  /** The "End this session?" sheet; `resume` when opening it paused a session that was running. */
+  const [ending, setEnding] = useState<{ resume: boolean } | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [announce, setAnnounce] = useState("");
@@ -141,6 +142,10 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
         : step.kind === "switch"
           ? counting ? "Start now" : "Start the other side"
           : counting ? "Start now" : `Start set ${step.set + 1}`;
+  const keepGoing = () => {
+    if (ending?.resume) dispatch({ type: "mobilityResume", now: at() });
+    setEnding(null);
+  };
   const hurtBefore = step.kind === "ready" && stoppedForPain(core, item.id);
   const side = step.kind === "switch" ? nextSide(a) : step.side;
 
@@ -170,7 +175,16 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             <span className="meta small num grow" style={{ textAlign: "center" }}>
               Drill {step.item + 1} of {a.plan.items.length}
             </span>
-            <button type="button" className="btn small" onClick={() => setEndOpen(true)}>
+            <button
+              type="button"
+              className="btn small"
+              aria-haspopup="dialog"
+              onClick={() => {
+                // The clock stops while they decide, and picks up again if they keep going.
+                if (!paused) dispatch({ type: "mobilityPause", now: at() });
+                setEnding({ resume: !paused });
+              }}
+            >
               End
             </button>
           </div>
@@ -323,8 +337,8 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
         </Sheet>
       ) : null}
 
-      {endOpen ? (
-        <Sheet title="End this session?" onClose={() => setEndOpen(false)}>
+      {ending ? (
+        <Sheet title="End this session?" onClose={keepGoing}>
           {mobilityProgress(a) > 0 ? (
             <>
               <p className="prose">
@@ -338,7 +352,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
           ) : (
             <p className="prose">Nothing is done yet, so there's nothing to save.</p>
           )}
-          <button type="button" className="btn big" onClick={() => setEndOpen(false)}>
+          <button type="button" className="btn big" onClick={keepGoing}>
             Keep going
           </button>
           <button type="button" className="btn danger big" onClick={() => dispatch({ type: "mobilityDiscard" })}>
@@ -433,7 +447,7 @@ export function MobilityFinished(props: { core: Core; entry: MobilityEntry }): R
         {entry.drills.map((d) => (
           <div key={d.id} className="lift">
             <div className="name">{nameOf(d.id)}</div>
-            <span className="meta small">{d.hurt ? "stopped" : d.doneSec === 0 ? "skipped" : d.skipped || d.doneSec < d.plannedSec ? "part" : "done"}</span>
+            <span className="meta small">{d.hurt ? "stopped" : d.doneSec >= d.plannedSec ? "done" : d.doneSec > 0 ? "part" : d.skipped ? "skipped" : "not done"}</span>
           </div>
         ))}
       </section>

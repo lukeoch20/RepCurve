@@ -402,16 +402,20 @@ export function mobilityProgress(a: ActiveMobility): number {
 }
 
 /**
- * Close the session and keep what was done. With nothing done there's nothing to keep (entry is
- * null). A block session counts toward the block when at least half its planned work was done.
- * `endedAt` closes it as of an earlier moment, for a session that was left open.
+ * Close the session and keep what was done, the part of a hold under way included. With nothing
+ * done there's nothing to keep (entry is null). A block session counts toward the block when at
+ * least half its planned work was done. `endedAt` closes it as of an earlier moment, for a
+ * session that was left open.
  */
 export function finishMobility(a: ActiveMobility, core: Core, now: number, endedAt = now): { core: Core; entry: MobilityEntry | null } {
   const planned = plannedSec(a.plan);
+  const end = Math.min(endedAt, now);
+  const step = currentStep(a);
+  const doneSec = step ? credit(a, step.item, heldSec(a, step, end)) : a.doneSec;
   const drills: MobilityDrillLog[] = a.plan.items.map((it, i) => ({
     id: it.id,
     plannedSec: planned[i]!,
-    doneSec: Math.min(planned[i]!, Math.round(a.doneSec[i] ?? 0)),
+    doneSec: Math.min(planned[i]!, Math.round(doneSec[i] ?? 0)),
     ...(a.skipped.includes(i) ? { skipped: true } : {}),
     ...(a.hurt.includes(i) ? { hurt: true } : {}),
   }));
@@ -419,7 +423,6 @@ export function finishMobility(a: ActiveMobility, core: Core, now: number, ended
   const done = drills.reduce((n, d) => n + d.doneSec, 0);
   // A drill stopped for pain is worth remembering even when nothing else was done.
   if (done === 0 && a.hurt.length === 0) return { core, entry: null };
-  const end = Math.min(endedAt, now);
   // Time away with the app closed never counts: no longer than three times the plan.
   const ms = Math.min(mobilityElapsedMs(a, end), a.plan.estimatedSec * 3000);
   const running = core.mobility?.block;
