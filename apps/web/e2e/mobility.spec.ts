@@ -7,9 +7,13 @@ const timer = (page: Page) => page.getByRole("timer");
 const target = (page: Page) => page.locator(".cardio-clock .block-target");
 const finished = (page: Page) => page.getByRole("heading", { level: 1, name: /^(All of it, done|Done for today)$/ });
 
-/** Run the session on screen to its end: tap Done on reps and let the clock run the holds. */
+/**
+ * Run the session on screen to its end: tap Done on reps and let the clock run the holds.
+ * The clock also runs by itself between steps, so countdowns are matched within a second or two.
+ */
 async function runToEnd(page: Page) {
-  const done = page.getByRole("button", { name: "Done", exact: true });
+  // The session screen's own Done: the summary has a Done button too, which closes it.
+  const done = page.locator("main").filter({ has: timer(page) }).getByRole("button", { name: "Done", exact: true });
   for (let i = 0; i < 120; i++) {
     if (await finished(page).isVisible()) return;
     if (await done.isVisible()) await done.click();
@@ -72,7 +76,7 @@ test("the hips block starts under Plan, runs on the timer beside today's workout
   await expect(page.getByRole("heading", { level: 1, name: "Hips: mobility and strength" })).toBeVisible();
   await expect(page.getByText("Mobility · session 1 of 18 · level 1")).toBeVisible();
   // Get ready counts down by itself; slow reps then wait for Done, one side at a time.
-  await expect(timer(page)).toHaveAccessibleName("Get ready: 0:10 left");
+  await expect(timer(page)).toHaveAccessibleName(/^Get ready: 0:(10|0[89]) left$/);
   await expect(page.getByRole("button", { name: "Start now" })).toBeVisible();
   await page.clock.runFor(10_500);
   await expect(timer(page)).toHaveAccessibleName("4 circles each way");
@@ -122,13 +126,19 @@ test("something hurts pauses first; the stopped drill is remembered, and a reloa
   await page.clock.runFor(30_000);
   await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
   await expect(page.locator(".segment.drill").first()).toContainText("stopped");
+  // It goes on waiting when End is opened and closed again.
+  await page.getByRole("button", { name: "End", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "End this session?" })).toContainText("What you've done is saved.");
+  await page.getByRole("dialog", { name: "End this session?" }).getByRole("button", { name: "Keep going" }).click();
+  await page.clock.runFor(15_000);
+  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  await expect(timer(page)).toHaveAccessibleName("Hold: 0:45 left");
+  await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:4[3-5] left$/);
   await page.clock.runFor(5_000);
 
   // A reload mid-hold: the session is back, paused, with that hold ready to start again in full.
   await page.reload();
-  await expect(page.getByRole("status").filter({ hasText: "Paused" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Paused" })).toContainText("The hold starts from the top when you resume.");
   await expect(timer(page)).toHaveAccessibleName("Hold: 0:45 left, paused");
   await page.getByRole("button", { name: "Resume" }).first().click();
   await page.clock.runFor(20_000);
@@ -143,11 +153,13 @@ test("something hurts pauses first; the stopped drill is remembered, and a reloa
   await page.clock.runFor(30_000);
   await expect(timer(page)).toHaveAttribute("aria-label", held);
   await end.getByRole("button", { name: "Keep going" }).click();
-  await expect(timer(page)).toHaveAttribute("aria-label", held.replace(", paused", ""));
+  await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:[12]\d left$/);
   // Ending early keeps what was done.
   await page.getByRole("button", { name: "End", exact: true }).click();
   await end.getByRole("button", { name: "Finish and save" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Done for today" })).toBeVisible();
+  // Part of two drills: neither counts as done.
+  await expect(page.getByRole("region", { name: "This session" })).toContainText("0 of 5");
   await expect(page.getByText("You stopped half-kneeling hip-flexor stretch")).toBeVisible();
   await page.getByRole("button", { name: "Done", exact: true }).click();
 
@@ -176,7 +188,7 @@ test("with hands-free off, each step waits for a tap", async ({ page }) => {
   await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   // The hold itself always counts down; the change of sides then waits.
-  await expect(timer(page)).toHaveAccessibleName("Hold: 0:45 left");
+  await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:4[3-5] left$/);
   await page.clock.runFor(45_500);
   await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
   await expect(target(page)).toHaveText("Next: right knee down");

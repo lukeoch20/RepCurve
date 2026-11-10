@@ -137,7 +137,8 @@ export type Action =
   | { type: "mobilityRestart"; now: number }
   /** Holds follow on by themselves, or wait for a tap: for this session and from now on. */
   | { type: "mobilityHandsFree"; on: boolean; now: number }
-  | { type: "mobilityFinish"; now: number }
+  /** End the session, keeping what was done. `hurt`: ended because the drill under way hurt, which is noted. */
+  | { type: "mobilityFinish"; now: number; hurt?: boolean }
   | { type: "mobilityDiscard" }
   | { type: "mobilityDismiss" }
   /** A session read back from this device after a reload. */
@@ -231,8 +232,9 @@ export function reducer(s: AppState, a: Action): AppState {
     case "mobilityRestore": {
       const saved = core && !s.mobility ? restoreMobility(a.saved, a.now) : null;
       if (!core || !saved) return s;
-      // Left open for hours: closed as of when it last moved, keeping what was done.
-      if (a.now - saved.touchedAt > MOBILITY_STALE_MS) return withCore(finishMobility(saved, core, a.now, saved.touchedAt).core);
+      // Left open for hours, or a workout is under way (started in another tab): closed as of when
+      // it last moved, keeping what was done. Only one session runs at a time.
+      if (active || a.now - saved.touchedAt > MOBILITY_STALE_MS) return withCore(finishMobility(saved, core, a.now, saved.touchedAt).core);
       return { ...s, mobility: saved };
     }
     case "mobilityTick":
@@ -252,7 +254,7 @@ export function reducer(s: AppState, a: Action): AppState {
       return { ...s, data: { ...s.data, core: setHandsFree(core, a.on) }, mobility: s.mobility ? sessionHandsFree(s.mobility, a.on, a.now) : null };
     case "mobilityFinish": {
       if (!core || !s.mobility) return s;
-      const r = finishMobility(s.mobility, core, a.now);
+      const r = finishMobility(a.hurt ? skipDrill(s.mobility, a.now, true) : s.mobility, core, a.now);
       return { ...s, data: { ...s.data, core: r.core }, mobility: null, mobilityDone: r.entry };
     }
     case "mobilityDiscard":

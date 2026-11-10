@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { mobilityDose, type MobilityItem, type MobilityStep } from "@repcurve/engine";
+import { MOBILITY_COUNTS_AT, mobilityDose, type MobilityItem, type MobilityStep } from "@repcurve/engine";
 import { findDrill, findExercise, findRoutine, sideLabel } from "@repcurve/exercises";
 import { clock } from "../model/format";
-import { blockStatus, currentStep, isCounting, mobilityElapsedMs, mobilityProgress, stepRemainingMs, stoppedForPain, type ActiveMobility, type MobilityEntry } from "../model/mobility";
+import { blockStatus, currentStep, isCounting, mobilityElapsedMs, mobilityProgress, stepRemainingMs, stoppedForPain, worthKeeping, type ActiveMobility, type MobilityEntry } from "../model/mobility";
 import type { Core } from "../model/types";
 import { beep, keepAwake, unlockAudio } from "../platform/device";
 import { haptic } from "../platform/haptics";
@@ -69,6 +69,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
   const paused = a.pausedAt !== null;
   const counting = isCounting(a);
   const remaining = stepRemainingMs(a, now);
+  const progress = mobilityProgress(a, now);
   /** The "End this session?" sheet; `resume` when opening it paused a session that was running. */
   const [ending, setEnding] = useState<{ resume: boolean } | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
@@ -189,14 +190,19 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             </button>
           </div>
           <div className="progress-track" aria-hidden="true">
-            <div className="progress-fill" style={{ width: `${mobilityProgress(a) * 100}%` }} />
+            <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
           </div>
         </div>
 
         {paused ? (
           <div className="banner info" role="status">
             <b>Paused</b>
-            Take the time you need. {timed && step.kind === "work" ? "The hold picks up where it stopped." : "Nothing moves on until you resume."}
+            Take the time you need.{" "}
+            {timed && step.kind === "work"
+              ? a.remainingMs >= step.seconds! * 1000
+                ? "The hold starts from the top when you resume."
+                : "The hold picks up where it stopped."
+              : "Nothing moves on until you resume."}
           </div>
         ) : null}
 
@@ -328,7 +334,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             <b>End the session if</b>
             the pain is severe or stays after you stop, a joint gives way, or numbness or tingling doesn't settle. Pain that keeps coming back is worth getting checked.
             <div className="row" style={{ marginTop: 10 }}>
-              <button type="button" className="btn danger" onClick={() => dispatch({ type: "mobilityFinish", now: at() })}>
+              <button type="button" className="btn danger" onClick={() => dispatch({ type: "mobilityFinish", now: at(), hurt: true })}>
                 End session
               </button>
             </div>
@@ -339,11 +345,11 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
 
       {ending ? (
         <Sheet title="End this session?" onClose={keepGoing}>
-          {mobilityProgress(a) > 0 ? (
+          {worthKeeping(a, now) ? (
             <>
               <p className="prose">
-                What you've done is saved.
-                {block && mobilityProgress(a) < 0.5 ? ` Less than half of it is done, so it won't count as session ${block.done + 1} of your block.` : ""}
+                {progress > 0 ? "What you've done is saved." : "The drill you stopped is noted, so it comes with a reminder next time."}
+                {block && progress < MOBILITY_COUNTS_AT ? ` Less than half of it is done, so it won't count as session ${block.done + 1} of your block.` : ""}
               </p>
               <button type="button" className="btn go big" onClick={() => dispatch({ type: "mobilityFinish", now: at() })}>
                 Finish and save
@@ -372,7 +378,7 @@ export function MobilityFinished(props: { core: Core; entry: MobilityEntry }): R
   const routine = findRoutine(entry.routine);
   const block = blockStatus(core, entry.finishedAt);
   const inBlock = block !== null && block.routine.id === entry.routine;
-  const done = entry.drills.filter((d) => d.doneSec > 0 && !d.skipped).length;
+  const done = entry.drills.filter((d) => d.doneSec >= d.plannedSec).length;
   const stopped = entry.drills.filter((d) => d.hurt);
   // A block body, so the effect returns nothing: newer Chrome hands back a promise from scrollTo,
   // and React would try to call it as the effect's cleanup.

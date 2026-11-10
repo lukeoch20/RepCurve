@@ -87,6 +87,8 @@ export interface ActiveMobility {
   pausedMs: number;
   /** Getting ready, switching sides and resting count down and move on by themselves. */
   handsFree: boolean;
+  /** The step on screen waits for a tap whatever hands-free says: the drill before it was stopped for pain. */
+  waits: boolean;
   /** Seconds of work done per drill, in the plan's order. */
   doneSec: number[];
   /** Drills (positions in the plan) left before they were finished. */
@@ -124,12 +126,16 @@ export function routinePlan(core: Core, routine: Routine, level: number, trained
   });
 }
 
-/** Whether the person stopped this drill for pain the last time it came up. */
+/**
+ * Whether the person stopped this drill for pain the last time they did any of it. Sessions that
+ * skipped it or ended before reaching it say nothing either way.
+ */
 export function stoppedForPain(core: Pick<Core, "mobility">, drill: string): boolean {
   const log = core.mobility?.log ?? [];
   for (let i = log.length - 1; i >= 0; i--) {
     const d = log[i]!.drills.find((x) => x.id === drill);
-    if (d) return d.hurt === true;
+    if (d?.hurt) return true;
+    if (d && d.doneSec > 0) return false;
   }
   return false;
 }
@@ -264,14 +270,19 @@ export const handsFreeOn = (core: Pick<Core, "mobility">): boolean => core.mobil
 
 // ---------------------------------------------------------------- a session under way
 
-/** Whether a step counts down by itself: a hold always does; the pauses around it do when hands-free is on. */
-const countsDown = (a: Pick<ActiveMobility, "handsFree">, step: MobilityStep): boolean => step.seconds !== null && (step.kind === "work" || a.handsFree);
+/**
+ * Whether a step counts down by itself: a hold always does; the pauses around it do when
+ * hands-free is on, unless this one is waiting for a tap after a drill was stopped for pain.
+ */
+const countsDown = (a: Pick<ActiveMobility, "handsFree" | "waits">, step: MobilityStep): boolean =>
+  step.seconds !== null && (step.kind === "work" || (a.handsFree && !a.waits));
 
 function enter(a: ActiveMobility, index: number, now: number): ActiveMobility {
   const step = a.plan.steps[index];
-  if (!step) return { ...a, endsAt: null, remainingMs: 0, finished: true, touchedAt: now };
+  if (!step) return { ...a, endsAt: null, remainingMs: 0, finished: true, waits: false, touchedAt: now };
   const ms = (step.seconds ?? 0) * 1000;
-  return { ...a, stepIndex: index, remainingMs: ms, endsAt: countsDown(a, step) ? now + ms : null, touchedAt: now };
+  const next = { ...a, stepIndex: index, remainingMs: ms, waits: false, touchedAt: now };
+  return { ...next, endsAt: countsDown(next, step) ? now + ms : null };
 }
 
 export function startMobility(plan: MobilityPlan, opts: { block: boolean; handsFree: boolean }, now: number): ActiveMobility {
@@ -286,6 +297,7 @@ export function startMobility(plan: MobilityPlan, opts: { block: boolean; handsF
     pausedAt: null,
     pausedMs: 0,
     handsFree: opts.handsFree,
+    waits: false,
     doneSec: plan.items.map(() => 0),
     skipped: [],
     hurt: [],
@@ -325,9 +337,11 @@ export function tickMobility(a: ActiveMobility, now: number): ActiveMobility {
   if (a.finished || a.pausedAt !== null || a.endsAt === null || now < a.endsAt) return a;
   const step = a.plan.steps[a.stepIndex]!;
   const late = now - a.endsAt > LATE_MS;
-  const next = enter({ ...a, doneSec: credit(a, step.item, step.kind === "work" ? (step.seconds ?? 0) : 0) }, a.stepIndex + 1, now);
-  // It ended while the app was asleep: wait for the person rather than running on without them.
-  return late && !next.finished ? pauseMobility(next, now) : next;
+  // It ended while the app was asleep: the next step starts as of then, paused, so the session
+  // waits for the person instead of running on without them and the time away isn't counted.
+  const at = late ? a.endsAt : now;
+  const next = enter({ ...a, doneSec: credit(a, step.item, step.kind === "work" ? (step.seconds ?? 0) : 0) }, a.stepIndex + 1, at);
+  return late && !next.finished ? pauseMobility(next, at) : next;
 }
 
 /** The person moves on: starts what was waiting, finishes their reps, or ends a hold early (it counts for the time held). */
@@ -352,7 +366,7 @@ export function skipDrill(a: ActiveMobility, now: number, hurt = false): ActiveM
   while (next < a.plan.steps.length && a.plan.steps[next]!.item === step.item) next++;
   const add = (list: number[]) => (list.includes(step.item) ? list : [...list, step.item]);
   const entered = enter({ ...unpaused(a, now), doneSec, skipped: add(a.skipped), hurt: hurt ? add(a.hurt) : a.hurt }, next, now);
-  return hurt && !entered.finished ? { ...entered, endsAt: null } : entered;
+  return hurt && !entered.finished ? { ...entered, endsAt: null, waits: true } : entered;
 }
 
 /** Start the current step again from the top, e.g. after losing the position. */
@@ -378,7 +392,8 @@ export function sessionHandsFree(a: ActiveMobility, on: boolean, now: number): A
   const next = { ...a, handsFree: on };
   const step = currentStep(a);
   if (!step || step.kind === "work" || a.pausedAt !== null) return next;
-  return on ? { ...next, endsAt: now + a.remainingMs, touchedAt: now } : { ...next, remainingMs: stepRemainingMs(a, now), endsAt: null, touchedAt: now };
+  if (on) return countsDown(next, step) ? { ...next, endsAt: now + a.remainingMs, touchedAt: now } : next;
+  return { ...next, remainingMs: stepRemainingMs(a, now), endsAt: null, touchedAt: now };
 }
 
 /** Milliseconds spent in the session up to `now`, pauses left out. */
@@ -393,12 +408,23 @@ export function plannedSec(plan: MobilityPlan): number[] {
   return out;
 }
 
-/** Share of the planned work done so far, 0 to 1. */
-export function mobilityProgress(a: ActiveMobility): number {
+/** Seconds of work done per drill up to `now`, the part of a hold under way included. */
+function doneSoFar(a: ActiveMobility, now: number): number[] {
+  const step = currentStep(a);
+  return step ? credit(a, step.item, heldSec(a, step, now)) : a.doneSec;
+}
+
+/** Share of the planned work done up to `now`, 0 to 1. */
+export function mobilityProgress(a: ActiveMobility, now: number): number {
   const planned = plannedSec(a.plan);
   const total = planned.reduce((n, s) => n + s, 0);
   if (total === 0) return 0;
-  return Math.min(1, a.doneSec.reduce((n, s, i) => n + Math.min(s, planned[i]!), 0) / total);
+  return Math.min(1, doneSoFar(a, now).reduce((n, s, i) => n + Math.min(s, planned[i]!), 0) / total);
+}
+
+/** Whether ending the session now would keep anything: some work done, or a drill stopped for pain. */
+export function worthKeeping(a: ActiveMobility, now: number): boolean {
+  return a.hurt.length > 0 || doneSoFar(a, now).some((s) => s >= 1);
 }
 
 /**
@@ -409,9 +435,9 @@ export function mobilityProgress(a: ActiveMobility): number {
  */
 export function finishMobility(a: ActiveMobility, core: Core, now: number, endedAt = now): { core: Core; entry: MobilityEntry | null } {
   const planned = plannedSec(a.plan);
-  const end = Math.min(endedAt, now);
-  const step = currentStep(a);
-  const doneSec = step ? credit(a, step.item, heldSec(a, step, end)) : a.doneSec;
+  // A session that ran to its end is over as of its last step, however long the summary took to show.
+  const end = Math.min(endedAt, now, a.finished ? a.touchedAt : now);
+  const doneSec = doneSoFar(a, end);
   const drills: MobilityDrillLog[] = a.plan.items.map((it, i) => ({
     id: it.id,
     plannedSec: planned[i]!,
@@ -426,8 +452,11 @@ export function finishMobility(a: ActiveMobility, core: Core, now: number, ended
   // Time away with the app closed never counts: no longer than three times the plan.
   const ms = Math.min(mobilityElapsedMs(a, end), a.plan.estimatedSec * 3000);
   const running = core.mobility?.block;
+  // Saved once already (the same session finished in another tab): it keeps its place and isn't counted again.
+  const counted = (core.mobility?.log ?? []).find((e) => e.id === a.id)?.blockSession;
   // The block this session counts toward, if it does.
   const block = a.block && running && running.routine === a.plan.routine && running.pausedAt === undefined && total > 0 && done / total >= MOBILITY_COUNTS_AT ? running : null;
+  const blockSession = counted ?? (block ? block.done + 1 : undefined);
   const entry: MobilityEntry = {
     id: a.id,
     routine: a.plan.routine,
@@ -437,16 +466,17 @@ export function finishMobility(a: ActiveMobility, core: Core, now: number, ended
     finishedAt: end,
     minutes: Math.max(1, Math.round(ms / 60_000)),
     drills,
-    ...(block ? { blockSession: block.done + 1 } : {}),
+    ...(blockSession !== undefined ? { blockSession } : {}),
   };
   const log = [...(core.mobility?.log ?? []).filter((e) => e.finishedAt >= end - KEEP_MS && e.id !== entry.id), entry];
   const next = withMobility(core, { log });
-  return { core: block ? withBlock(next, { ...block, done: block.done + 1 }) : next, entry };
+  return { core: block && counted === undefined ? withBlock(next, { ...block, done: block.done + 1 }) : next, entry };
 }
 
 // ---------------------------------------------------------------- restoring one after a reload
 
 type Obj = Record<string, unknown>;
+const STEP_KINDS = new Set(["ready", "work", "switch", "rest"]);
 const isObj = (x: unknown): x is Obj => typeof x === "object" && x !== null && !Array.isArray(x);
 const isNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
 const indexes = (x: unknown, n: number): number[] => (Array.isArray(x) ? [...new Set(x.filter((i): i is number => Number.isInteger(i) && i >= 0 && i < n))] : []);
@@ -461,9 +491,30 @@ export function restoreMobility(saved: unknown, now: number): ActiveMobility | n
   const plan = saved["plan"] as unknown as MobilityPlan;
   const routine = typeof plan.routine === "string" ? findRoutine(plan.routine) : undefined;
   if (!routine || routine.version !== plan.version || !Array.isArray(plan.items) || !Array.isArray(plan.steps) || plan.steps.length === 0) return null;
-  const stepOk = (s: unknown) => isObj(s) && isNum(s["item"]) && s["item"] >= 0 && s["item"] < plan.items.length && isNum(s["estSec"]) && (s["seconds"] === null || isNum(s["seconds"]));
-  const itemOk = (i: unknown) => isObj(i) && typeof i["id"] === "string" && typeof i["name"] === "string" && typeof i["cue"] === "string" && isNum(i["sets"]) && isNum(i["amount"]) && Array.isArray(i["ease"]);
-  if (!plan.steps.every(stepOk) || !plan.items.every(itemOk) || !isNum(plan.estimatedSec)) return null;
+  const stepOk = (s: unknown) =>
+    isObj(s) &&
+    STEP_KINDS.has(s["kind"] as string) &&
+    Number.isInteger(s["item"]) &&
+    (s["item"] as number) >= 0 &&
+    (s["item"] as number) < plan.items.length &&
+    isNum(s["set"]) &&
+    isNum(s["estSec"]) &&
+    (s["seconds"] === null || isNum(s["seconds"])) &&
+    (s["side"] === undefined || s["side"] === "left" || s["side"] === "right");
+  const itemOk = (i: unknown) =>
+    isObj(i) &&
+    typeof i["id"] === "string" &&
+    typeof i["name"] === "string" &&
+    typeof i["cue"] === "string" &&
+    (i["kind"] === "hold" || i["kind"] === "reps") &&
+    typeof i["sided"] === "boolean" &&
+    isNum(i["sets"]) &&
+    isNum(i["amount"]) &&
+    (i["count"] === undefined || typeof i["count"] === "string") &&
+    (i["sideLabel"] === undefined || typeof i["sideLabel"] === "string") &&
+    Array.isArray(i["ease"]) &&
+    i["ease"].every((e) => typeof e === "string");
+  if (!plan.steps.every(stepOk) || !plan.items.every(itemOk) || !isNum(plan.estimatedSec) || !isNum(plan.level) || typeof plan.name !== "string") return null;
   const finished = saved["finished"] === true;
   const stepIndex = isNum(saved["stepIndex"]) ? Math.min(plan.steps.length - 1, Math.max(0, Math.floor(saved["stepIndex"]))) : 0;
   const touchedAt = isNum(saved["touchedAt"]) ? Math.min(now, saved["touchedAt"]) : Math.min(now, saved["startedAt"]);
@@ -481,6 +532,7 @@ export function restoreMobility(saved: unknown, now: number): ActiveMobility | n
     pausedAt: finished ? null : pausedAt,
     pausedMs: isNum(saved["pausedMs"]) ? Math.max(0, saved["pausedMs"]) : 0,
     handsFree: saved["handsFree"] !== false,
+    waits: saved["waits"] === true,
     doneSec,
     skipped: indexes(saved["skipped"], plan.items.length),
     hurt: indexes(saved["hurt"], plan.items.length),

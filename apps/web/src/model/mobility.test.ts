@@ -1,4 +1,4 @@
-import { findRoutine } from "@repcurve/exercises";
+import { findExercise, findRoutine } from "@repcurve/exercises";
 import type { Equipment, Profile } from "@repcurve/shared";
 import { describe, expect, it } from "vitest";
 import { INITIAL, reducer, type AppState } from "../store/reducer";
@@ -35,9 +35,10 @@ import {
   stoppedForPain,
   tickMobility,
   trainedFamilies,
+  worthKeeping,
   type ActiveMobility,
 } from "./mobility";
-import { newCore } from "./plan";
+import { newCore, planExerciseIds, weekSessions } from "./plan";
 import type { Core } from "./types";
 
 const profile: Profile = {
@@ -108,7 +109,11 @@ describe("a mobility session under way", () => {
     // The 30-second hold ended long ago: it counts, and the session pauses at the changeover.
     const back = T0 + 40_000 + LATE_MS + 1;
     a = tickMobility(a, back);
-    expect([kind(a), a.pausedAt, a.endsAt, a.doneSec[2], stepRemainingMs(a, back + 999)]).toEqual(["switch", back, null, 30, 5000]);
+    expect([kind(a), a.pausedAt, a.endsAt, a.doneSec[2], stepRemainingMs(a, back + 999)]).toEqual(["switch", T0 + 40_000, null, 30, 5000]);
+    // Paused as of when the hold ended, so the time asleep isn't time spent, then or after resuming.
+    expect(mobilityElapsedMs(a, back + 30 * 60_000)).toBe(40_000);
+    const on = resumeMobility(a, back + 30 * 60_000);
+    expect([isCounting(on), mobilityElapsedMs(on, back + 30 * 60_000 + 3000)]).toEqual([true, 43_000]);
     // Only a little late is just a slow timer: it carries on.
     let b = skipDrill(skipDrill(begin(), T0), T0);
     b = tickMobility(tickMobility(b, T0 + 10_000), T0 + 40_000 + LATE_MS);
@@ -170,7 +175,15 @@ describe("a mobility session under way", () => {
     // After pain nothing starts by itself: the next drill waits for a tap, even hands-free.
     expect([a.handsFree, isCounting(a), a.endsAt]).toEqual([true, false, null]);
     expect(tickMobility(a, T0 + 600_000)).toBe(a);
-    expect(kind(nextMobility(a, T0 + 75_000))).toBe("work");
+    // It goes on waiting through a pause (the End sheet pauses and resumes) and a hands-free switch.
+    const resumed = resumeMobility(pauseMobility(a, T0 + 71_000), T0 + 72_000);
+    expect([kind(resumed), isCounting(resumed), resumed.endsAt]).toEqual(["ready", false, null]);
+    const toggled = sessionHandsFree(sessionHandsFree(a, false, T0 + 71_000), true, T0 + 72_000);
+    expect([isCounting(toggled), toggled.endsAt]).toEqual([false, null]);
+    // The tap starts the drill, and from there the session runs by itself again.
+    const started = nextMobility(a, T0 + 75_000);
+    expect([kind(started), isCounting(started), started.waits]).toEqual(["work", true, false]);
+    expect(isCounting(tickMobility(started, T0 + 105_000))).toBe(true);
     // A plain skip carries straight on.
     expect(isCounting(skipDrill(begin(), T0))).toBe(true);
     // Skipping the last drill ends the session.
@@ -204,10 +217,17 @@ describe("a mobility session under way", () => {
 
   it("runs to the end and reports progress along the way", () => {
     const start = begin();
-    expect(mobilityProgress(start)).toBe(0);
-    const { a } = runAll(start, T0);
-    expect([a.finished, mobilityProgress(a)]).toEqual([true, 1]);
+    expect([mobilityProgress(start, T0), worthKeeping(start, T0 + 5000)]).toEqual([0, false]);
+    const { a, now } = runAll(start, T0);
+    expect([a.finished, mobilityProgress(a, now)]).toEqual([true, 1]);
     expect(a.skipped).toEqual([]);
+    // A hold under way counts as it goes: 15 of the session's 474 seconds of work.
+    const hold = tickMobility(skipDrill(skipDrill(begin(), T0), T0), T0 + 10_000);
+    expect(mobilityProgress(hold, T0 + 10_000)).toBe(0);
+    expect(mobilityProgress(hold, T0 + 25_000)).toBeCloseTo(15 / 474, 5);
+    expect([worthKeeping(hold, T0 + 10_500), worthKeeping(hold, T0 + 25_000)]).toEqual([false, true]);
+    // A drill stopped for pain is worth keeping with nothing else done.
+    expect(worthKeeping(skipDrill(begin(), T0 + 5000, true), T0 + 6000)).toBe(true);
   });
 });
 
@@ -238,9 +258,26 @@ describe("finishing a mobility session", () => {
     expect(hurt.entry!.drills[0]).toEqual({ id: "hip_circles", plannedSec: 64, doneSec: 0, skipped: true, hurt: true });
     expect(stoppedForPain(hurt.core, "hip_circles")).toBe(true);
     expect(stoppedForPain(hurt.core, "figure_four")).toBe(false);
+    // A session that ends before reaching it, or skips it, says nothing: the note stays.
+    const figure = (c: Core) => {
+      let a = startMobility(plan(c), { block: false, handsFree: true }, T0 + DAY);
+      a = skipDrill(skipDrill(skipDrill(a, T0 + DAY), T0 + DAY), T0 + DAY);
+      return finishMobility(tickMobility(tickMobility(a, T0 + DAY + 10_000), T0 + DAY + 40_000), c, T0 + DAY + 41_000);
+    };
+    const short = figure(hurt.core);
+    expect(short.entry!.drills.map((d) => [d.id, d.doneSec, d.skipped ?? false]).slice(0, 4)).toEqual([["hip_circles", 0, true], ["ninety_ninety", 0, true], ["hip_flexor_stretch", 0, true], ["figure_four", 30, false]]);
+    expect(stoppedForPain(short.core, "hip_circles")).toBe(true);
     // Doing it again without stopping clears the note.
-    const again = finishMobility(runAll(startMobility(plan(hurt.core), { block: false, handsFree: true }, T0 + DAY), T0 + DAY).a, hurt.core, T0 + DAY + 600_000);
+    const again = finishMobility(runAll(startMobility(plan(short.core), { block: false, handsFree: true }, T0 + 2 * DAY), T0 + 2 * DAY).a, short.core, T0 + 2 * DAY + 600_000);
     expect(stoppedForPain(again.core, "hip_circles")).toBe(false);
+  });
+
+  it("is over as of its last step when it ran to the end while the phone was asleep", () => {
+    const core = core0();
+    // Everything done but the last set of bridges, which is reps: finished by a tap at the 9-minute mark.
+    const { a, now } = runAll(begin({ core }), T0);
+    const r = finishMobility(a, core, now + 45 * 60_000);
+    expect([r.entry!.finishedAt, r.entry!.minutes]).toEqual([now, Math.round((now - T0) / 60_000)]);
   });
 
   it("doesn't count time away: no longer than three times the plan", () => {
@@ -267,6 +304,9 @@ describe("finishing a mobility session", () => {
     const other = runAll(startMobility(plan(core, 0, desk), { block: true, handsFree: true }, T0), T0);
     expect(finishMobility(other.a, core, other.now).core.mobility!.block!.done).toBe(0);
     expect(finishMobility(whole.a, pauseBlock(core, T0), whole.now).entry!.blockSession).toBeUndefined();
+    // The same session finished twice (it was open in two tabs): saved once, counted once.
+    const twice = finishMobility(whole.a, done.core, whole.now + 5000);
+    expect([twice.entry!.blockSession, twice.core.mobility!.block!.done, twice.core.mobility!.log]).toEqual([1, 1, [twice.entry]]);
   });
 
   it("drops sessions more than a year old as new ones are kept", () => {
@@ -375,9 +415,12 @@ describe("choices kept with the person's data", () => {
     const families = trainedFamilies(core0(), [], T0);
     expect(families).toContain("squat");
     expect(families.length).toBeGreaterThan(3);
-    // A week of cardio only trains none.
-    const walker: Core = newCore({ ...profile, goal: "fitness", daysPerWeek: 1 }, { ...equipment, dumbbells: { kind: "none" } }, T0);
-    expect(trainedFamilies(walker, [], T0).every((f) => typeof f === "string")).toBe(true);
+    // Each family once, and only those of exercises in this week's strength sessions: cardio adds none.
+    expect(new Set(families).size).toBe(families.length);
+    const sessions = weekSessions(core0(), [], T0).sessions;
+    expect(sessions.some((x) => x.plan.kind === "cardio")).toBe(true);
+    const planned = new Set(sessions.flatMap((x) => (x.plan.kind === "strength" ? planExerciseIds(x.plan) : [])).map((id) => findExercise(id)!.family));
+    expect(new Set(families)).toEqual(planned);
   });
 
   it("keeps hands-free on unless it's turned off", () => {
@@ -446,6 +489,16 @@ describe("a mobility session after a reload", () => {
     expect(restoreMobility({ ...(saved(a) as object), plan: { ...a.plan, version: a.plan.version + 1 } }, T0)).toBeNull();
     expect(restoreMobility({ ...(saved(a) as object), plan: { ...a.plan, routine: "gone" } }, T0)).toBeNull();
     expect(restoreMobility({ ...(saved(a) as object), plan: { ...a.plan, steps: [{ item: 99, estSec: 1, seconds: 1 }] } }, T0)).toBeNull();
+    // A step or drill that isn't the shape the screen draws: refused, never half-read.
+    const steps = (change: object) => ({ ...(saved(a) as object), plan: { ...a.plan, steps: [{ ...a.plan.steps[0]!, ...change }, ...a.plan.steps.slice(1)] } });
+    const items = (change: object) => ({ ...(saved(a) as object), plan: { ...a.plan, items: [{ ...a.plan.items[0]!, ...change }, ...a.plan.items.slice(1)] } });
+    for (const bad of [steps({ kind: "nap" }), steps({ item: 0.5 }), steps({ side: "up" }), items({ kind: "plank" }), items({ sided: "yes" }), items({ ease: [1] }), { ...(saved(a) as object), plan: { ...a.plan, name: 7 } }]) {
+      expect(restoreMobility(bad, T0)).toBeNull();
+    }
+    expect(restoreMobility(saved(a), T0)).not.toBeNull();
+    // Waiting for a tap after a pain stop is kept across the reload.
+    const waiting = skipDrill(a, T0 + 1000, true);
+    expect(resumeMobility(restoreMobility(saved(waiting), T0 + 2000)!, T0 + 3000)).toMatchObject({ waits: true, endsAt: null, pausedAt: null });
     expect(restoreMobility({ ...(saved(a) as object), stepIndex: 9999, skipped: [0, 0, 77], hurt: "x" }, T0)).toMatchObject({ stepIndex: a.plan.steps.length - 1, skipped: [0], hurt: [] });
   });
 });
@@ -520,6 +573,24 @@ describe("reducer: mobility", () => {
     expect(late.mobility).toBeNull();
     expect(late.data.core!.mobility!.log).toMatchObject([{ routine: "desk", finishedAt: T0 + 55_000, minutes: 1 }]);
     expect(late.mobilityDone).toBeNull();
+    // A workout is under way (started in another tab): the workout stays, and the session is closed with what was done.
+    const working = reducer(ready(), { type: "start", now: T0, minutes: null });
+    const both = reducer(working, { type: "mobilityRestore", saved: kept, now: T0 + 120_000 });
+    expect([both.mobility, both.data.active === working.data.active]).toEqual([null, true]);
+    expect(both.data.core!.mobility!.log).toMatchObject([{ routine: "desk", finishedAt: T0 + 55_000 }]);
+  });
+
+  it("notes the drill under way as stopped when the session is ended because it hurt", () => {
+    let s = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    s = reducer(s, { type: "mobilityTick", now: T0 + 10_000 });
+    s = reducer(s, { type: "mobilityPause", now: T0 + 22_000 });
+    s = reducer(s, { type: "mobilityFinish", now: T0 + 40_000, hurt: true });
+    expect(s.mobilityDone!.drills[0]).toEqual({ id: "hip_flexor_stretch", plannedSec: 90, doneSec: 12, skipped: true, hurt: true });
+    expect(stoppedForPain(s.data.core!, "hip_flexor_stretch")).toBe(true);
+    // Ended the ordinary way, nothing is marked.
+    let plain = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    plain = reducer(reducer(plain, { type: "mobilityTick", now: T0 + 10_000 }), { type: "mobilityFinish", now: T0 + 22_000 });
+    expect(plain.mobilityDone!.drills[0]).toEqual({ id: "hip_flexor_stretch", plannedSec: 90, doneSec: 12 });
   });
 
   it("drops a session under way when the data is reset", () => {
