@@ -152,6 +152,90 @@ Sessions are filled toward what the week is short on (generate.ts `weekChain`, s
 
 ---
 
+## 16. Stretching and mobility (added 2026-11-10)
+
+**How this section was read.** Like the rest, through web-search extracts, with one more limit: PubMed, PMC, Europe PMC and Crossref could not be opened from the build environment at all, so every quote is the wording an extract showed and none was checked on the page. The numbers listed under "Verify first" at the end are not used in the app. The app's own wording is `MOBILITY_FACTS` and `MOBILITY_SOURCES` in `packages/exercises/src/mobility.ts`, shown under Plan, Mobility, "What stretching does, and what it doesn't".
+
+### 16.1 Regular static stretching increases range of motion
+**Claim:** stretching for several weeks improves flexibility; 30-second holds are enough; total weekly time matters more than the length of a hold.
+**Verdict: supported.** How many days a week is best is unresolved.
+**Numbers:** Konrad 2024 (77 studies, 186 effect sizes, at least 2 weeks): ES −1.002 (95% CI −1.165 to −0.840; the sign is a coding convention), which the authors call moderate. Ingram 2025 (189 studies, 6,654 adults): chronic g = 0.96 (0.84–1.09), larger with poor baseline flexibility. Bandy 1994 (57 adults): 30 s and 60 s holds beat 15 s and none, and did not differ. Bandy 1997 (93 adults, 5 days a week for 6 weeks): no gain from 60 s over 30 s, or from three times a day over once. Feland 2001 (62 people aged 65–97): 60 s holds gained 2.4° a week against 1.3° for 30 s, the one trial where longer did better. Thomas 2018 (23 articles): time per week matters, time per session does not. Single trials put six weeks of hamstring stretching at +5° to +11°.
+**Days a week:** the Delphi panel (Warneke 2025) recommends daily stretching for the most range and Thomas 2018 favours 5 or more days; Konrad 2024 and Ingram 2025 found no effect of frequency; Marques 2009 (31 adults) found three days a week better than one and equal to five. The two meta-regressions are far larger, but they compare between studies.
+**Quote:** "No increase in flexibility occurred when the duration of stretching was increased from 30 to 60 seconds or when the frequency of stretching was increased from one to three times per day." (Bandy 1997) · "neither volume, intensity, nor frequency of stretching were found to play a significant role in ROM yields." (Konrad 2024)
+**Sources:** Konrad A, Alizadeh S, Daneshjoo A, et al., Behm DG (2024). Chronic effects of stretching on range of motion with consideration of potential moderating variables: A systematic review with meta-analysis. *J Sport Health Sci* 13(2):186–194. https://doi.org/10.1016/j.jshs.2023.06.002 · Ingram LA, Tomkinson GR, d'Unienville NMA, et al. (2025). Optimising the Dose of Static Stretching to Improve Flexibility: A Systematic Review, Meta-analysis and Multivariate Meta-regression. *Sports Med* 55(3):597–617. https://doi.org/10.1007/s40279-024-02143-9 · Bandy WD, Irion JM (1994). *Phys Ther* 74(9):845–850. PMID 8066111 · Bandy WD, Irion JM, Briggler M (1997). *Phys Ther* 77(10):1090–1096. PMID 9327823 · Feland JB, et al. (2001). *Phys Ther* 81(5):1110–1117. PMID 11319936 · Thomas E, Bianco A, Paoli A, Palma A (2018). *Int J Sports Med* 39(4):243–254. PMID 29506306 · Marques AP, et al. (2009). *Braz J Med Biol Res* 42(10):949–953 · Warneke K, Thomas E, Blazevich AJ, et al., Wilke J (2025). Practical recommendations on stretching exercise: A Delphi consensus statement of international research experts. *J Sport Health Sci* 14:101067. https://doi.org/10.1016/j.jshs.2025.101067
+
+**Built:** the hips block holds each stretch 2 × 30 s a side at level 1 and 2 × 45 s at levels 2 and 3, three sessions a week: 3 and 4.5 minutes a week per stretched muscle. That is inside the range that has worked in trials (Bandy 1997 used 2.5 minutes a week) and below the most anyone recommends; a test holds each stretch between 2.5 and 10 minutes a week. Levels add total time, not harder stretching. The app says three sessions a week is "enough to work in studies, not the most you could do", and promises no number of degrees.
+
+### 16.2 Type of stretching, and slow mobility drills
+**Verdict: held stretches supported; drills unclear.** Static and PNF stretching beat ballistic and dynamic stretching for long-term range in the largest meta-analysis (Konrad 2024, subgroup p = 0.01), and PNF is not reliably better than static (Lempke 2018: four of five studies found no difference). No multi-week trial of controlled drills (hip circles, 90/90 switches, rock-backs) turned up; the one trial of controlled articular rotations measured a single session. One trial tested whether more hip range shows up in movement: it did not (Moreside and McGill 2013, 24 young men, seen through a database summary).
+**Quote:** "proprioceptive neuromuscular facilitation and static stretching produced greater ROM than did ballistic/dynamic stretching" (Konrad 2024) · "no evidence of increased hip ROM used during functional movement testing" (Moreside and McGill 2013)
+**Sources:** Konrad 2024 (above) · Lempke L, Wilkinson R, Murray C, Stanek J (2018). *J Sport Rehabil* 27(3):289–294. PMID 28182516 · Moreside JM, McGill SM (2013). Improvements in hip flexibility do not transfer to mobility in functional movement patterns. *J Strength Cond Res* 27(10):2635–2643
+
+**Built:** every routine has slow drills, described as practice at moving a joint under control. The app says their effect on range over weeks "has barely been studied" and that held stretches have the stronger evidence. The last level of the hips block adds squats that use the range, and the app says why.
+
+### 16.3 Lifting through a full range also improves flexibility
+**Verdict: supported for loaded lifting, not for bodyweight work.** "No significant difference" from stretching is not proof the two are equal.
+**Numbers:** Alizadeh 2023 (55 studies): resistance training against control ES 0.73; against stretching ES 0.08 (p = 0.79); bodyweight-only training gave no significant gain. Afonso 2021 (11 trials, n = 452): ES −0.22 (95% CI −0.55 to 0.12).
+**Quote:** "As resistance training with external loads can improve range of motion, stretching prior to or after resistance training may not be necessary to enhance flexibility." (Alizadeh 2023)
+**Sources:** Alizadeh S, Daneshjoo A, Zahiri A, et al., Behm DG (2023). Resistance Training Induces Improvements in Range of Motion: A Systematic Review and Meta-Analysis. *Sports Med* 53(3):707–722. https://doi.org/10.1007/s40279-022-01804-x · Afonso J, Ramirez-Campillo R, Moscão J, et al. (2021). Strength Training versus Stretching for Improving Range of Motion: A Systematic Review and Meta-Analysis. *Healthcare* 9(4):427. https://doi.org/10.3390/healthcare9040427
+
+**Built:** mobility is offered as extra, never required, and the app says extra stretching is optional where workouts already take a joint through its range. The bridges and leg raises the routines borrow from the exercise library are there as light strength work and are not credited with flexibility; a session leaves one out when the week's workouts already train that movement (`buildMobilityPlan`).
+
+### 16.4 Injury
+**Verdict: not supported** for injuries overall. A reduction in muscle strains is contested.
+**Numbers:** Lauersen 2014 (25 trials, 26,610 people): stretching RR 0.963 (0.846–1.095); strength training RR 0.315 (0.207–0.480). Pope 2000 (1,538 recruits): HR 0.95 (0.77–1.18). Jamtvedt 2010 (2,377 adults): all injuries HR 0.97 (0.84–1.13); muscle, ligament and tendon injuries HR 0.75 (0.59–0.96), a secondary outcome of an unblinded trial. Yeung 2011 (Cochrane, runners and recruits): RR 0.85 (0.65–1.12). Takeuchi 2024 reports fewer muscle injuries (OR 0.37, I² 63%) and has been formally challenged.
+**Quote:** "The panel does not recommend stretching for injury prevention in general." (Warneke 2025)
+**Sources:** Lauersen JB, Bertelsen DM, Andersen LB (2014). *Br J Sports Med* 48(11):871–877. https://doi.org/10.1136/bjsports-2013-092538 · Pope RP, Herbert RD, Kirwan JD, Graham BJ (2000). *Med Sci Sports Exerc* 32(2):271–277. PMID 10694106 · Jamtvedt G, Herbert RD, Flottorp S, et al. (2010). *Br J Sports Med* 44(14):1002–1009 · Yeung SS, Yeung EW, Gillespie LD (2011). *Cochrane Database Syst Rev* (7):CD001256 · Warneke 2025 (above)
+
+**Built:** no injury-prevention claim anywhere. The app says stretching "hasn't been shown to lower your overall risk of injury".
+
+### 16.5 Soreness and recovery
+**Verdict: not supported.**
+**Numbers:** Herbert 2011 (Cochrane, 12 trials): soreness a day later −0.52 points of 100 with stretching before exercise and −1.04 after. Afonso 2021 (11 trials, n = 229): no effect on soreness at 24, 48 or 72 hours; strength recovery ES −0.08 (−0.54 to 0.39). Zhang 2025 (15 studies): soreness SMD −0.06 (−0.32 to 0.19).
+**Quote:** "stretching does not produce clinically important reductions in delayed-onset muscle soreness in healthy adults" (Herbert 2011)
+**Sources:** Herbert RD, de Noronha M, Kamper SJ (2011). Stretching to prevent or reduce muscle soreness after exercise. *Cochrane Database Syst Rev* (7):CD004577. https://doi.org/10.1002/14651858.CD004577.pub3 · Afonso J, et al. (2021). *Front Physiol* 12:677581. https://doi.org/10.3389/fphys.2021.677581 · Zhang, Chen, Xing (2025). *Front Physiol*, article 1674871. https://doi.org/10.3389/fphys.2025.1674871
+
+**Built:** no soreness or recovery claim; the app says it doesn't meaningfully reduce either. Posture is treated the same way (Warneke 2024, 23 studies: no change after one session or after weeks. *Sports Med Open*. https://doi.org/10.1186/s40798-024-00733-5).
+
+### 16.6 Long holds right before lifting
+**Verdict: supported, and small.** The loss depends on dose, shows in tests done within minutes, and disappears when a dynamic warm-up follows.
+**Numbers:** Kay and Blazevich 2012 (106 articles): under 30 s in total −1.1%, 30–45 s −1.9% (not significant), 60 s or more a likely reduction. Behm 2016: −4.6% with 60 s or more per muscle against −1.1% with less. Simic 2013: strength −5.4%, power −1.9%. Warneke and Lohmann 2024 (83 studies): maximal strength ES −0.21, and no negative effect on jumping or sprinting.
+**Quote:** "greater performance deficits with ≥60 s (-4.6%) than with <60 s (-1.1%) SS per muscle group" (Behm 2016)
+**Sources:** Kay AD, Blazevich AJ (2012). Effect of acute static stretch on maximal muscle performance: a systematic review. *Med Sci Sports Exerc* 44(1):154–164. PMID 21659901 · Behm DG, Blazevich AJ, Kay AD, McHugh M (2016). *Appl Physiol Nutr Metab* 41(1):1–11. https://doi.org/10.1139/apnm-2015-0235 · Simic L, Sarabon N, Markovic G (2013). *Scand J Med Sci Sports* 23(2):131–148. PMID 22316148 · Warneke K, Lohmann LH (2024). *J Sport Health Sci* 13(6):805–819. https://doi.org/10.1016/j.jshs.2024.05.002
+
+**Built:** the hips block says "after a workout or on a day off", Today says "Your workout comes first", and the wind-down routine says "Better after lifting than right before it". Nothing stops someone doing a session first. Behm 2016 also gives the "one session's extra range typically lasts under 30 minutes" the app quotes.
+
+### 16.7 How hard to stretch
+**Verdict: partly supported.** No convincing evidence that stretching into pain gains more than stretching to discomfort; evidence of harm is sparse either way.
+**Numbers:** Muanjai 2017 (22 women): no acute advantage of stretching to pain. Bryant 2023 (18 studies): 8 of 16 found more range at higher intensity. Intensity did not moderate gains in Konrad 2024 or Ingram 2025. ACSM (Garber 2011): stretch to "tightness or slight discomfort".
+**Quote:** "Stretching to the point of pain had no acute advantages over stretching to the discomfort point." (Muanjai 2017)
+**Sources:** Muanjai P, et al. (2017). The acute benefits and risks of passive stretching to the point of pain. *Eur J Appl Physiol* 117(6):1217–1226. https://doi.org/10.1007/s00421-017-3608-y · Bryant J, Cooper DJ, Peters DM, Cook MD (2023). *J Funct Morphol Kinesiol* 8(2):37. https://doi.org/10.3390/jfmk8020037
+
+**Built:** the copy asks for "a firm pull or mild discomfort" you can breathe through. "Something hurts" pauses the session first, then offers stopping the drill, easing off or ending; after a drill is stopped for pain, the next one waits for a tap [est].
+
+### 16.8 What fades, and what keeps it
+**Verdict: partly supported.** Some range is lost within weeks of stopping, usually not all. What maintains it rests on single small trials.
+**Numbers:** Konrad 2025 (13 studies, 556 people): training ES 0.93; from the end of training to 2–6 weeks later −0.41; against baseline still 0.55. Willy 2001 lost everything in four weeks; Rancour 2009 held hip range with 2–3 days a week.
+**Quote:** "Chronic gains in ROM are maintained above baseline levels after stretching training cessation." (Konrad 2025)
+**Sources:** Konrad A, et al. (2025). Detraining Effects Following Chronic Stretching Training on Range of Motion: A Systematic Review and Meta-Analysis. *Sports Med Open* 11:141. https://doi.org/10.1186/s40798-025-00935-5
+
+**Built:** the app says range "isn't permanent". After the block's 18 sessions it asks the person to look back and choose another six weeks or to finish; it prescribes no maintenance schedule. A block picked up after 14 or more days away eases back one level [est].
+
+### 16.9 Who should take care
+**Verdict: unclear.** No trial-based list of who shouldn't stretch exists for healthy adults; what exists is professional guidance.
+**Quote:** "A mild pulling feeling during a stretch is normal. Sharp or stabbing pain or joint pain means you should stop, you're stretching too far." (American Heart Association) · "Do not bounce your stretches. Ballistic (bouncy) stretching can cause injury." (AAOS OrthoInfo)
+**Sources:** heart.org, "Flexibility Exercise (Stretching)" · orthoinfo.aaos.org, "Warm Up, Cool Down and Be Flexible" · ehlers-danlos.com, "Physical Therapy", which lists repeated or excessive stretching as a factor in joint instability
+
+**Built:** "When to take care" in the app, labelled as guidance that no trial has tested. Which drill bothers which area (`avoidWith`), its gentler stand-in and the advice for doing it with a sore area (`ease`) are my own judgement [est], driven by the areas in the person's profile. Any drill can be left out for good. The lying hamstring stretch says to leave it out if it hurts at the sit bone. These sessions are general fitness guidance; nothing in them is offered as treatment.
+
+### Not from the evidence
+The choice of drills, their order and their rep counts; the three levels; six weeks and 18 sessions as the block (six weeks is a common trial length, and length was not a moderator in Ingram 2025); the 10-second get-ready, 5-second changeover and 10- or 20-second rests; a block session counting when half its work is done; recorded time capped at three times the planned length. All [est].
+
+### Verify first
+Not used in the app until read in the paper itself: the Delphi panel's exact dose for the most range (the journal extract says 2–3 sets daily of 30–120 s, a press release says three sets of 120 s); whether Ingram 2025's "no additional benefit observed beyond 4 min per session or 10 min per week" is per muscle group; how many trials Takeuchi 2024 pooled and what the published critique says; what moderated retention in Konrad 2025; which way the sign runs in Afonso 2021.
+
+---
+
 ## Appendix: sources behind priors.json not cited above
 - **Strength, untrained:** Ahtiainen 2016 (above): leg-press 1RM +21.1 ± 11.5% (range −8 to +60%) after 20–24 weeks at 2×/wk; ~7% low responders for strength and ~30% for muscle size. ACSM (2009). Progression models in resistance training for healthy adults. *Med Sci Sports Exerc* 41:687–708, https://doi.org/10.1249/MSS.0b013e3181915670. It reports strength gains of "approximately 40% in untrained, 20% in moderately trained, 16% in trained, 10% in advanced" over 4 wk–2 yr, a figure seen via documents quoting it. Hubal MJ, et al. (2005). Variability in muscle size and strength gain after unilateral resistance training. *Med Sci Sports Exerc* 37:964–972, PMID 15947721: after 12 weeks of arm training, CSA +18.9 ± 9.7% and 1RM gains ranging 0 to +250%.
 - **Lean mass:** Benito PJ, Cupeiro R, Ramos-Campo DJ, Alcaraz PE, Rubio-Arias JÁ (2020). A Systematic Review with Meta-Analysis of the Effect of Resistance Training on Whole-Body Muscle Growth in Healthy Adult Males. *IJERPH* 17:1285, https://doi.org/10.3390/ijerph17041285. Muscle mass "increased... by 1.53 kg (95% CI [1.30, 1.76])"; study durations ranged from 2 weeks to 1 year. Untrained men, 8 wk: lean body mass +1.0 to +1.5 kg (*J Strength Cond Res* 2021, PMID 31009427; authors not confirmed).

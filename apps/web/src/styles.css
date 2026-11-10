@@ -585,3 +585,12 @@ textarea.input.prose-input { font-family: var(--font-body); font-size: 0.95rem; 
 /* A set skipped for today ("not feeling it"). */
 .set-skipped .set-row .cell.plan { font-style: italic; }
 .set-skipped .tick { border-style: dashed; color: var(--muted); }
+
+/* Mobility: the drills of a session as a numbered list, and the routine's drills with their notes. */
+.segment.drill { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
+.segment.drill .m { color: var(--muted); text-align: center; }
+.segment.drill.now .m { color: var(--accent); }
+.drill-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); }
+.drill-row:first-child { border-top: 0; padding-top: 0; }
+.drill-row .lineup-item { padding: 0; }
+.card .session-list .session-row { box-shadow: none; }

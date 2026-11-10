@@ -62,3 +62,5 @@ export { simulateTraining, DEFAULT_LIFTER } from "./simulate.js";
 export type { SimulationResult, SimulatedSession, VirtualLifter } from "./simulate.js";
 export { project, personalFactor, leanBodyMassKg, HORIZONS } from "./projection.js";
 export type { Projection, ProjectionPoint, ProjectionInput, Band, LiftObservation } from "./projection.js";
+export { buildMobilityPlan, mobilityMinutes, mobilityDose, mobilityWorkSec, blockLevel, MOBILITY_READY_SEC, MOBILITY_SWITCH_SEC, MOBILITY_REST_SEC, MOBILITY_COUNTS_AT } from "./mobility.js";
+export type { MobilityPlan, MobilityItem, MobilityStep, MobilityStepKind, MobilityInput } from "./mobility.js";

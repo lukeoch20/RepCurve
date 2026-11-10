@@ -7,6 +7,7 @@ import { validTime, type Reminders } from "./calendar";
 import { upgradeEquipment } from "./equipment";
 import { BODYWEIGHT_ID, MAX_NAME, MAX_SETUPS, cleanName, sessionSetup, setupsFrom, withSetups } from "./setups";
 import { MAX_ADDED_SETS } from "./session";
+import { migrateMobility } from "./mobility";
 import { migrateOverrides } from "./profile";
 import { migrateSoreCheck, migrateSoreness } from "./soreness";
 import {
@@ -300,6 +301,7 @@ export function migrateCore(c: unknown): Core | null {
       soreCheck: migrateSoreCheck(c["soreCheck"]),
       regenerated: migrateRegenerated(c["regenerated"]),
       account: migrateAccount(c["account"]),
+      mobility: migrateMobility(c["mobility"]),
     }),
     setups,
   );
