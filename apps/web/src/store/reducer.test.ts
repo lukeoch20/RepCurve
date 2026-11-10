@@ -133,3 +133,23 @@ describe("L2: an action that fails changes nothing", () => {
     expect(s.data.core!.settings.restSec).toBe(90);
   });
 });
+
+describe("reducer: the username", () => {
+  const account = { userId: "11111111-1111-4111-8111-111111111111", secret: "ab".repeat(32), username: "luke" };
+
+  it("is saved with the first setup, changed and let go without touching training", () => {
+    let s = reducer(loaded(), { type: "setup", profile, equipment, account, now: T0 });
+    expect(s.data.core!.account).toEqual(account);
+    const state = s.data.core!.state;
+    s = reducer(s, { type: "account", account: { ...account, username: "lukelifts" } });
+    expect(s.data.core!.account!.username).toBe("lukelifts");
+    expect(s.data.core!.state).toBe(state);
+    s = reducer(s, { type: "account", account: null });
+    expect("account" in s.data.core!).toBe(false);
+    // Editing the profile later keeps it.
+    s = reducer(s, { type: "account", account });
+    s = reducer(s, { type: "setup", profile: { ...profile, aim: "get_stronger" }, now: T0 });
+    expect(s.data.core!.account).toEqual(account);
+    expect(s.data.core!.profile.aim).toBe("get_stronger");
+  });
+});

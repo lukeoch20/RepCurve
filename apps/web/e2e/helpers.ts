@@ -1,12 +1,17 @@
 import { expect, type Page } from "@playwright/test";
 
 /**
- * Set up a new user: 33-year-old man, never trained, 10–30 lb dumbbells, treadmill and ab roller.
- * In RepCurve by default, or in RepCurve Test with "/test/".
+ * Set up a new user: 33-year-old man, never trained, aiming to lose fat, 10–30 lb dumbbells,
+ * treadmill and ab roller. In RepCurve by default, or in RepCurve Test with "/test/"; with a
+ * username when the app has a backend (see backend.ts in this folder).
  */
-export async function onboard(page: Page, app: "/" | "/test/" = "/") {
+export async function onboard(page: Page, app: "/" | "/test/" = "/", opts: { username?: string; nameStatus?: string | RegExp } = {}) {
   await page.goto(app);
   await page.getByRole("button", { name: "Set up my plan" }).click();
+  if (opts.username) {
+    await page.getByLabel("Username").fill(opts.username);
+    await expect(page.getByText(opts.nameStatus ?? "Available.")).toBeVisible();
+  }
   await page.getByRole("group", { name: "Sex" }).getByRole("button", { name: "Male", exact: true }).click();
   await page.getByLabel("Age").fill("33");
   await page.getByLabel("Weight (lb)").fill("185");
@@ -14,6 +19,7 @@ export async function onboard(page: Page, app: "/" | "/test/" = "/") {
   await page.getByLabel("(in)").fill("10");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: /New to it/ }).click();
+  await page.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByText("80 minutes")).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();

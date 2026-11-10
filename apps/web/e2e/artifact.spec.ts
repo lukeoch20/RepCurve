@@ -98,6 +98,7 @@ test("the claude.ai page saves to the account database and survives a reload", a
   await p.getByLabel("Height (cm)").fill("168");
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: /A little/ }).click();
+  await p.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();
   await p.getByRole("button", { name: "Next" }).click();

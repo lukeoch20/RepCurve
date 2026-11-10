@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __RUNTIME__: JSON.stringify(artifact ? "artifact" : "pwa"),
       __CHANNEL__: JSON.stringify(test ? "test" : "main"),
+      // The commit a CI build came from, sent with feedback.
+      __BUILD__: JSON.stringify((process.env["GITHUB_SHA"] ?? "").slice(0, 7) || "dev"),
     },
     build: artifact
       ? {

@@ -69,6 +69,7 @@ test("an hour-long plan: 60 minutes can be picked, and the plan's summary comes 
   await page.getByLabel("Height (cm)").fill("168");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: /I train regularly/ }).click();
+  await page.getByRole("group", { name: "Main aim" }).getByRole("button", { name: /^Lose fat/ }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("group", { name: "Days a week" }).getByRole("button", { name: "3", exact: true }).click();
   await page.getByRole("group", { name: "Minutes per session" }).getByRole("button", { name: "60", exact: true }).click();

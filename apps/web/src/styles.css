@@ -169,7 +169,9 @@ svg { flex: none; }
 .input { min-height: var(--tap); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--card); padding: 0 12px; width: 100%; }
 .input.num { text-align: center; font-variant-numeric: tabular-nums; }
 select.input { appearance: none; padding-right: 32px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
-textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78rem; }
+textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78rem; border-radius: min(var(--radius-sm), 18px); }
+/* Feedback is written, not pasted: the body font, at reading size. */
+textarea.input.prose-input { font-family: var(--font-body); font-size: 0.95rem; line-height: 1.45; }
 .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .toggle:last-child { border-bottom: 0; }
 .switch { appearance: none; width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: none; border: 0; margin: 0; }
@@ -379,6 +381,15 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .footer-actions .btn { flex: 1; }
 .hero-curve { width: 100%; height: auto; display: block; }
 .example-tag { display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+/* usernames: the live check under the field, and the name in Settings */
+.username-status.good { color: var(--accent-text, var(--accent)); font-weight: 600; }
+.username-current { font-family: var(--font-display); font-size: 1.4rem; line-height: 1.2; margin: 0; }
+/* tips for the person's aim, after a workout */
+.aim-tip .h3 { margin: 0; }
+.aim-tip-list { display: flex; flex-direction: column; gap: 10px; }
+.aim-tip-list details { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--card); }
+.aim-tip-list summary { cursor: pointer; font-weight: 600; }
+.aim-tip-list details[open] summary { margin-bottom: 8px; }
 /* training setups: names are the person's own, so long ones wrap anywhere rather than overflow */
 .setup-name { overflow-wrap: anywhere; }
 .setup-card { gap: 6px; }
