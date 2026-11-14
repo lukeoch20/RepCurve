@@ -19,6 +19,15 @@ import { ErrorLogSettings } from "./ErrorLog";
 import { Lock, LookPreview, useLooks } from "./Looks";
 import { KnowsLink } from "./Knows";
 import { TapTick } from "./TapTick";
+import { TICKS } from "../platform/haptics";
+
+/** What the Vibration switch does on this device. */
+const VIBRATION_HINT =
+  TICKS === "vibrate"
+    ? "A light tick when you tap a main button, and a buzz when a set is done."
+    : TICKS === "switch"
+      ? "A light tick when you tap a main button."
+      : "Nothing to feel on this device: it can't vibrate from a web app.";
 
 export function Settings(props: { core: Core; onEditSetup: () => void }): React.ReactElement {
   const { core } = props;
@@ -129,7 +138,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
         <div>
           <Toggle id="sound" label="Beep when rest is over" checked={s.sound} onChange={(sound) => dispatch({ type: "settings", settings: { sound } })} />
           <Toggle id="awake" label="Keep the screen on during workouts" hint="Where your phone allows it" checked={s.keepAwake} onChange={(keepAwake) => dispatch({ type: "settings", settings: { keepAwake } })} />
-          <Toggle id="haptics" label="Vibration" hint="A light tick when you tap a main button, and a buzz when a set is done. On iPhone, the tick only." checked={s.haptics} onChange={(haptics) => dispatch({ type: "settings", settings: { haptics } })} />
+          <Toggle id="haptics" label="Vibration" hint={VIBRATION_HINT} checked={s.haptics} onChange={(haptics) => dispatch({ type: "settings", settings: { haptics } })} />
           <PatsToggle />
         </div>
       </section>
@@ -217,7 +226,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
                 setPendingImport(null);
                 setImportText("");
                 void restore(d);
-              }}>Replace</button>
+              }}>Replace<TapTick /></button>
             </div>
           </div>
         ) : null}
@@ -247,6 +256,7 @@ export function Settings(props: { core: Core; onEditSetup: () => void }): React.
                 }}
               >
                 Delete everything
+                <TapTick />
               </button>
             </div>
           </div>

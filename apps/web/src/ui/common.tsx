@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { IS_TEST } from "../platform/channel";
 import { useFocusTrap } from "./focusTrap";
 import { PIXEL_ICONS } from "./pixelIcons";
-import { TapTick } from "./TapTick";
+import { TapMark, TapTick } from "./TapTick";
 
 export function Seg<T extends string | number>(props: {
   value: T | undefined;
@@ -58,8 +58,7 @@ export function Toggle(props: { id: string; label: string; hint?: string; checke
         {props.hint ? <span className="meta small" style={{ display: "block" }}>{props.hint}</span> : null}
       </label>
       <input id={props.id} type="checkbox" role="switch" className="switch" checked={props.checked} onChange={(e) => props.onChange(e.target.checked)} />
-      {/* On iPhone the tap lands on this instead of the checkbox, so it does the switching too. */}
-      <TapTick onTap={() => props.onChange(!props.checked)} />
+      <TapMark />
     </div>
   );
 }

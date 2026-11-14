@@ -33,7 +33,7 @@ import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 import { ExerciseInfo, TIER_LABEL } from "./ExerciseInfo";
 import { PatOnTheBack } from "./PatOnTheBack";
 import { useTip } from "./tips";
-import { TapTick } from "./TapTick";
+import { TapMark, TapTick } from "./TapTick";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -642,6 +642,7 @@ function SetEditor(props: {
         ) : (
           <button ref={hurtTip} type="button" className="btn danger" onClick={() => props.onSave({ loadKg, reps, rir, painFlag: true })} title="Log the set and flag pain">
             It hurt
+            <TapTick />
           </button>
         )}
       </div>
@@ -783,6 +784,7 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
           </span>
         </span>
         <input id="perm" type="checkbox" role="switch" className="switch" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} />
+        <TapMark />
       </label>
     </Sheet>
   );

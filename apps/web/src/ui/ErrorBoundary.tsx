@@ -81,7 +81,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               Save a backup first if you might want it.
               <div className="row" style={{ marginTop: 10 }}>
                 <button type="button" className="btn" onClick={() => this.setState({ confirmReset: false })}>Cancel</button>
-                <button type="button" className="btn danger solid" onClick={() => void this.reset()}>Delete everything</button>
+                <button type="button" className="btn danger solid" onClick={() => void this.reset()}>Delete everything<TapTick /></button>
               </div>
             </div>
           ) : (

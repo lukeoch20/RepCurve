@@ -46,5 +46,7 @@ test("the buzz can be turned off in Settings", async ({ page }) => {
   await page.getByRole("button", { name: "Today" }).click();
   await page.getByRole("button", { name: "Start session" }).click();
   await page.getByRole("button", { name: "Done · set 1" }).first().click();
+  // Long enough for a tap's pulse to have gone out, had there been one.
+  await page.waitForTimeout(150);
   expect(await buzzes(page)).toEqual([]);
 });

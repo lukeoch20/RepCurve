@@ -22,7 +22,9 @@ const open: HTMLElement[] = [];
 
 /** The controls Tab reaches inside `root`, in order. Hidden ones are left out. */
 export function focusables(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.closest("[hidden], [inert]") && el.getClientRects().length > 0);
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+    (el) => !el.closest("[hidden], [inert]") && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden",
+  );
 }
 
 export function useFocusTrap(

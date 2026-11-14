@@ -46,14 +46,15 @@
   --bevel-hi: #ffffff;
   --bevel-lo: #3d2367;
   --medal-ink: #24213d;
-  /* pressed: a block lands on its own 2px shadow, and steps back instead of easing */
+  /* pressed: a block lands on its own 2px shadow at once and is back at once, like a sprite's two
+     frames, so the shadow and the block never part company */
   --press-main: translate(2px, 2px);
   --press-plain: translate(2px, 2px);
   --press-small: translate(1px, 1px);
   --press-wide: translate(1px, 1px);
+  --press-wait: 0ms;
   --press-in: 0ms;
-  --press-out: 100ms;
-  --press-ease: steps(2, end);
+  --press-out: 0ms;
   color-scheme: light;
 }
 :root[data-style="pixel"][data-theme="dark"] {
@@ -153,6 +154,8 @@
   box-shadow: inset 0 -2px 0 var(--control-line), 2px 2px 0 var(--control-line);
 }
 [data-style="pixel"] :is(.btn, .chip) { font-weight: 700; }
+/* the small controls that stand on a 2px shadow land on it too */
+[data-style="pixel"] :is(.icon-btn, .chip, .dock-actions button) { --press-small: translate(2px, 2px); }
 [data-style="pixel"] :is(.btn, .icon-btn, .chip, .dock-actions button):active { background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
 [data-style="pixel"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
   background: var(--accent);

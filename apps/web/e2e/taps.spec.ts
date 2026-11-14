@@ -3,7 +3,7 @@ import { onboard } from "./helpers";
 
 // A tick when a control that matters is tapped (src/ui/TapTick.tsx, src/platform/haptics.ts).
 // Android pulses from code. An iPhone only ticks when the finger itself toggles a native switch,
-// so there the control carries a see-through label wired to a hidden one.
+// so there the button carries a see-through label with a hidden one inside it.
 
 type Recorded = { __buzz: unknown[] };
 const buzzes = (page: Page) => page.evaluate(() => (window as unknown as Recorded).__buzz);
@@ -24,16 +24,20 @@ test.describe("on a phone that can vibrate", () => {
     });
   });
 
-  test("main buttons, steppers, segments and switches give one short pulse a tap; other buttons give none", async ({ page }) => {
+  test("main buttons, steppers, segments and switches give one short pulse a tap; other taps give none", async ({ page }) => {
     await onboard(page);
 
     // A switch: one pulse, though the row's label passes its click on to the checkbox.
     await page.getByRole("button", { name: "Settings" }).click();
     await forget(page);
+    const sound = page.getByRole("switch", { name: "Beep when rest is over" });
     await page.getByText("Beep when rest is over").click();
-    await expect(page.getByRole("switch", { name: "Beep when rest is over" })).not.toBeChecked();
+    await expect(sound).not.toBeChecked();
     await expect.poll(() => buzzes(page)).toEqual([15]);
+    // The space above the words switches nothing, so it gives nothing.
+    await page.locator(".toggle").filter({ has: sound }).click({ position: { x: 150, y: 3 } });
     await settle(page);
+    await expect(sound).not.toBeChecked();
     expect(await buzzes(page)).toEqual([15]);
 
     // The tab bar doesn't tick; a main button does.
@@ -56,7 +60,7 @@ test.describe("on a phone that can vibrate", () => {
     expect(await buzzes(page)).toEqual([15, 15, 15, 15]);
   });
 
-  test("logging a set gives the set's buzz in place of the tap's, and the rest timer's buttons pulse", async ({ page }) => {
+  test("a set or a finished session gives its own buzz in place of the tap's, and the rest timer's buttons pulse", async ({ page }) => {
     await onboard(page);
     await page.getByRole("button", { name: "Start session" }).click();
     await expect.poll(() => buzzes(page)).toContain(15);
@@ -69,6 +73,13 @@ test.describe("on a phone that can vibrate", () => {
     await expect.poll(() => buzzes(page)).toEqual([30, 15]);
     await page.getByRole("timer").getByRole("button", { name: "Skip", exact: true }).click();
     await expect.poll(() => buzzes(page)).toEqual([30, 15, 15]);
+
+    // Finishing: the session's pattern, and no tap pulse after it to cut it short.
+    await page.getByRole("button", { name: "End" }).click();
+    await forget(page);
+    await page.getByRole("button", { name: "Finish and save" }).click();
+    await settle(page);
+    expect(await buzzes(page)).toEqual([[40, 70, 40, 70, 120]]);
   });
 });
 
@@ -88,7 +99,7 @@ test.describe("on an iPhone", () => {
 
   const tapLabel = (page: Page, name: string | RegExp) => page.getByRole("button", { name }).first().locator("label.tap-tick");
 
-  test("a main button carries a label wired to a hidden switch: the tap lands on it, acts once and flips the switch", async ({ page }) => {
+  test("a main button carries a label with a hidden switch: the tap lands on it, acts once and flips the switch", async ({ page }) => {
     // Every tap in the setup goes through such a label.
     await onboard(page);
 
@@ -110,6 +121,7 @@ test.describe("on an iPhone", () => {
     // The button still reads as before.
     await expect(start).toHaveAccessibleName("Start session");
 
+    // This tap takes the button off the page before its label can pass the click on.
     await start.click();
     await expect(page.getByRole("button", { name: "Done · set 1" }).first()).toBeVisible();
 
@@ -124,11 +136,17 @@ test.describe("on an iPhone", () => {
     await expect(reps).toHaveText(String(before + 2));
     await expect(more.locator("label.tap-tick input")).not.toBeChecked();
 
+    // A screen reader's "activate" goes straight to the switch: that has to press the button too, once.
+    await more.locator("label.tap-tick input").dispatchEvent("click");
+    await expect(reps).toHaveText(String(before + 3));
+    // And the keyboard presses the button itself.
+    await more.focus();
+    await page.keyboard.press("Enter");
+    await expect(reps).toHaveText(String(before + 4));
+
     // A set is logged once.
     await page.getByRole("button", { name: "Done · set 1" }).first().click();
     await expect(page.getByText(/^1 of \d+ sets$/)).toBeVisible();
-    // Nothing here calls for vibration from code.
-    expect(await page.evaluate(() => typeof navigator.vibrate)).toBe("undefined");
   });
 
   test("the label steps aside while a button is disabled", async ({ page }) => {
@@ -147,32 +165,46 @@ test.describe("on an iPhone", () => {
     await expect(tapLabel(page, "Next")).toBeVisible();
   });
 
-  test("a switch row ticks and still switches once; turning Vibration off takes the labels away", async ({ page }) => {
+  test("switch rows stay plain switches, and turning Vibration off takes the labels away", async ({ page }) => {
     await onboard(page);
+    await expect(tapLabel(page, "Start session")).toBeVisible();
     await page.getByRole("button", { name: "Settings" }).click();
 
-    // The row's label takes the tap and does the switching.
+    // Nothing is laid over a switch row: a screen reader's finger has to find the switch.
+    await expect(page.locator(".toggle label.tap-tick")).toHaveCount(0);
     const sound = page.getByRole("switch", { name: "Beep when rest is over" });
-    const soundRow = page.locator(".toggle").filter({ has: sound });
-    await expect(sound).toBeChecked();
-    await soundRow.locator("label.tap-tick").click();
+    await sound.uncheck();
     await expect(sound).not.toBeChecked();
-    await expect(soundRow.locator("label.tap-tick input")).toBeChecked();
-    await soundRow.locator("label.tap-tick").click();
+    await page.getByText("Beep when rest is over").click();
     await expect(sound).toBeChecked();
 
     const vibration = page.getByRole("switch", { name: /^Vibration/ });
-    const row = page.locator(".toggle").filter({ has: vibration });
-    await row.locator("label.tap-tick").click();
-    await expect(vibration).not.toBeChecked();
+    await expect(page.locator(".toggle").filter({ has: vibration })).toContainText("A light tick when you tap a main button.");
+    await vibration.uncheck();
     await expect(page.locator("html")).toHaveAttribute("data-haptics", "off");
     await expect(page.locator("label.tap-tick:visible")).toHaveCount(0);
-
-    // With the labels gone the switches work as plain switches, and buttons as plain buttons.
-    await sound.uncheck();
-    await expect(sound).not.toBeChecked();
+    // With the labels gone the buttons are plain buttons.
+    await page.getByRole("button", { name: "Today" }).click();
+    await expect(tapLabel(page, "Start session")).toBeHidden();
+    await page.getByRole("button", { name: "Settings" }).click();
     await vibration.check();
     await expect(page.locator("html")).not.toHaveAttribute("data-haptics", "off");
-    await expect(row.locator("label.tap-tick")).toBeVisible();
+    await page.getByRole("button", { name: "Today" }).click();
+    await expect(tapLabel(page, "Start session")).toBeVisible();
+  });
+
+  test("a sheet still keeps keyboard focus inside: the hidden switches aren't stops", async ({ page }) => {
+    await onboard(page);
+    await page.getByRole("button", { name: "Start session" }).click();
+    await page.getByRole("button", { name: "End" }).click();
+    const sheet = page.getByRole("dialog", { name: "End this session?" });
+    await expect(sheet).toBeVisible();
+    const close = sheet.getByRole("button", { name: "Close" });
+    const last = sheet.getByRole("button", { name: "Discard this session" });
+    await close.focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(last).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
   });
 });

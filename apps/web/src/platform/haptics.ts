@@ -74,10 +74,13 @@ export function tapPulse(after: (run: () => void) => void, buzz: () => void = ()
   });
 }
 
-/** True for a control that should pulse when clicked: it holds a tap mark and isn't switched off. */
+/** True for a click that should pulse: on a control that holds a tap mark and isn't switched off. */
 export function carriesTick(target: EventTarget | null): boolean {
-  const host = typeof Element !== "undefined" && target instanceof Element ? target.closest("button, .toggle") : null;
-  return !!host && !host.matches(":disabled, [aria-disabled='true']") && host.querySelector(":scope > .tap-mark") !== null;
+  if (typeof Element === "undefined" || !(target instanceof Element)) return false;
+  const host = target.closest("button, .toggle");
+  if (!host || host.matches(":disabled, [aria-disabled='true']") || host.querySelector(":scope > .tap-mark") === null) return false;
+  // In a switch row only the words and the switch do anything; the space between them doesn't.
+  return host.matches("button") || target.closest("label, input") !== null;
 }
 
 /** Android: listen for taps on the controls that carry <TapTick/>. Call once, at startup. */

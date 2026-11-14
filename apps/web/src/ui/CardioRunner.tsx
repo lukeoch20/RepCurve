@@ -123,7 +123,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
           Nothing from it will be saved.
           <div className="row" style={{ marginTop: 10 }}>
             <button type="button" className="btn" onClick={() => setDiscardOpen(false)}>Keep going</button>
-            <button type="button" className="btn danger solid" onClick={() => dispatch({ type: "discard" })}>Discard</button>
+            <button type="button" className="btn danger solid" onClick={() => dispatch({ type: "discard" })}>Discard<TapTick /></button>
           </div>
         </div>
       ) : null}

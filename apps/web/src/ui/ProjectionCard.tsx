@@ -3,6 +3,7 @@ import type { Band, Projection } from "@repcurve/engine";
 import { kgToLb } from "@repcurve/shared";
 import type { Units } from "@repcurve/shared";
 import { NOTICE } from "../model/projection";
+import { TapTick } from "./TapTick";
 
 function RangeBar(props: { band: Band; max: number; label: string; unit: string }): React.ReactElement {
   const { band, max } = props;
@@ -40,6 +41,7 @@ export function ProjectionCard(props: { projection: Projection; units: Units; in
         {projection.points.map((p) => (
           <button key={p.week} type="button" aria-pressed={p.week === week} onClick={() => setWeek(p.week)}>
             {p.week === 52 ? "1 yr" : `${p.week} wk`}
+            <TapTick />
           </button>
         ))}
       </div>
