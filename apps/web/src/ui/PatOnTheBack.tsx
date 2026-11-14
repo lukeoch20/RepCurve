@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Cheer } from "../model/cheer";
 import { useFocusTrap } from "./focusTrap";
+import { TapTick } from "./TapTick";
 
 /** How long a pat on the back stays up before getting out of the way, ms. The last one stays. */
 export const PAT_MS = 6000;
@@ -62,6 +63,7 @@ export function PatOnTheBack(props: { cheer: Cheer; onClose: () => void; onFinis
             <>
               <button ref={primary} type="button" className="btn primary" onClick={props.onFinish}>
                 Finish workout
+                <TapTick />
               </button>
               <button type="button" className="btn ghost" onClick={props.onClose}>
                 Not yet
@@ -70,6 +72,7 @@ export function PatOnTheBack(props: { cheer: Cheer; onClose: () => void; onFinis
           ) : (
             <button ref={primary} type="button" className="btn primary" onClick={props.onClose}>
               Keep going
+              <TapTick />
             </button>
           )}
         </div>

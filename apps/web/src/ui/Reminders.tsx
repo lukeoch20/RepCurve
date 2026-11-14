@@ -4,6 +4,7 @@ import type { Core } from "../model/types";
 import { openCalendarFile } from "../platform/download";
 import { storageKey } from "../platform/channel";
 import { useStore } from "../store/useAppStore";
+import { TapTick } from "./TapTick";
 
 /** The app's own address, for the link in each reminder. */
 const appUrl = () => `${location.origin}${location.pathname}`;
@@ -57,6 +58,7 @@ export function ReminderSettings(props: { core: Core }): React.ReactElement {
       </div>
       <button type="button" className="btn primary" disabled={days.length === 0} onClick={() => void add()}>
         {saved ? "Add to my calendar again" : "Add to my calendar"}
+        <TapTick />
       </button>
       {saved ? (
         <span className="meta small">

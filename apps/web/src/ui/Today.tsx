@@ -20,6 +20,7 @@ import { badges, monthChallenge, RETURN_GAP_DAYS } from "../model/gamify";
 import { SessionGlyph, WeekStrip } from "./Week";
 import { SoreCheckCard } from "./SoreCheck";
 import { MobilityToday } from "./Mobility";
+import { TapTick } from "./TapTick";
 
 const DAY_MS = 86_400_000;
 
@@ -211,6 +212,7 @@ export function Today(props: { core: Core; history: SessionRecord[] }): React.Re
         >
           Start session
           <Icon name="arrowRight" size={20} />
+          <TapTick />
         </button>
         <div className="time-adjust" ref={timeTip}>
           <div className="stack" style={{ gap: 2 }}>

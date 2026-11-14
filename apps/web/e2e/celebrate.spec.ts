@@ -10,18 +10,20 @@ test.beforeEach(async ({ page }) => {
   });
 });
 const buzzes = (page: import("@playwright/test").Page) => page.evaluate(() => (window as unknown as { __buzz: unknown[] }).__buzz);
+/** The buzzes for sets and sessions. A tap on a main button pulses for 15 ms as well: that's taps.spec.ts. */
+const bigBuzzes = async (page: import("@playwright/test").Page) => (await buzzes(page)).filter((b) => b !== 15);
 
 test("each set gets a buzz, and finishing gets a celebration: stats, calories, the week and why it matters", async ({ page }) => {
   await onboard(page);
   await page.getByRole("button", { name: "Start session" }).click();
   await page.getByRole("button", { name: "Done · set 1" }).first().click();
-  expect(await buzzes(page)).toEqual([30]);
+  expect(await bigBuzzes(page)).toEqual([30]);
   await page.getByRole("button", { name: "Done · set 1" }).first().click();
-  expect(await buzzes(page)).toEqual([30, 30]);
+  expect(await bigBuzzes(page)).toEqual([30, 30]);
 
   await page.getByRole("button", { name: "End" }).click();
   await page.getByRole("button", { name: "Finish and save" }).click();
-  expect((await buzzes(page)).length).toBe(3);
+  expect((await bigBuzzes(page)).length).toBe(3);
 
   await expect(page.getByRole("heading", { name: "First workout done!" })).toBeVisible();
   const stats = page.getByRole("region", { name: "This session" });
@@ -36,7 +38,11 @@ test("each set gets a buzz, and finishing gets a celebration: stats, calories, t
 test("the buzz can be turned off in Settings", async ({ page }) => {
   await onboard(page);
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("switch", { name: /Vibrate when you finish a set/ }).uncheck();
+  await page.getByRole("switch", { name: /^Vibration/ }).uncheck();
+  // Taps up to here pulsed. From here on nothing does: not the taps, not the set.
+  await page.evaluate(() => {
+    (window as unknown as { __buzz: unknown[] }).__buzz.length = 0;
+  });
   await page.getByRole("button", { name: "Today" }).click();
   await page.getByRole("button", { name: "Start session" }).click();
   await page.getByRole("button", { name: "Done · set 1" }).first().click();

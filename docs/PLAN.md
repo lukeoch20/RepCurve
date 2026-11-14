@@ -273,6 +273,7 @@ A is confirmed. The engine package doesn't change if we move to B or C later.
 - Keep the screen awake during a session (Screen Wake Lock) so the rest timer keeps running.
 - Compute the rest timer from a stored end time, not a running counter, so it is still correct after the app is backgrounded.
 - Timer end is signalled with sound; iPhone web apps cannot vibrate or post a lock-screen countdown. If that gap matters after a few weeks of use, wrap the app with Capacitor on the Mac.
+- A tap can tick, a timer can't: an iPhone gives its light haptic tick only when a finger toggles a native switch, so the main buttons carry a see-through label wired to a hidden one (built: `apps/web/src/ui/TapTick.tsx`, `apps/web/src/platform/haptics.ts`). Stronger or patterned haptics need the native wrapper.
 - Install: open the link in Safari, Share → Add to Home Screen.
 - Data lives on the phone; a monthly backup reminder (built: on Today, for device-only data) until sync exists.
 

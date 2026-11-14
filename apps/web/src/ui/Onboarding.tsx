@@ -14,6 +14,7 @@ import { APP_NAME } from "../platform/channel";
 import { parseBackup } from "../model/backup";
 import type { AppData, Location, Locations } from "../model/types";
 import { useStore } from "../store/useAppStore";
+import { TapTick } from "./TapTick";
 
 interface Draft {
   units: Units;
@@ -422,6 +423,7 @@ export function Onboarding(props: {
           ) : null}
           <button type="button" className="btn primary" onClick={next} disabled={!canNext}>
             {step === "review" ? (editing ? "Save changes" : "Start training") : "Next"}
+            <TapTick />
           </button>
         </div>
       )}
@@ -446,6 +448,7 @@ function Welcome(props: { onStart: () => void }): React.ReactElement {
       <div className="footer-actions">
         <button type="button" className="btn primary" onClick={props.onStart}>
           Set up my plan
+          <TapTick />
         </button>
       </div>
       <InstallCard beforeSetup />
@@ -551,6 +554,7 @@ function RestoreBackup(): React.ReactElement {
               }}
             >
               Restore
+              <TapTick />
             </button>
           </div>
         </div>

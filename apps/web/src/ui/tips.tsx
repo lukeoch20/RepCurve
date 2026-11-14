@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { nextTip, TIPS, tipById, type TipId } from "../model/tips";
 import { loadTips, saveTips, type TipsState } from "../platform/tips";
 import { useFocusTrap } from "./focusTrap";
+import { TapTick } from "./TapTick";
 
 interface TipsApi {
   state: TipsState;
@@ -179,7 +180,7 @@ function TipCard(props: { id: TipId; rect: DOMRect; onSeen: () => void; onSkipAl
         <p id="tip-body" className="prose">{tip.body}</p>
         <div className="tip-actions">
           <button type="button" className="btn ghost" onClick={props.onSkipAll}>Skip all tips</button>
-          <button ref={gotIt} type="button" className="btn primary" onClick={props.onSeen}>Got it</button>
+          <button ref={gotIt} type="button" className="btn primary" onClick={props.onSeen}>Got it<TapTick /></button>
         </div>
       </div>
     </div>

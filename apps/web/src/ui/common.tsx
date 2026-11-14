@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { IS_TEST } from "../platform/channel";
 import { useFocusTrap } from "./focusTrap";
 import { PIXEL_ICONS } from "./pixelIcons";
+import { TapTick } from "./TapTick";
 
 export function Seg<T extends string | number>(props: {
   value: T | undefined;
@@ -15,6 +16,7 @@ export function Seg<T extends string | number>(props: {
       {props.options.map((o) => (
         <button key={String(o.value)} type="button" aria-pressed={props.value === o.value} onClick={() => props.onChange(o.value)}>
           {o.label}
+          <TapTick />
         </button>
       ))}
     </div>
@@ -56,6 +58,8 @@ export function Toggle(props: { id: string; label: string; hint?: string; checke
         {props.hint ? <span className="meta small" style={{ display: "block" }}>{props.hint}</span> : null}
       </label>
       <input id={props.id} type="checkbox" role="switch" className="switch" checked={props.checked} onChange={(e) => props.onChange(e.target.checked)} />
+      {/* On iPhone the tap lands on this instead of the checkbox, so it does the switching too. */}
+      <TapTick onTap={() => props.onChange(!props.checked)} />
     </div>
   );
 }
@@ -73,6 +77,7 @@ export function Stepper(props: {
     <div className="stepper" role="group" aria-label={props.label}>
       <button type="button" aria-label={`Less ${props.label.toLowerCase()}`} onClick={props.onDec} disabled={props.decDisabled}>
         −
+        <TapTick />
       </button>
       <div className="value" aria-live="polite">
         <b>{props.value}</b>
@@ -80,6 +85,7 @@ export function Stepper(props: {
       </div>
       <button type="button" aria-label={`More ${props.label.toLowerCase()}`} onClick={props.onInc} disabled={props.incDisabled}>
         +
+        <TapTick />
       </button>
     </div>
   );

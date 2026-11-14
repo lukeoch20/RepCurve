@@ -11,6 +11,7 @@ import { Icon, Sheet, TimerRing, Toggle } from "./common";
 import { BlockReview, DrillInfo, DrillName } from "./Mobility";
 import { PIXEL_ICONS } from "./pixelIcons";
 import { useTip } from "./tips";
+import { TapTick } from "./TapTick";
 
 const PHASE: Record<MobilityStep["kind"], string> = { ready: "Get ready", work: "Hold", switch: "Switch sides", rest: "Rest" };
 
@@ -255,10 +256,12 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
           {paused ? (
             <button type="button" className="btn primary big" onClick={() => dispatch({ type: "mobilityResume", now: at() })}>
               Resume
+              <TapTick />
             </button>
           ) : (
             <button type="button" className={`btn big${step.kind === "work" && timed ? "" : " primary"}`} onClick={next}>
               {go}
+              <TapTick />
             </button>
           )}
         </div>
@@ -331,6 +334,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             }}
           >
             Stop this drill
+            <TapTick />
           </button>
           <button
             type="button"
@@ -341,6 +345,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             }}
           >
             Ease off and carry on
+            <TapTick />
           </button>
           <div className="banner stop">
             <b>End the session if</b>
@@ -365,6 +370,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
               </p>
               <button type="button" className="btn go big" onClick={() => dispatch({ type: "mobilityFinish", now: at() })}>
                 Finish and save
+                <TapTick />
               </button>
             </>
           ) : (
@@ -372,9 +378,11 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
           )}
           <button type="button" className="btn big" onClick={keepGoing}>
             Keep going
+            <TapTick />
           </button>
           <button type="button" className="btn danger big" onClick={() => dispatch({ type: "mobilityDiscard" })}>
             Discard this session
+            <TapTick />
           </button>
         </Sheet>
       ) : null}
@@ -447,6 +455,7 @@ export function MobilityFinished(props: { core: Core; entry: MobilityEntry }): R
           {block.reviewDue ? (
             <button type="button" className="btn primary" onClick={() => setReview(true)}>
               Look back at the block
+              <TapTick />
             </button>
           ) : null}
         </section>
@@ -472,6 +481,7 @@ export function MobilityFinished(props: { core: Core; entry: MobilityEntry }): R
 
       <button type="button" className="btn primary big" onClick={() => dispatch({ type: "mobilityDismiss" })}>
         Done
+        <TapTick />
       </button>
     </main>
   );

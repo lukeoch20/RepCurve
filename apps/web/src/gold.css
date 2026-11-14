@@ -36,6 +36,8 @@
   --bevel-lo: #97772a;
   --accent-text: #765611;
   --gold-low: #c5a24a;
+  /* pressed: a small, even squeeze */
+  --press-main: scale(0.975);
   color-scheme: light;
 }
 :root[data-style="gold"][data-theme="dark"] {
@@ -144,7 +146,7 @@
   box-shadow: none;
 }
 [data-style="gold"] :is(.btn, .chip) { font-weight: 600; }
-[data-style="gold"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { transform: none; background: var(--sunk); }
+[data-style="gold"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { background: var(--sunk); }
 [data-style="gold"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
   --cut: 8px;
   --edge: var(--accent-line);

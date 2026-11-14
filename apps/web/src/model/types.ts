@@ -11,7 +11,7 @@ export interface Settings {
   transitionSec: number;
   sound: boolean;
   keepAwake: boolean;
-  /** A buzz on each logged set and a bigger one at the end, where the phone allows it. */
+  /** A tick when a main button is tapped, a buzz on each logged set and a bigger one at the end, where the phone allows it. */
   haptics: boolean;
   /** The cardio activity the user picked last; used whenever the day's equipment and format allow. */
   cardioActivity?: CardioActivity;

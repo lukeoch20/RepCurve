@@ -11,6 +11,7 @@ import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { useTip } from "./tips";
 import { PIXEL_ICONS } from "./pixelIcons";
+import { TapTick } from "./TapTick";
 
 const UP = new Set(["load_up", "ladder_up", "widen_range"]);
 const DOWN = new Set(["load_down", "ladder_down", "pain"]);
@@ -177,6 +178,7 @@ export function Finished(props: { record: SessionRecord; core: Core; history: Se
 
       <button type="button" className="btn primary big" onClick={() => dispatch({ type: "dismissFinished" })}>
         Done
+        <TapTick />
       </button>
     </main>
   );
