@@ -3,6 +3,7 @@ import { exportBackup } from "../model/backup";
 import type { AppData } from "../model/types";
 import { copyCrashLog, crashLogText, logCrash } from "../platform/crashLog";
 import { backupFilename, saveTextFile } from "../platform/download";
+import { TapTick } from "./TapTick";
 
 interface Props {
   data: AppData;
@@ -71,7 +72,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         </header>
         {message ? <div className="banner info">{message}</div> : null}
         <div className="stack">
-          <button type="button" className="btn primary" onClick={() => void this.exportData()}>Save a backup</button>
+          <button type="button" className="btn primary" onClick={() => void this.exportData()}>Save a backup<TapTick /></button>
           <button type="button" className="btn" onClick={() => window.location.reload()}>Reload</button>
           <button type="button" className="btn" onClick={() => void this.copyLog()}>Copy error log</button>
           {confirmReset ? (
@@ -80,7 +81,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               Save a backup first if you might want it.
               <div className="row" style={{ marginTop: 10 }}>
                 <button type="button" className="btn" onClick={() => this.setState({ confirmReset: false })}>Cancel</button>
-                <button type="button" className="btn danger solid" onClick={() => void this.reset()}>Delete everything</button>
+                <button type="button" className="btn danger solid" onClick={() => void this.reset()}>Delete everything<TapTick /></button>
               </div>
             </div>
           ) : (

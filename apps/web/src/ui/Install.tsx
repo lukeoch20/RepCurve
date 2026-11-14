@@ -2,6 +2,7 @@ import React, { useSyncExternalStore } from "react";
 import { canSuggestInstall, installPromptReady, iosBrowser, isIOS, onInstallPromptChange, promptInstall } from "../platform/install";
 import { APP_NAME } from "../platform/channel";
 import { Icon } from "./common";
+import { TapTick } from "./TapTick";
 
 /** The Safari share icon, drawn so the instructions match what's on screen. */
 function ShareGlyph(): React.ReactElement {
@@ -45,6 +46,7 @@ export function InstallCard(props: { beforeSetup?: boolean }): React.ReactElemen
       ) : promptReady ? (
         <button type="button" className="btn primary" style={{ alignSelf: "flex-start" }} onClick={() => void promptInstall()}>
           Install app
+          <TapTick />
         </button>
       ) : (
         <p className="meta small" style={{ color: "var(--ink)" }}>Use your browser's menu and choose Install app or Add to Home Screen.</p>

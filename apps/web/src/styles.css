@@ -126,7 +126,6 @@ svg { flex: none; }
 
 /* buttons: pills */
 .btn { min-height: var(--tap); padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
-.btn:active { transform: translateY(1px); }
 .btn.primary, .btn.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn.outline { background: transparent; border-color: var(--accent); color: var(--accent); }
 .btn.big { min-height: 56px; font-size: 1.02rem; width: 100%; }
@@ -572,3 +571,74 @@ textarea.input { padding: 10px 12px; min-height: 120px; font-family: ui-monospac
 .drill-row:first-child { border-top: 0; padding-top: 0; }
 .drill-row .lineup-item { padding: 0; }
 .card .session-list .session-row { box-shadow: none; }
+
+/* Press feel: a control goes down when it's touched and springs back when it's let go.
+   The mechanics are here. Each look says how far and how fast with the --press-… values and
+   paints its own pressed buttons; Classic, and anything a look leaves alone, gets the shades below.
+   A finger hides a small control while it's down, so what shows is mostly the way back: that is
+   why the return takes a third of a second and overshoots a little.
+   A button's pressed colour is instant. Its movement waits a moment first; a row or a tile waits
+   longer, moves less and fades into its shade. So a thumb that lands on one to scroll the page
+   doesn't make it flash, dip and bounce. */
+:root {
+  --press-wait: 40ms;
+  --press-wait-wide: 90ms;
+  --press-in: 60ms;
+  --press-out: 320ms;
+  --press-ease: cubic-bezier(0.3, 0.7, 0.4, 1.5);
+  --press-main: translateY(1px) scale(0.97); /* filled and full-width actions */
+  --press-plain: scale(0.96); /* other buttons */
+  --press-small: scale(0.93); /* chips, steppers, segments, tabs: small, so they move more */
+  --press-wide: scale(0.985); /* rows and tiles */
+  /* Ink over whatever is there: darker in a light look, lighter in a dark one. */
+  --press-tint: color-mix(in srgb, var(--ink) 10%, transparent);
+  --press-tint-main: color-mix(in srgb, var(--ink) 16%, transparent);
+  /* The same idea for a row, as a filter so it can fade: everything a step toward mid-grey. */
+  --press-shade: contrast(0.88);
+}
+/* A damped spring (damping ratio 0.55, about 13% past the mark), where linear() easing is understood. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --press-ease: linear(0, 0.074, 0.248, 0.461, 0.67, 0.847, 0.98, 1.067, 1.113, 1.126, 1.117, 1.096, 1.069, 1.042, 1.02, 1.003, 0.992, 0.986, 0.984, 0.985, 0.988, 0.991, 0.995, 0.997, 1); }
+}
+:is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring) {
+  transition: transform var(--press-out) var(--press-ease);
+  /* a quick second tap is a tap, not a zoom */
+  touch-action: manipulation;
+}
+:is(.choice button, .tile, .session-row, .library-row, button.trophy) { transition: transform var(--press-out) var(--press-ease), filter 260ms ease-out; }
+:is(.set-row, button.block-head) { transition: filter 260ms ease-out; }
+:is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring, .set-row, button.block-head):active {
+  transition-duration: var(--press-in);
+  transition-timing-function: ease-out;
+  transition-delay: var(--press-wait);
+}
+.btn:active, button.ring:active { transform: var(--press-plain); }
+.btn.primary:active, .btn.go:active, .btn.big:active, .btn.danger.solid:active, .dock-actions button.go:active { transform: var(--press-main); }
+.icon-btn:active, .chip:active, .seg button:active, .stepper button:active, .dock-actions button:active, .tabbar button:active { transform: var(--press-small); }
+.choice button:active, .tile:active, .session-row:active, .library-row:active, button.trophy:active { transform: var(--press-wide); }
+:is(.choice button, .tile, .session-row, .library-row, button.trophy, .set-row, button.block-head):active { filter: var(--press-shade); transition-delay: var(--press-wait-wide); }
+/* A pressed control has shrunk or moved, so its edge is no longer under the finger that pressed
+   it there. An unseen pad, reaching back out past where the edge was, keeps the tap. */
+:is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring):active { position: relative; }
+:is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring):active::before { content: ""; position: absolute; inset: -6px; }
+/* a control that's switched off stays put */
+:is(button, .tile):is(:disabled, [aria-disabled="true"]) { --press-main: none; --press-plain: none; --press-small: none; --press-wide: none; --press-shade: none; --press-tint: transparent; --press-tint-main: transparent; }
+/* pressed buttons, where a look doesn't paint its own */
+.btn:active, .icon-btn:active, .chip:active, .stepper button:active, .dock-actions button:active { background-image: linear-gradient(var(--press-tint), var(--press-tint)); }
+.seg button:not([aria-pressed="true"]):active { background-image: linear-gradient(var(--press-tint), var(--press-tint)); }
+.btn.primary:active, .btn.go:active, .btn.danger.solid:active, .dock-actions button.go:active, .chip[aria-pressed="true"]:active { background-image: linear-gradient(var(--press-tint-main), var(--press-tint-main)); }
+.link-btn:active, .exercise-link:active { opacity: 0.55; }
+/* Reduced motion: the pressed state without the animation. The waits stay, for the same reason. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring, .set-row, button.block-head),
+  :is(.btn, .icon-btn, .chip, .seg button, .stepper button, .dock-actions button, .tabbar button, .choice button, .tile, .session-row, .library-row, button.trophy, button.ring, .set-row, button.block-head):active { transition-duration: 0s; }
+}
+
+/* Tap ticks on iPhone (ui/TapTick.tsx): a see-through label over a control, holding a hidden
+   switch. The finger lands on the label; the switch stays out from under it, because a touch
+   that starts on a switch can't scroll the page. */
+:where(:has(> label.tap-tick)) { position: relative; }
+label.tap-tick { position: absolute; inset: 0; border-radius: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+label.tap-tick input { position: absolute; width: 1px; height: 1px; margin: 0; visibility: hidden; }
+:active > label.tap-tick { inset: -6px; }
+:is(:disabled, [aria-disabled="true"]) > label.tap-tick, [data-haptics="off"] label.tap-tick { display: none; }

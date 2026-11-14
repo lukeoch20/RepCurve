@@ -9,6 +9,7 @@ import { useStore } from "../store/useAppStore";
 import { Icon, Seg, Sheet, Toggle } from "./common";
 import { ExerciseInfo } from "./ExerciseInfo";
 import { useTip } from "./tips";
+import { TapTick } from "./TapTick";
 
 const SOURCE = new Map(MOBILITY_SOURCES.map((s) => [s.id, s]));
 const AREA_NAME: Record<string, string> = { knee: "knees", low_back: "lower back", shoulder: "shoulders", wrist: "wrists" };
@@ -236,7 +237,7 @@ function RoutineSheet(props: { core: Core; trained: string[]; routine: Routine; 
           {mine.reviewDue ? (
             <>
               <p className="meta small">That's the whole block. Look back at it and choose what's next.</p>
-              <button type="button" className="btn primary" onClick={() => setReview(true)}>Look back at the block</button>
+              <button type="button" className="btn primary" onClick={() => setReview(true)}>Look back at the block<TapTick /></button>
             </>
           ) : (
             <>
@@ -247,7 +248,7 @@ function RoutineSheet(props: { core: Core; trained: string[]; routine: Routine; 
               {mine.levelNote ? <p className="meta small" role="status">{mine.levelNote}</p> : null}
               {mine.paused ? (
                 <div className="row-wrap">
-                  <button type="button" className="btn primary" onClick={() => dispatch({ type: "blockResume" })}>Resume the block</button>
+                  <button type="button" className="btn primary" onClick={() => dispatch({ type: "blockResume" })}>Resume the block<TapTick /></button>
                 </div>
               ) : null}
             </>
@@ -258,7 +259,7 @@ function RoutineSheet(props: { core: Core; trained: string[]; routine: Routine; 
           <b>{routine.weeks} weeks, {routine.perWeek} sessions a week</b>
           About {span[0]} minutes a session at first and {span[1]} by the end: roughly {(routine.perWeek ?? 0) * span[0]} to {(routine.perWeek ?? 0) * span[1]} minutes a week on top of your workouts. Sessions run in order, so a missed day just waits. At the end you look back and decide what's next.
           <div className="row-wrap" style={{ marginTop: 10 }}>
-            <button type="button" className="btn primary" onClick={() => dispatch({ type: "blockStart", routine: routine.id, now: Date.now() })}>Start the {routine.weeks} weeks</button>
+            <button type="button" className="btn primary" onClick={() => dispatch({ type: "blockStart", routine: routine.id, now: Date.now() })}>Start the {routine.weeks} weeks<TapTick /></button>
           </div>
         </div>
       ) : null}
@@ -279,6 +280,7 @@ function RoutineSheet(props: { core: Core; trained: string[]; routine: Routine; 
       ) : mine && (mine.paused || mine.reviewDue) ? null : (
         <button type="button" className={`btn big${routine.kind === "block" && !mine ? "" : " primary"}`} onClick={() => start(mine !== null)}>
           Start this session
+          <TapTick />
         </button>
       )}
 
@@ -394,6 +396,7 @@ export function BlockReview(props: { core: Core; onClose: () => void }): React.R
         }}
       >
         Go another {status.weeks} weeks
+        <TapTick />
       </button>
       <p className="meta small">Stays at level {status.routine.levels.length}, {status.perWeek} sessions a week.</p>
       <button
@@ -405,6 +408,7 @@ export function BlockReview(props: { core: Core; onClose: () => void }): React.R
         }}
       >
         Finish the block
+        <TapTick />
       </button>
       <p className="meta small">The routine stays in Mobility for one-off sessions whenever you like.</p>
     </Sheet>

@@ -7,6 +7,7 @@ import { haptic } from "../platform/haptics";
 import { useNow, useStore } from "../store/useAppStore";
 import { Sheet, TimerRing } from "./common";
 import { useTip } from "./tips";
+import { TapTick } from "./TapTick";
 
 const INTENT: Record<string, string> = { warmup: "Warm-up", easy: "Easy", steady: "Steady", hard: "Hard", cooldown: "Cool-down" };
 
@@ -76,18 +77,22 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
         {!c.started ? (
           <button type="button" className="btn primary big" onClick={() => { unlockAudio(); dispatch({ type: "cardioStart", now: Date.now() }); }}>
             Start
+            <TapTick />
           </button>
         ) : c.finished ? (
           <button type="button" className="btn go big" onClick={() => setFinishOpen(true)}>
             Log it
+            <TapTick />
           </button>
         ) : (
           <>
             <button type="button" className="btn big grow" onClick={() => dispatch({ type: active.pausedAt ? "resume" : "pause", now: Date.now() })}>
               {active.pausedAt ? "Resume" : "Pause"}
+              <TapTick />
             </button>
             <button type="button" className="btn big grow" onClick={() => dispatch({ type: "cardioNext", now: Date.now() })}>
               Next part
+              <TapTick />
             </button>
           </>
         )}
@@ -118,7 +123,7 @@ export function CardioRunner(props: { core: Core; active: ActiveSession }): Reac
           Nothing from it will be saved.
           <div className="row" style={{ marginTop: 10 }}>
             <button type="button" className="btn" onClick={() => setDiscardOpen(false)}>Keep going</button>
-            <button type="button" className="btn danger solid" onClick={() => dispatch({ type: "discard" })}>Discard</button>
+            <button type="button" className="btn danger solid" onClick={() => dispatch({ type: "discard" })}>Discard<TapTick /></button>
           </div>
         </div>
       ) : null}
@@ -165,6 +170,7 @@ function CardioFinish(props: { active: ActiveSession; now: number; haptics: bool
         }}
       >
         Save
+        <TapTick />
       </button>
     </Sheet>
   );

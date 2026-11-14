@@ -35,6 +35,11 @@
   --button-top: #34793d;
   --bevel-hi: #ffffff;
   --bevel-lo: #6f8098;
+  /* pressed: the bevel flips (below) and the button moves into the page */
+  --press-main: translateY(2px) scale(0.975);
+  --press-plain: translateY(1px) scale(0.975);
+  --press-small: translateY(1px) scale(0.95);
+  --press-out: 280ms;
   color-scheme: light;
 }
 :root[data-style="bluebird"][data-theme="dark"] {
@@ -102,7 +107,6 @@
 [data-style="bluebird"] .btn { font-weight: 700; }
 [data-style="bluebird"] .chip { font-weight: 700; }
 [data-style="bluebird"] :is(.btn, .icon-btn, .chip, .dock-actions button):active {
-  transform: none;
   background: var(--sunk);
   box-shadow: inset 1px 1px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi);
 }

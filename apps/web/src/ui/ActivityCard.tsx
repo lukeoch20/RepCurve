@@ -3,6 +3,7 @@ import { WHO_AEROBIC_MAX, WHO_AEROBIC_MIN, WHO_STRENGTH_DAYS, extraCredit, weekA
 import type { Core, SessionRecord } from "../model/types";
 import { useStore } from "../store/useAppStore";
 import { Toggle } from "./common";
+import { TapTick } from "./TapTick";
 
 const KINDS = ["Walk", "Run", "Bike", "Swim", "Sport", "Other"];
 
@@ -81,6 +82,7 @@ export function ActivityCard(props: { core: Core; history: SessionRecord[]; now:
               }}
             >
               Add
+              <TapTick />
             </button>
           </div>
         </div>

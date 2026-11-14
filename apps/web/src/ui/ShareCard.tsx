@@ -3,6 +3,7 @@ import type { ShareCard } from "../model/share";
 import { APP_NAME } from "../platform/channel";
 import { canShareFile, shareOrSaveFile } from "../platform/download";
 import { Sheet } from "./common";
+import { TapTick } from "./TapTick";
 
 const SIZE = 1080;
 
@@ -212,6 +213,7 @@ export function ShareSheet(props: { card: ShareCard; onClose: () => void }): Rea
       {msg ? <p className="meta small" role="status">{msg}</p> : null}
       <button type="button" className="btn primary big" disabled={!file} onClick={() => void share()}>
         {file && canShareFile(file) ? "Share" : "Save picture"}
+        <TapTick />
       </button>
     </Sheet>
   );

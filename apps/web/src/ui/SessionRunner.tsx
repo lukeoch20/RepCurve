@@ -33,6 +33,7 @@ import { Icon, Seg, Sheet, TimerRing, Toggle } from "./common";
 import { ExerciseInfo, TIER_LABEL } from "./ExerciseInfo";
 import { PatOnTheBack } from "./PatOnTheBack";
 import { useTip } from "./tips";
+import { TapMark, TapTick } from "./TapTick";
 
 export function SessionRunner(props: { core: Core; active: ActiveSession }): React.ReactElement {
   const { core, active } = props;
@@ -174,6 +175,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
 
         <button type="button" className="btn go big" onClick={finish} style={{ marginTop: 8 }}>
           {up ? "Finish early" : "Finish session"}
+          <TapTick />
         </button>
       </main>
 
@@ -209,6 +211,7 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
                 }}
               >
                 Finish and save
+                <TapTick />
               </button>
             </>
           ) : (
@@ -216,9 +219,11 @@ export function SessionRunner(props: { core: Core; active: ActiveSession }): Rea
           )}
           <button type="button" className="btn big" onClick={() => setEndOpen(false)}>
             Keep going
+            <TapTick />
           </button>
           <button type="button" className="btn danger big" onClick={() => dispatch({ type: "discard" })}>
             Discard this session
+            <TapTick />
           </button>
         </Sheet>
       ) : null}
@@ -246,9 +251,11 @@ function LeftOpenSheet(props: { core: Core; active: ActiveSession; now: number; 
         }}
       >
         Yes, finish it as of {time}
+        <TapTick />
       </button>
       <button type="button" className="btn big" onClick={props.onKeepGoing}>
         No, keep going
+        <TapTick />
       </button>
     </Sheet>
   );
@@ -583,12 +590,12 @@ function SetEditor(props: {
       <div className="editor-steppers" ref={setTip}>
         {p.loadKg !== null && loadKg !== null ? (
           <div className="stepper" role="group" aria-label="Weight">
-            <button type="button" aria-label="Lighter" onClick={() => stepLoad(-1)} disabled={loadIdx === 0}>−</button>
+            <button type="button" aria-label="Lighter" onClick={() => stepLoad(-1)} disabled={loadIdx === 0}>−<TapTick /></button>
             <div className="value">
               <b>{loadNumber(loadKg, units)}</b>
               <span>{units}{p.loadType === "dumbbell_pair" ? " each" : p.loadType === "barbell" ? " total" : ""}</span>
             </div>
-            <button type="button" aria-label="Heavier" onClick={() => stepLoad(1)} disabled={loadIdx === owned.length - 1}>+</button>
+            <button type="button" aria-label="Heavier" onClick={() => stepLoad(1)} disabled={loadIdx === owned.length - 1}>+<TapTick /></button>
           </div>
         ) : (
           <div className="stepper fixed">
@@ -598,12 +605,12 @@ function SetEditor(props: {
           </div>
         )}
         <div className="stepper" role="group" aria-label={isTime ? "Seconds" : "Reps"}>
-          <button type="button" aria-label={isTime ? "Fewer seconds" : "Fewer reps"} onClick={() => setReps((r) => Math.max(0, r - step))}>−</button>
+          <button type="button" aria-label={isTime ? "Fewer seconds" : "Fewer reps"} onClick={() => setReps((r) => Math.max(0, r - step))}>−<TapTick /></button>
           <div className="value">
             <b>{reps}</b>
             <span>{isTime ? "seconds" : p.unilateral ? "reps / side" : "reps"}</span>
           </div>
-          <button type="button" aria-label={isTime ? "More seconds" : "More reps"} onClick={() => setReps((r) => Math.min(isTime ? 300 : 60, r + step))}>+</button>
+          <button type="button" aria-label={isTime ? "More seconds" : "More reps"} onClick={() => setReps((r) => Math.min(isTime ? 300 : 60, r + step))}>+<TapTick /></button>
         </div>
       </div>
       {p.loadType === "barbell" && loadKg !== null ? (
@@ -626,6 +633,7 @@ function SetEditor(props: {
           onClick={() => props.onSave(props.existing ? { loadKg, reps, rir, painFlag: pain } : { loadKg, reps, rir })}
         >
           {props.existing ? "Save changes" : `Done · set ${setIndex + 1}`}
+          <TapTick />
         </button>
         {props.existing ? (
           <button type="button" className="btn danger" onClick={props.onDelete}>
@@ -634,6 +642,7 @@ function SetEditor(props: {
         ) : (
           <button ref={hurtTip} type="button" className="btn danger" onClick={() => props.onSave({ loadKg, reps, rir, painFlag: true })} title="Log the set and flag pain">
             It hurt
+            <TapTick />
           </button>
         )}
       </div>
@@ -685,7 +694,7 @@ function PainSheet(props: { active: ActiveSession; slot: string; setIndex: numbe
         </div>
       </div>
       <p className="meta small">Otherwise carry on with the rest if everything else feels fine. Pain that's sharp or keeps coming back is worth getting checked.</p>
-      <button type="button" className="btn primary" onClick={props.onClose}>Carry on</button>
+      <button type="button" className="btn primary" onClick={props.onClose}>Carry on<TapTick /></button>
     </Sheet>
   );
 }
@@ -775,6 +784,7 @@ function SwapSheet(props: { core: Core; active: ActiveSession; p: Prescription; 
           </span>
         </span>
         <input id="perm" type="checkbox" role="switch" className="switch" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} />
+        <TapMark />
       </label>
     </Sheet>
   );
@@ -818,11 +828,16 @@ function TimerDock(props: { core: Core; active: ActiveSession; now: number }): R
             <div className="dock-actions">
               <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: -15, now: Date.now() })} disabled={over}>
                 −15 s
+                <TapTick />
               </button>
               <button type="button" onClick={() => dispatch({ type: "timerAdjust", deltaSec: 15, now: Date.now() })}>
                 +15 s
+                <TapTick />
               </button>
-              <button type="button" className="go" onClick={() => dispatch({ type: "timerClear" })}>{over ? "Hide" : "Skip"}</button>
+              <button type="button" className="go" onClick={() => dispatch({ type: "timerClear" })}>
+                {over ? "Hide" : "Skip"}
+                <TapTick />
+              </button>
             </div>
           </div>
         </div>

@@ -36,6 +36,10 @@
   --bevel-lo: #97772a;
   --accent-text: #765611;
   --gold-low: #c5a24a;
+  /* pressed: plain buttons squeeze. The faceted pieces dip 1px instead: their cut corners would
+     clip the pad that keeps a tap at the edge of a shrunken button (styles.css) */
+  --press-main: translateY(1px);
+  --press-wide: none;
   color-scheme: light;
 }
 :root[data-style="gold"][data-theme="dark"] {
@@ -144,7 +148,8 @@
   box-shadow: none;
 }
 [data-style="gold"] :is(.btn, .chip) { font-weight: 600; }
-[data-style="gold"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { transform: none; background: var(--sunk); }
+[data-style="gold"] :is(.chip[aria-pressed="true"], .seg button[aria-pressed="true"], .tabbar button[aria-current="page"]) { --press-small: translateY(1px); }
+[data-style="gold"] :is(.btn:not(.primary, .go), .icon-btn, .chip:not([aria-pressed="true"]), .dock-actions button:not(.go)):active { background: var(--sunk); }
 [data-style="gold"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
   --cut: 8px;
   --edge: var(--accent-line);

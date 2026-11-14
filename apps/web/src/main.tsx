@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { startTapPulses } from "./platform/haptics";
 import { applyStyle, loadStyle } from "./platform/style";
 import { setUpdateReady } from "./platform/update";
 import "./fonts.css";
@@ -15,6 +16,7 @@ declare const __RUNTIME__: "pwa" | "artifact";
 
 // The chosen look goes on before the first render, so the app never flashes another.
 applyStyle(loadStyle());
+startTapPulses();
 
 createRoot(document.getElementById("root")!).render(<App />);
 

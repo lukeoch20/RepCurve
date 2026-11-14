@@ -16,6 +16,7 @@ import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { EMPTY_DATA } from "./model/types";
 import { applyUpdate, onUpdateReady, updateOffered, updateReady } from "./platform/update";
 import { dropSafetyCopy } from "./platform/safetyCopy";
+import { setHaptics } from "./platform/haptics";
 import { IS_TEST, storageKey } from "./platform/channel";
 import { StoreContext, useAppStore } from "./store/useAppStore";
 import { STORAGE_FULL } from "./store/persistence";
@@ -56,6 +57,10 @@ export function App(): React.ReactElement {
   }, [tab]);
 
   const { core, active, history } = store.data;
+
+  // The Vibration setting, where the tap ticks can see it. On until someone turns it off.
+  const haptics = core?.settings.haptics ?? true;
+  useEffect(() => setHaptics(haptics), [haptics]);
 
   let body: React.ReactElement;
   if (!store.ready) {

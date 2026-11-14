@@ -35,6 +35,14 @@
   --button-top: #a43f15;
   --bevel-hi: #c28765;
   --bevel-lo: #713314;
+  /* pressed: a heavy plate, stamped down 2px; it comes back without a bounce */
+  --press-main: translateY(2px);
+  --press-plain: translateY(2px);
+  --press-small: translateY(1px);
+  --press-wide: translateY(1px);
+  --press-in: 40ms;
+  --press-out: 170ms;
+  --press-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
   color-scheme: light;
 }
 :root[data-style="forge"][data-theme="dark"] {
@@ -99,7 +107,7 @@
   box-shadow: inset 0 -2px 0 var(--control-line);
 }
 [data-style="forge"] :is(.btn, .chip) { font-weight: 700; }
-[data-style="forge"] :is(.btn, .icon-btn, .chip, .dock-actions button):active { transform: none; background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
+[data-style="forge"] :is(.btn, .icon-btn, .chip, .dock-actions button):active { background: var(--sunk); box-shadow: inset 0 2px 0 var(--control-line); }
 [data-style="forge"] :is(.btn.primary, .btn.go, .dock-actions button.go) {
   background: var(--accent);
   border-color: var(--accent-line);
