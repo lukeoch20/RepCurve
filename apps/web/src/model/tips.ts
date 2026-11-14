@@ -151,8 +151,8 @@ export const TIPS = [
   {
     id: "mobility.timer",
     kind: "app",
-    title: "The timer runs the holds",
-    body: "Each hold counts down and beeps, then tells you when to switch sides. Slow reps go at your own pace: tap Done. Pause, skip a drill or tap Something hurts at any point.",
+    title: "You start each hold",
+    body: "Get into position, then tap Start: the hold counts down and beeps when it's done. Slow reps go at your own pace: tap Done. Pause, skip a drill or tap Something hurts at any point.",
   },
   {
     id: "progress.charts",

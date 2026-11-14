@@ -8,15 +8,16 @@ const target = (page: Page) => page.locator(".cardio-clock .block-target");
 const finished = (page: Page) => page.getByRole("heading", { level: 1, name: /^(All of it, done|Done for today)$/ });
 
 /**
- * Run the session on screen to its end: tap Done on reps and let the clock run the holds.
- * The clock also runs by itself between steps, so countdowns are matched within a second or two.
+ * Run the session on screen to its end: tap whatever waits for a tap (Start, Start the other side,
+ * Start set 2, Done on reps) and let the clock run the holds. The clock also runs by itself
+ * between steps, so countdowns are matched within a second or two.
  */
 async function runToEnd(page: Page) {
-  // The session screen's own Done: the summary has a Done button too, which closes it.
-  const done = page.locator("main").filter({ has: timer(page) }).getByRole("button", { name: "Done", exact: true });
-  for (let i = 0; i < 120; i++) {
+  // The session screen's own buttons: the summary has a Done button too, which closes it.
+  const tap = page.locator("main").filter({ has: timer(page) }).getByRole("button", { name: /^(Done|Start( the other side| set \d+)?)$/ });
+  for (let i = 0; i < 200; i++) {
     if (await finished(page).isVisible()) return;
-    if (await done.isVisible()) await done.click();
+    if (await tap.isVisible()) await tap.click();
     // Short steps, so a countdown is never found long over (which would pause the session).
     else await page.clock.runFor(10_000);
   }
@@ -46,7 +47,7 @@ async function restore(page: Page, core: { injuries?: string[]; mobility?: unkno
   await expect(page.getByRole("button", { name: "Start session" })).toBeVisible();
 }
 
-test("the hips block starts under Plan, runs on the timer beside today's workout, and counts", async ({ page }) => {
+test("the hips block starts under Plan, each hold starts on a tap, and the session counts", async ({ page }) => {
   await page.clock.install({ time: MONDAY });
   await onboard(page);
   // Today has a way in; Plan lists the routines.
@@ -75,16 +76,41 @@ test("the hips block starts under Plan, runs on the timer beside today's workout
   await today.getByRole("button", { name: "Start hips session" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Hips: mobility and strength" })).toBeVisible();
   await expect(page.getByText("Mobility · session 1 of 18 · level 1")).toBeVisible();
-  // Get ready counts down by itself; slow reps then wait for Done, one side at a time.
-  await expect(timer(page)).toHaveAccessibleName(/^Get ready: 0:(10|0[89]) left$/);
-  await expect(page.getByRole("button", { name: "Start now" })).toBeVisible();
-  await page.clock.runFor(10_500);
+  // Nothing begins by itself: the first drill waits for Start, and says which side comes first.
+  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  await expect(target(page)).toHaveText("4 circles each way, each side · left leg first");
+  await page.clock.runFor(60_000);
+  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  // Slow reps wait for Done, one side at a time.
   await expect(timer(page)).toHaveAccessibleName("4 circles each way");
   await expect(target(page)).toHaveText("4 circles each way · left leg");
   await page.clock.runFor(60_000);
   await expect(target(page)).toHaveText("4 circles each way · left leg");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(target(page)).toHaveText("4 circles each way · right leg");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(target(page)).toHaveText("8 switches");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+
+  // A hold: the clock shows its length and stays put until Start, however long that takes.
+  await expect(timer(page)).toHaveAccessibleName("0:30 hold ready: tap start");
+  await expect(target(page)).toHaveText("2 × 30 s each side · left knee down first");
+  await page.clock.runFor(120_000);
+  await expect(timer(page)).toHaveAccessibleName("0:30 hold ready: tap start");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:(30|2[789]) left$/);
+  await expect(target(page)).toHaveText("Left knee down · set 1 of 2");
+  // It ends by itself; the other side and the next set each wait for their own tap.
+  await page.clock.runFor(30_500);
+  await expect(timer(page)).toHaveAccessibleName("0:30 hold ready: tap start");
+  await expect(target(page)).toHaveText("Next: right knee down");
+  await page.getByRole("button", { name: "Start the other side" }).click();
+  await expect(target(page)).toHaveText("Right knee down · set 1 of 2");
+  await page.clock.runFor(30_500);
+  await expect(target(page)).toHaveText("Next: set 2 of 2, left knee down");
+  await expect(page.getByRole("button", { name: "Start set 2" })).toBeVisible();
 
   await runToEnd(page);
   await expect(page.getByRole("heading", { level: 1, name: "All of it, done" })).toBeVisible();
@@ -100,13 +126,20 @@ test("the hips block starts under Plan, runs on the timer beside today's workout
   await expect(page.getByRole("region", { name: "Mobility" })).toContainText("Hips block: 1 of 18 sessions");
 });
 
-test("something hurts pauses first; the stopped drill is remembered, and a reload brings the session back paused", async ({ page }) => {
+test("hands-free on: holds follow by themselves; something hurts pauses first, and a reload brings the session back paused", async ({ page }) => {
   await page.clock.install({ time: MONDAY });
   await onboard(page);
   await page.getByRole("button", { name: /Stretch and loosen up/ }).click();
   await page.getByRole("dialog", { name: "Mobility" }).getByRole("button", { name: /Desk-day reset/ }).click();
-  await page.getByRole("dialog", { name: "Desk-day reset" }).getByRole("button", { name: "Start this session" }).click();
+  const desk = page.getByRole("dialog", { name: "Desk-day reset" });
+  // Hands-free is off until it's turned on; then each hold starts after a short countdown.
+  await expect(desk.getByRole("switch", { name: /Hands-free/ })).not.toBeChecked();
+  await desk.getByRole("switch", { name: /Hands-free/ }).check();
+  await desk.getByRole("button", { name: "Start this session" }).click();
   await expect(page.getByText("Mobility", { exact: true })).toBeVisible();
+  await expect(timer(page)).toHaveAccessibleName(/^Get ready: 0:(10|0[89]) left$/);
+  await expect(target(page)).toHaveText("45 s each side · left knee down first");
+  await expect(page.getByRole("button", { name: "Start now" })).toBeVisible();
   await page.clock.runFor(10_500);
   await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:4\d left$/);
   await expect(target(page)).toHaveText("Left knee down");
@@ -121,17 +154,17 @@ test("something hurts pauses first; the stopped drill is remembered, and a reloa
   await page.clock.runFor(30_000);
   await expect(timer(page)).toHaveAttribute("aria-label", left);
   await hurts.getByRole("button", { name: "Stop this drill" }).click();
-  // After pain nothing starts by itself: the next drill waits for a tap, hands-free or not.
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  // After pain nothing starts by itself: the next drill waits for a tap, even hands-free.
+  await expect(timer(page)).toHaveAccessibleName("0:45 hold ready: tap start");
   await page.clock.runFor(30_000);
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  await expect(timer(page)).toHaveAccessibleName("0:45 hold ready: tap start");
   await expect(page.locator(".segment.drill").first()).toContainText("stopped");
   // It goes on waiting when End is opened and closed again.
   await page.getByRole("button", { name: "End", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "End this session?" })).toContainText("What you've done is saved.");
   await page.getByRole("dialog", { name: "End this session?" }).getByRole("button", { name: "Keep going" }).click();
   await page.clock.runFor(15_000);
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  await expect(timer(page)).toHaveAccessibleName("0:45 hold ready: tap start");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:4[3-5] left$/);
   await page.clock.runFor(5_000);
@@ -175,32 +208,32 @@ test("something hurts pauses first; the stopped drill is remembered, and a reloa
   await expect(routine.locator(".lineup-item")).toHaveCount(5);
 });
 
-test("with hands-free off, each step waits for a tap", async ({ page }) => {
+test("hands-free can be turned on in the middle of a session, and the choice sticks", async ({ page }) => {
   await page.clock.install({ time: MONDAY });
   await onboard(page);
   await page.getByRole("button", { name: "Plan" }).click();
   await page.getByRole("region", { name: "Mobility" }).getByRole("button", { name: /Desk-day reset/ }).click();
   const routine = page.getByRole("dialog", { name: "Desk-day reset" });
-  await routine.getByRole("switch", { name: /Hands-free/ }).uncheck();
+  await expect(routine.getByRole("switch", { name: /Hands-free/ })).not.toBeChecked();
   await routine.getByRole("button", { name: "Start this session" }).click();
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
-  await page.clock.runFor(30_000);
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
+  await expect(timer(page)).toHaveAccessibleName("0:45 hold ready: tap start");
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  // The hold itself always counts down; the change of sides then waits.
   await expect(timer(page)).toHaveAccessibleName(/^Hold: 0:4[3-5] left$/);
   await page.clock.runFor(45_500);
-  await expect(timer(page)).toHaveAccessibleName("Ready: tap start");
   await expect(target(page)).toHaveText("Next: right knee down");
   await page.getByRole("button", { name: "Start the other side" }).click();
   await expect(target(page)).toHaveText("Right knee down");
-  // Nothing done yet counts for little: it can be thrown away.
+  // Turned on during the hold: when it ends, the next drill counts itself in.
+  await page.getByRole("switch", { name: /Hands-free/ }).check();
+  await page.clock.runFor(45_500);
+  await expect(timer(page)).toHaveAccessibleName(/^Get ready: 0:(10|0[89]) left$/);
+  await expect(page.getByRole("button", { name: "Start now" })).toBeVisible();
   await page.getByRole("button", { name: "End", exact: true }).click();
   await page.getByRole("dialog", { name: "End this session?" }).getByRole("button", { name: "Discard this session" }).click();
   await expect(page.getByRole("region", { name: "Mobility" })).toBeVisible();
   // The choice sticks for next time.
   await page.getByRole("region", { name: "Mobility" }).getByRole("button", { name: /Desk-day reset/ }).click();
-  await expect(page.getByRole("dialog", { name: "Desk-day reset" }).getByRole("switch", { name: /Hands-free/ })).not.toBeChecked();
+  await expect(page.getByRole("dialog", { name: "Desk-day reset" }).getByRole("switch", { name: /Hands-free/ })).toBeChecked();
 });
 
 test("sore knees get gentler drills, and the routine says what changed", async ({ page }) => {

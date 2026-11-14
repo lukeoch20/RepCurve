@@ -333,7 +333,7 @@ function RoutineSheet(props: { core: Core; trained: string[]; routine: Routine; 
         <Toggle
           id="routine-hands-free"
           label="Hands-free"
-          hint="Each hold starts by itself after a short countdown. Off: it waits for your tap."
+          hint="Holds start by themselves after a short countdown. Off: each one waits for you to tap Start."
           checked={handsFreeOn(core)}
           onChange={(on) => dispatch({ type: "mobilityHandsFree", on, now: Date.now() })}
         />

@@ -66,7 +66,7 @@ export interface MobilityState {
   log: MobilityEntry[];
   /** Drills the person left out of a routine, by routine. Missing means none. */
   leftOut?: Record<string, string[]>;
-  /** False when each hold should wait for a tap. Missing means holds follow on by themselves. */
+  /** True when holds follow on by themselves after a short countdown. Missing or false: each waits for a tap on Start. */
   handsFree?: boolean;
 }
 
@@ -265,8 +265,8 @@ export function setHandsFree(core: Core, on: boolean): Core {
   return withMobility(core, { handsFree: on });
 }
 
-/** Holds follow on by themselves unless the person turned that off. */
-export const handsFreeOn = (core: Pick<Core, "mobility">): boolean => core.mobility?.handsFree !== false;
+/** Whether holds follow on by themselves. Off unless the person turned it on: each hold waits for a tap on Start. */
+export const handsFreeOn = (core: Pick<Core, "mobility">): boolean => core.mobility?.handsFree === true;
 
 // ---------------------------------------------------------------- a session under way
 
@@ -531,7 +531,7 @@ export function restoreMobility(saved: unknown, now: number): ActiveMobility | n
     remainingMs: finished ? 0 : (plan.steps[stepIndex]!.seconds ?? 0) * 1000,
     pausedAt: finished ? null : pausedAt,
     pausedMs: isNum(saved["pausedMs"]) ? Math.max(0, saved["pausedMs"]) : 0,
-    handsFree: saved["handsFree"] !== false,
+    handsFree: saved["handsFree"] === true,
     waits: saved["waits"] === true,
     doneSec,
     skipped: indexes(saved["skipped"], plan.items.length),
