@@ -251,9 +251,10 @@ manages an injury until a clinician has reviewed its rules.
 - **Routines:** one six-week block ("Hips: mobility and strength", three sessions a week, three
   levels) and three quick sessions (morning, desk-day, wind-down). Definitions are versioned
   (`ROUTINES` in `packages/exercises/src/mobility.ts`), so a saved session says what it was built from.
-- **The player:** one step at a time. Holds count down and beep; reps wait for Done. Hands-free is a
-  switch. Pause, skip and "Something hurts" are always there, and "Something hurts" pauses first and
-  asks second. A reload brings the session back paused.
+- **The player:** one step at a time. Each hold waits for a tap on Start, then counts down and
+  beeps; reps wait for Done. Hands-free, where holds follow on by themselves after a short
+  countdown, is a switch that starts off. Pause, skip and "Something hurts" are always there, and
+  "Something hurts" pauses first and asks second. A reload brings the session back paused.
 - **One day, one schedule:** with a block running, Today shows its next session beside the workout,
   the total time, which comes first, and a shorter workout that fits both into the usual time.
 - **A practice block, not a ladder:** sessions run in order, so a missed day waits. A session counts

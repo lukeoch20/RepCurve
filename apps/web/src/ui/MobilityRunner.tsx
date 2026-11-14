@@ -36,11 +36,12 @@ function where(step: MobilityStep, item: MobilityItem): string {
   return [amount, amount ? side.toLowerCase() : side, set].filter(Boolean).join(" · ");
 }
 
-/** The step read out for screen readers as it starts: the beep can't be heard by everyone. */
-function spoken(step: MobilityStep, item: MobilityItem): string {
+/** The step read out for screen readers as it starts: the beep can't be heard by everyone. `next` is the side that follows it. */
+function spoken(step: MobilityStep, item: MobilityItem, next?: MobilityStep["side"]): string {
   const side = step.side ? `, ${sideLabel(item, step.side).toLowerCase()}` : "";
-  if (step.kind === "ready") return `Get ready: ${item.name}`;
-  if (step.kind === "switch") return "Switch sides";
+  const then = next ? sideLabel(item, next).toLowerCase() : "";
+  if (step.kind === "ready") return `Get ready: ${item.name}${then ? `, ${then} first` : ""}`;
+  if (step.kind === "switch") return `Switch sides${then ? `: ${then}` : ""}`;
   if (step.kind === "rest") return `Rest, then set ${step.set + 1}`;
   return step.seconds === null ? `${item.name}${side}: ${item.amount} ${unit(item)}` : `Hold: ${item.name}${side}, ${step.seconds} seconds`;
 }
@@ -50,7 +51,7 @@ function nameOf(id: string): string {
   return findDrill(id)?.name ?? findExercise(id)?.name ?? id;
 }
 
-/** The side a "switch" step is changing to. */
+/** The side the step after this one is on: what a get-ready, switch or rest step leads to. */
 function nextSide(a: ActiveMobility): MobilityStep["side"] {
   return a.plan.steps[a.stepIndex + 1]?.side;
 }
@@ -108,7 +109,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
 
   useEffect(() => {
     // Once per step, not on every clock tick.
-    setAnnounce(step && item ? spoken(step, item) : "");
+    setAnnounce(step && item ? spoken(step, item, step.kind === "work" ? undefined : nextSide(a)) : "");
     window.scrollTo(0, 0);
   }, [a.stepIndex]);
 
@@ -127,11 +128,14 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
     unlockAudio();
     dispatch({ type: "mobilityNext", now: at() });
   };
+  // What a waiting step leads to: the hold's length when it's a hold, so the clock shows what Start will start.
+  const upcoming = step.kind === "work" ? null : (a.plan.steps[a.stepIndex + 1] ?? null);
+  const holdNext = waiting && upcoming && upcoming.seconds !== null ? clock(upcoming.seconds * 1000) : null;
   const face =
     step.kind === "work" && !timed
       ? { t: String(item.amount), l: shortUnit(item) }
       : waiting
-        ? { t: "Ready", l: "tap start" }
+        ? { t: holdNext ?? "Ready", l: "tap start" }
         : { t: clock(remaining), l: paused ? "paused" : phase(step).toLowerCase() };
   const go =
     step.kind === "work"
@@ -148,7 +152,17 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
     setEnding(null);
   };
   const hurtBefore = step.kind === "ready" && stoppedForPain(core, item.id);
-  const side = step.kind === "switch" ? nextSide(a) : step.side;
+  // The side the next hold or set of reps is on, said before it starts so there's time to get into it.
+  const first = nextSide(a);
+  const firstSide = first ? sideLabel(item, first).toLowerCase() : "";
+  const target =
+    step.kind === "work"
+      ? where(step, item)
+      : step.kind === "switch"
+        ? firstSide ? `Next: ${firstSide}` : ""
+        : step.kind === "rest"
+          ? `Next: set ${step.set + 1} of ${item.sets}${firstSide ? `, ${firstSide}` : ""}`
+          : `${mobilityDose(item)}${firstSide ? ` · ${firstSide} first` : ""}`;
 
   return (
     <>
@@ -207,7 +221,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
         ) : null}
 
         <section className="cardio-clock" aria-label="Now" ref={timerTip}>
-          <div className="ring" role="timer" aria-label={!timed ? `${item.amount} ${unit(item)}` : waiting ? "Ready: tap start" : `${phase(step)}: ${clock(remaining)} left${paused ? ", paused" : ""}`}>
+          <div className="ring" role="timer" aria-label={!timed ? `${item.amount} ${unit(item)}` : waiting ? (holdNext ? `${holdNext} hold ready: tap start` : "Ready: tap start") : `${phase(step)}: ${clock(remaining)} left${paused ? ", paused" : ""}`}>
             <TimerRing fraction={timed ? remaining / Math.max(1, step.seconds! * 1000) : 1} size={132} />
             <span className="face">
               <span className="t">{face.t}</span>
@@ -219,9 +233,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
             <h2 className="block-name" style={{ margin: "4px 0 0" }}>
               <DrillName id={item.id} name={item.name} ease={item.ease} />
             </h2>
-            <div className="block-target">
-              {step.kind === "ready" || step.kind === "rest" ? mobilityDose(item) : step.kind === "switch" ? (side ? `Next: ${sideLabel(item, side).toLowerCase()}` : "") : where(step, item)}
-            </div>
+            <div className="block-target">{target}</div>
           </div>
         </section>
 
@@ -297,7 +309,7 @@ export function MobilityRunner(props: { core: Core; session: ActiveMobility }): 
           <Toggle
             id="hands-free"
             label="Hands-free"
-            hint="Each hold starts by itself after a short countdown. Off: it waits for your tap."
+            hint="Holds start by themselves after a short countdown. Off: each one waits for you to tap Start."
             checked={a.handsFree}
             onChange={(on) => dispatch({ type: "mobilityHandsFree", on, now: at() })}
           />

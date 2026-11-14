@@ -27,6 +27,7 @@ import {
   routinePlan,
   sessionHandsFree,
   setBlockLevel,
+  setHandsFree,
   setLeftOut,
   skipDrill,
   startBlock,
@@ -423,10 +424,21 @@ describe("choices kept with the person's data", () => {
     expect(new Set(families)).toEqual(planned);
   });
 
-  it("keeps hands-free on unless it's turned off", () => {
-    expect(handsFreeOn(core0())).toBe(true);
-    const off = reducer({ ...INITIAL, ready: true, data: { core: core0(), active: null, history: [] } }, { type: "mobilityHandsFree", on: false, now: T0 });
-    expect(handsFreeOn(off.data.core!)).toBe(false);
+  it("waits for a tap on each hold unless hands-free is turned on", () => {
+    expect(handsFreeOn(core0())).toBe(false);
+    const state: AppState = { ...INITIAL, ready: true, data: { core: core0(), active: null, history: [] } };
+    // As things come, a session waits at its first step.
+    const manual = reducer(state, { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    expect([manual.mobility!.handsFree, isCounting(manual.mobility!)]).toEqual([false, false]);
+    // Turned on, it's kept with the person's data and the next session runs by itself.
+    const on = reducer(state, { type: "mobilityHandsFree", on: true, now: T0 });
+    expect(handsFreeOn(on.data.core!)).toBe(true);
+    const flowing = reducer(on, { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    expect([flowing.mobility!.handsFree, isCounting(flowing.mobility!)]).toEqual([true, true]);
+    expect(handsFreeOn(reducer(on, { type: "mobilityHandsFree", on: false, now: T0 }).data.core!)).toBe(false);
+    // A session saved before the switch existed in this form comes back waiting for taps.
+    const { handsFree: _, ...old } = JSON.parse(JSON.stringify(manual.mobility)) as ActiveMobility;
+    expect(restoreMobility(old, T0)!.handsFree).toBe(false);
   });
 });
 
@@ -505,9 +517,30 @@ describe("a mobility session after a reload", () => {
 
 describe("reducer: mobility", () => {
   const ready = (core: Core = core0()): AppState => ({ ...INITIAL, ready: true, data: { core, active: null, history: [] } });
+  /** With hands-free turned on, so countdowns run by themselves. */
+  const flowing = (): AppState => ready(setHandsFree(core0(), true));
+
+  it("starts each hold on a tap: nothing counts down until Start", () => {
+    let s = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    // However long it's left, the first hold hasn't begun.
+    expect(reducer(s, { type: "mobilityTick", now: T0 + 600_000 })).toBe(s);
+    expect([currentStep(s.mobility!)!.kind, isCounting(s.mobility!)]).toEqual(["ready", false]);
+    // Start: the hold counts down from the tap, in full.
+    s = reducer(s, { type: "mobilityNext", now: T0 + 60_000 });
+    expect([currentStep(s.mobility!)!.kind, currentStep(s.mobility!)!.side, s.mobility!.endsAt]).toEqual(["work", "left", T0 + 105_000]);
+    // It ends by itself, and the other side waits for its own tap.
+    s = reducer(s, { type: "mobilityTick", now: T0 + 105_000 });
+    expect([currentStep(s.mobility!)!.kind, isCounting(s.mobility!), s.mobility!.doneSec[0]]).toEqual(["switch", false, 45]);
+    expect(reducer(s, { type: "mobilityTick", now: T0 + 900_000 })).toBe(s);
+    s = reducer(s, { type: "mobilityNext", now: T0 + 130_000 });
+    expect([currentStep(s.mobility!)!.kind, currentStep(s.mobility!)!.side, s.mobility!.endsAt]).toEqual(["work", "right", T0 + 175_000]);
+    // The next drill waits too.
+    s = reducer(s, { type: "mobilityTick", now: T0 + 175_000 });
+    expect([currentStep(s.mobility!)!.kind, currentStep(s.mobility!)!.item, isCounting(s.mobility!)]).toEqual(["ready", 1, false]);
+  });
 
   it("starts a session, runs it and keeps it when finished", () => {
-    let s = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    let s = reducer(flowing(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
     expect(s.mobility!.plan.routine).toBe("desk");
     // One at a time, and no workout starts over it.
     expect(reducer(s, { type: "mobilityStart", routine: "hips", level: 0, block: false, now: T0 })).toBe(s);
@@ -562,7 +595,7 @@ describe("reducer: mobility", () => {
   });
 
   it("picks a session back up after a reload, and closes one left open for hours with what was done", () => {
-    let s = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    let s = reducer(flowing(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
     s = reducer(reducer(s, { type: "mobilityTick", now: T0 + 10_000 }), { type: "mobilityTick", now: T0 + 55_000 });
     const kept: unknown = JSON.parse(JSON.stringify(s.mobility));
     const soon = reducer(ready(), { type: "mobilityRestore", saved: kept, now: T0 + 120_000 });
@@ -581,14 +614,14 @@ describe("reducer: mobility", () => {
   });
 
   it("notes the drill under way as stopped when the session is ended because it hurt", () => {
-    let s = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    let s = reducer(flowing(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
     s = reducer(s, { type: "mobilityTick", now: T0 + 10_000 });
     s = reducer(s, { type: "mobilityPause", now: T0 + 22_000 });
     s = reducer(s, { type: "mobilityFinish", now: T0 + 40_000, hurt: true });
     expect(s.mobilityDone!.drills[0]).toEqual({ id: "hip_flexor_stretch", plannedSec: 90, doneSec: 12, skipped: true, hurt: true });
     expect(stoppedForPain(s.data.core!, "hip_flexor_stretch")).toBe(true);
     // Ended the ordinary way, nothing is marked.
-    let plain = reducer(ready(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
+    let plain = reducer(flowing(), { type: "mobilityStart", routine: "desk", level: 0, block: false, now: T0 });
     plain = reducer(reducer(plain, { type: "mobilityTick", now: T0 + 10_000 }), { type: "mobilityFinish", now: T0 + 22_000 });
     expect(plain.mobilityDone!.drills[0]).toEqual({ id: "hip_flexor_stretch", plannedSec: 90, doneSec: 12 });
   });
